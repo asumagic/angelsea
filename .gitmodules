@@ -7,3 +7,6 @@
 [submodule "vendor/fmt"]
 	path = vendor/fmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "tests/vendor/Catch2"]
+	path = tests/vendor/Catch2
+	url = https://github.com/catchorg/Catch2.git
