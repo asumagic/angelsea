@@ -1,5 +1,8 @@
 ## angelsea
 
+> [!IMPORTANT]  
+> Angelsea is in very early stages of development and is not suitable for use.
+
 Angelsea is a **JIT compiler for AngelScript** which leverages  the lightweight
 [MIR](https://github.com/vnmakarov/mir) JIT runtime and its C11 compiler.
 
@@ -20,6 +23,11 @@ in this case.
 
 We implement the [`asIJITCompiler`](https://www.angelcode.com/angelscript/sdk/docs/manual/classas_i_j_i_t_compiler.html)
 JIT interface.
+
+> [!NOTE]
+> The `vendor/angelscript` submodule points to the
+> [unofficial AngelScript](github.com/codecat/angelscript-mirror) git repository
+> mirror by codecat.
 
 #### License notice
 
