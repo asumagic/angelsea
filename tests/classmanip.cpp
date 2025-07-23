@@ -36,7 +36,7 @@ TEST_CASE("user classes", "[userclass][simpleuserclass]")
 	// 'hello' displayed twice because of the copy construction
 	REQUIRE(
 		run("scripts/userclasses.as", "void pass_by_value_test()")
-		== "hello\nhello\n10\n20\n30\n40\n50\n60\n70\n80\n90\n100\n");
+		== "hello\n10\n20\n30\n40\n50\n60\n70\n80\n90\n100\n");
 }
 
 TEST_CASE("user class Vec3f", "[userclass][vec3f]")

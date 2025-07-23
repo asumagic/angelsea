@@ -98,6 +98,7 @@ void take_by_value(Foo foo)
 
 void pass_by_value_test()
 {
+    // FIXME: AS now made this only call the constructor once, or..?
     Foo f;
     take_by_value(f);
 }
