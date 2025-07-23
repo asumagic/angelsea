@@ -43,6 +43,17 @@ in source **and** binary distributions!
 
 ### Q&A
 
+#### What is the best supported calling convention?
+
+For now, special care is given to the `asCALL_GENERIC` convention
+performance-wise, but others will work (although they will fall back to the
+interpreter).  
+This is because it is the easiest to support without falling back to the
+interpreter, because it can be made reasonably fast, and because the primary
+downstream user of angelsea uses it exclusively.  
+As of writing, `asIScriptGeneric` is not a particularly efficient interface, but
+when the time comes, we may contribute back design improvements for it.
+
 #### What about other JIT compilers?
 
 - [BlindMindStudio's JIT compiler](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler)
