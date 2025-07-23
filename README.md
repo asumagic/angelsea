@@ -1,7 +1,7 @@
 ## angelsea
 
 Angelsea is a **JIT compiler for AngelScript** which leverages  the lightweight
-[MIR 🔗](https://github.com/vnmakarov/mir) JIT runtime and its C11 compiler.
+[MIR](https://github.com/vnmakarov/mir) JIT runtime and its C11 compiler.
 
 ### Design
 
