@@ -1,16 +1,26 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 #include <angelsea/jit.hpp>
+#include <angelsea/detail/log.hpp>
 
 namespace angelsea
 {
 
-int JitCompiler::CompileFunction(asIScriptFunction* function, asJITFunction* output)
+void Jit::NewFunction(asIScriptFunction* scriptFunc)
 {
-    return 1;
+    detail::log(m_compiler, *scriptFunc, detail::LogSeverity::VERBOSE, "Registered \"{}\" for compilation", scriptFunc->GetDeclaration(true, true, true));
 }
 
-void JitCompiler::ReleaseJITFunction(asJITFunction func)
+void Jit::CleanFunction(asIScriptFunction* scriptFunc, asJITFunction jitFunc)
+{
+}
+
+void Jit::CompileModules()
+{
+    detail::log(m_compiler, detail::LogSeverity::VERBOSE, "Requested JIT compilation for TODO modules");
+}
+
+Jit::~Jit()
 {
 
 }

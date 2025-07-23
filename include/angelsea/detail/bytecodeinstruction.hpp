@@ -3,6 +3,7 @@
 #pragma once
 
 #include <angelscript.h>
+#include <cstddef>
 
 namespace angelsea::detail
 {

@@ -47,7 +47,7 @@ void print_uint(unsigned long value) { out << value << '\n'; }
 void print_char(char value) { out << value; }
 } // namespace bindings
 
-EngineContext::EngineContext(angelsea::JitConfig config) : engine{asCreateScriptEngine()}, jit{config}
+EngineContext::EngineContext(const angelsea::JitConfig& config) : engine{asCreateScriptEngine()}, jit{config, *engine}
 {
 	engine->SetEngineProperty(asEP_INCLUDE_JIT_INSTRUCTIONS, true);
 	asllvm_test_check(engine->SetJITCompiler(&jit) >= 0);

@@ -24,7 +24,7 @@ extern std::stringstream out;
 
 struct EngineContext
 {
-	EngineContext(angelsea::JitConfig config = {});
+	EngineContext(const angelsea::JitConfig& config = {});
 
 	~EngineContext();
 
@@ -34,8 +34,8 @@ struct EngineContext
 
 	void run(asIScriptModule& module, const char* entry_point);
 
-	asIScriptEngine*     engine;
-	angelsea::JitCompiler jit;
+	asIScriptEngine* engine;
+	angelsea::Jit jit;
 };
 
 std::string run(const char* path, const char* entry = "void main()");

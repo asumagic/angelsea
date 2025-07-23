@@ -3,26 +3,28 @@
 #pragma once
 
 #include <angelscript.h>
+#include <angelsea/config.hpp>
+#include <angelsea/detail/jitcompiler.hpp>
 
 namespace angelsea
 {
 
-struct JitConfig
-{
-};
-
-class JitCompiler : public asIJITCompiler
+class Jit final : public asIJITCompilerV2
 {
     public:
-    JitCompiler(const JitConfig& config = {}) :
-        m_config(config)
+    Jit(const JitConfig& config, asIScriptEngine& engine) :
+        m_compiler(config, engine)
     {}
 
-	virtual int  CompileFunction(asIScriptFunction* function, asJITFunction* output) override;
-	virtual void ReleaseJITFunction(asJITFunction func) override;
+    ~Jit();
+
+	virtual void NewFunction(asIScriptFunction* scriptFunc) override;
+	virtual void CleanFunction(asIScriptFunction* scriptFunc, asJITFunction jitFunc) override;
+
+    void CompileModules();
 
     private:
-    JitConfig m_config;
+    detail::JitCompiler m_compiler;
 };
 
 }
