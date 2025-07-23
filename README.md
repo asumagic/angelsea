@@ -25,8 +25,9 @@ JIT interface.
 
 As of writing:
 
-- Angelsea is licensed under the [BSD-2-Clause license](LICENSE).
+- **Angelsea is licensed under the [BSD-2-Clause license](LICENSE)**.
 - MIR is licensed under the [MIT license](https://github.com/vnmakarov/mir/blob/master/LICENSE).
+- AngelScript is licensed under the zlib license.
 - libfmt is licensed under the [MIT license](https://github.com/fmtlib/fmt/blob/master/LICENSE) (with optional exception).
 
 Those all have very similar permissive terms, but remember to give attribution
