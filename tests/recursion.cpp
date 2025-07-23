@@ -9,16 +9,17 @@ TEST_CASE("recursive fibonacci", "[fib]")
 	out = {};
 
 	asIScriptModule& module = context.build("build", "scripts/fib.as");
+	context.prepare_execution();
 
 	asIScriptFunction* fib = module.GetFunctionByDecl("int fib(int)");
-	asllvm_test_check(fib != nullptr);
+	ANGELSEA_TEST_CHECK(fib != nullptr);
 
 	asIScriptContext* script_context = context.engine->CreateContext();
 
 	const auto run_fib = [&](int i) -> int {
-		asllvm_test_check(script_context->Prepare(fib) >= 0);
-		asllvm_test_check(script_context->SetArgDWord(0, i) >= 0);
-		asllvm_test_check(script_context->Execute() == asEXECUTION_FINISHED);
+		ANGELSEA_TEST_CHECK(script_context->Prepare(fib) >= 0);
+		ANGELSEA_TEST_CHECK(script_context->SetArgDWord(0, i) >= 0);
+		ANGELSEA_TEST_CHECK(script_context->Execute() == asEXECUTION_FINISHED);
 		return script_context->GetReturnDWord();
 	};
 

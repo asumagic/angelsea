@@ -6,6 +6,15 @@ project(angelsea)
 
 # TODO: allow selecting these from system
 
+#### GLOBAL COMPILER CONFIG
+
+if (CMAKE_BUILD_TYPE MATCHES "Debug")
+    if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+        add_compile_options(-fsanitize=address)
+        add_link_options(-fsanitize=address)
+    endif()
+endif()
+
 #### DEPENDENCIES
 
 # Configure fmtlib build
@@ -46,6 +55,8 @@ add_library(
     angelsea
     STATIC
     src/angelsea/jit.cpp
+    src/angelsea/detail/jitcompiler.cpp
+    src/angelsea/detail/jitfunction.cpp
 )
 target_link_libraries(angelsea PRIVATE fmt mir angelscript)
 target_include_directories(angelsea PUBLIC include/)

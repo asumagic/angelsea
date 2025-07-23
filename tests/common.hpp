@@ -13,7 +13,7 @@
 #define TEST_REQUIRE(name, tag, cond)                                                                                  \
 	TEST_CASE(name, tag) { REQUIRE(cond); }
 
-#define asllvm_test_check(x)                                                                                           \
+#define ANGELSEA_TEST_CHECK(x)                                                                                           \
 	if (!(x))                                                                                                          \
 	{                                                                                                                  \
 		throw std::runtime_error{"check failed: " #x};                                                                 \
@@ -31,7 +31,7 @@ struct EngineContext
 	void register_interface();
 
 	asIScriptModule& build(const char* name, const char* script_path);
-
+	void prepare_execution();
 	void run(asIScriptModule& module, const char* entry_point);
 
 	asIScriptEngine* engine;
