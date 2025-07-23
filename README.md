@@ -26,7 +26,7 @@ JIT interface.
 
 > [!NOTE]
 > The `vendor/angelscript` submodule points to the
-> [unofficial AngelScript](github.com/codecat/angelscript-mirror) git repository
+> [unofficial AngelScript](https://github.com/codecat/angelscript-mirror) git repository
 > mirror by codecat.
 
 #### License notice
