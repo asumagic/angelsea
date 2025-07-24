@@ -29,6 +29,14 @@ void JitCompiler::unregister_function(asIScriptFunction& script_function)
     m_functions.erase(it);
 }
 
+struct InputData
+{
+    std::string* c_source;
+    std::size_t current_offset;
+
+    InputData(std::string& source) : c_source{&source}, current_offset{0} {}
+};
+
 void JitCompiler::compile_all()
 {
     detail::log(*this, LogSeverity::VERBOSE, "Requesting compilation for {} functions", m_functions.size());
@@ -36,25 +44,30 @@ void JitCompiler::compile_all()
     MIR_context_t mir = MIR_init();
     c2mir_init(mir);
 
-    const char* include_dirs[] = {nullptr};
+    // no include dir
+    std::array<const char*, 1> include_dirs {nullptr};
+
+    std::array<c2mir_macro_command, 1> macros {{
+        {.def_p = true, .name = "ANGELSEA_SUPPORT", .def = "1"}
+    }};
 
     c2mir_options c_options {
         .message_file = stderr, // TODO: optional
-        .debug_p = 0,
-        .verbose_p = 0,
-        .ignore_warnings_p = 1,
-        .no_prepro_p = 0,
-        .prepro_only_p = 0,
-        .syntax_only_p = 0,
-        .pedantic_p = 1,
-        .asm_p = 0,
-        .object_p = 0,
+        .debug_p = false,
+        .verbose_p = true,
+        .ignore_warnings_p = false,
+        .no_prepro_p = false,
+        .prepro_only_p = false,
+        .syntax_only_p = false,
+        .pedantic_p = false, // seems to be janky...
+        .asm_p = false,
+        .object_p = false,
         .module_num = 0, // ?
         .prepro_output_file = nullptr,
         .output_file_name = nullptr,
-        .macro_commands_num = 0,
-        .macro_commands = nullptr,
-        .include_dirs = include_dirs
+        .macro_commands_num = macros.size(),
+        .macro_commands = macros.data(),
+        .include_dirs = include_dirs.data()
     };
 
     BytecodeToC c_generator{*this};
@@ -64,7 +77,16 @@ void JitCompiler::compile_all()
 
     auto modules = compute_module_map();
 
-    // TODO: bad names that contain __angelsea_ or something
+    const auto getc_callback = +[](void* user_data) -> int {
+        InputData& info = *static_cast<InputData*>(user_data);
+        if (info.current_offset >= info.c_source->size())
+        {
+            return EOF;
+        }
+        char c = (*info.c_source)[info.current_offset];
+        ++info.current_offset;
+        return c;
+    };
 
     for (auto& [script_module, functions] : modules)
     {
@@ -82,7 +104,8 @@ void JitCompiler::compile_all()
                     std::span{functions}.subspan(i, 1)
                 );
 
-                // c2mir_compile(mir, &c_options, TODO, TODO, "<anon>", nullptr);
+                InputData input_data(c_generator.source());
+                c2mir_compile(mir, &c_options, getc_callback, &input_data, "<anon>", nullptr);
             }
         }
         else
@@ -95,6 +118,9 @@ void JitCompiler::compile_all()
             );
 
             fmt::print("Compiled function:\n{}", c_generator.source());
+
+            InputData input_data(c_generator.source());
+            c2mir_compile(mir, &c_options, getc_callback, &input_data, "<anon>", nullptr);
         }
     }
 

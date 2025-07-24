@@ -76,9 +76,9 @@ FunctionId BytecodeToC::translate_function(
 
     // Local VM variables; load them from the registers
     emit(
-        "\tasDWORD *l_bc = m_regs.programPointer;\n"
-        "\tasDWORD *l_sp = m_regs.stackPointer;\n"
-        "\tasDWORD *l_fp = m_regs.stackFramePointer;\n"
+        "\tasDWORD *l_bc = (*regs).programPointer;\n"
+        "\tasDWORD *l_sp = (*regs).stackPointer;\n"
+        "\tasDWORD *l_fp = (*regs).stackFramePointer;\n"
         "\n"
     );
 
@@ -211,9 +211,9 @@ void BytecodeToC::emit_vm_fallback(JitFunction& function, std::string_view reaso
 {
     // update VM registers
     emit(
-        "\t\tm_regs.programPointer = l_bc;\n"
-        "\t\tm_regs.stackPointer = l_sp;\n"
-        "\t\tm_regs.stackFramePointer = l_fp;\n"
+        "\t\t(*regs).programPointer = l_bc;\n"
+        "\t\t(*regs).stackPointer = l_sp;\n"
+        "\t\t(*regs).stackFramePointer = l_fp;\n"
     );
 
     if (is_human_readable())
@@ -320,22 +320,27 @@ typedef __UINTPTR_TYPE__ asPWORD;
 	#define asBCTYPE_PTR_DW_ARG asBCTYPE_QW_DW_ARG
 	#define asBCTYPE_wW_PTR_ARG asBCTYPE_wW_QW_ARG
 	#define asBCTYPE_rW_PTR_ARG asBCTYPE_rW_QW_ARG
-	#ifndef AS_PTR_SIZE
 	#define AS_PTR_SIZE 2
 #endif
 
-struct asIScriptContext;
-struct asSVMRegisters
+/*
+    Forward declarations if angelsea is not going to need to inspect them for
+    now
+*/
+typedef struct asIScriptContext asIScriptContext;
+typedef struct asITypeInfo asITypeInfo;
+typedef struct
 {
-	asDWORD          *programPointer;     // points to current bytecode instruction
-	asDWORD          *stackFramePointer;  // function stack frame
-	asDWORD          *stackPointer;       // top of stack (grows downward)
-	asQWORD           valueRegister;      // temp register for primitives
-	void             *objectRegister;     // temp register for objects and handles
-	asITypeInfo      *objectType;         // type of object held in object register
-	bool              doProcessSuspend;   // whether or not the JIT should break out when it encounters a suspend instruction
-	asIScriptContext *ctx;                // the active context
-};
+	asDWORD          *programPointer;     /* points to current bytecode instruction */
+	asDWORD          *stackFramePointer;  /* function stack frame */
+	asDWORD          *stackPointer;       /* top of stack (grows downward) */
+	asQWORD           valueRegister;      /* temp register for primitives */
+	void             *objectRegister;     /* temp register for objects and handles */
+	asITypeInfo      *objectType;         /* type of object held in object register */
+	/* HACK: doProcessSuspend is normally defined as bool in C++; assume int equivalent */
+	int              doProcessSuspend;    /* whether or not the JIT should break out when it encounters a suspend instruction */
+	asIScriptContext *ctx;                /* the active context */
+} asSVMRegisters;
 #endif
 
 /* end of angelsea static header */
