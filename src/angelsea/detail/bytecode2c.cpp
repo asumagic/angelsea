@@ -283,9 +283,19 @@ void BytecodeToC::write_header()
 
 /*
     Definitions normally provided by <angelscript.h>, but that in case of JIT we
-    prefer to specify those as standard C
+    override them with definitions provided by c2mir.
 */
 #ifdef ANGELSEA_SUPPORT
+
+typedef __INT8_TYPE__    asINT8;
+typedef __INT16_TYPE__   asINT16;
+typedef __INT32_TYPE__   asINT32;
+typedef __UINT8_TYPE__   asBYTE;
+typedef __UINT16_TYPE__  asWORD;
+typedef __UINT32_TYPE__  asUINT;
+typedef __UINT32_TYPE__  asDWORD;
+typedef __UINT64_TYPE__  asQWORD;
+typedef __UINTPTR_TYPE__ asPWORD;
 
 #define asBC_DWORDARG(x)  (*(((asDWORD*)x)+1))
 #define asBC_INTARG(x)    (*(int*)(((asDWORD*)x)+1))
@@ -297,6 +307,22 @@ void BytecodeToC::write_header()
 #define asBC_SWORDARG0(x) (*(((short*)x)+1))
 #define asBC_SWORDARG1(x) (*(((short*)x)+2))
 #define asBC_SWORDARG2(x) (*(((short*)x)+3))
+
+/* TODO: is this ever used in the VM other than AS_PTR_SIZE? */
+#if __SIZEOF_POINTER__ == 4
+	#define asBCTYPE_PTR_ARG    asBCTYPE_DW_ARG
+	#define asBCTYPE_PTR_DW_ARG asBCTYPE_DW_DW_ARG
+	#define asBCTYPE_wW_PTR_ARG asBCTYPE_wW_DW_ARG
+	#define asBCTYPE_rW_PTR_ARG asBCTYPE_rW_DW_ARG
+	#define AS_PTR_SIZE 1
+#else
+	#define asBCTYPE_PTR_ARG    asBCTYPE_QW_ARG
+	#define asBCTYPE_PTR_DW_ARG asBCTYPE_QW_DW_ARG
+	#define asBCTYPE_wW_PTR_ARG asBCTYPE_wW_QW_ARG
+	#define asBCTYPE_rW_PTR_ARG asBCTYPE_rW_QW_ARG
+	#ifndef AS_PTR_SIZE
+	#define AS_PTR_SIZE 2
+#endif
 
 struct asIScriptContext;
 struct asSVMRegisters
@@ -310,15 +336,6 @@ struct asSVMRegisters
 	bool              doProcessSuspend;   // whether or not the JIT should break out when it encounters a suspend instruction
 	asIScriptContext *ctx;                // the active context
 };
-
-typedef signed char    asINT8;
-typedef signed short   asINT16;
-typedef signed int     asINT32;
-typedef unsigned char  asBYTE;
-typedef unsigned short asWORD;
-typedef unsigned int   asUINT;
-typedef unsigned long long asPWORD; /* angelsea: asPWORD as unsigned long... can we use stdddef/stdint? FIXME: probably broken for 32-bit? */
-
 #endif
 
 /* end of angelsea static header */
