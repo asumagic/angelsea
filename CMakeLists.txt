@@ -57,9 +57,11 @@ add_library(
     src/angelsea/jit.cpp
     src/angelsea/detail/jitcompiler.cpp
     src/angelsea/detail/jitfunction.cpp
+    src/angelsea/detail/bytecode2c.cpp
 )
 target_link_libraries(angelsea PRIVATE fmt mir angelscript)
 target_include_directories(angelsea PUBLIC include/)
+target_compile_features(angelsea PUBLIC cxx_std_20)
 
 # AngelScript CMake module doesn't give us the include
 target_include_directories(angelsea PUBLIC ${ANGELSCRIPT_ROOT}/angelscript/include)

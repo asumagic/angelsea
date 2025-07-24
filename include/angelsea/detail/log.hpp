@@ -6,7 +6,7 @@
 #include <angelsea/config.hpp>
 #include <angelsea/detail/jitcompiler.hpp>
 #include <utility>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace angelsea::detail
 {
@@ -26,6 +26,7 @@ void log_at(
     int row,
     int col,
     LogSeverity severity,
+    fmt::format_string<Ts...> format_string,
     Ts&&... fmt_args
 ) {
     asEMsgType type;
@@ -50,7 +51,10 @@ void log_at(
         break;
     }
 
-    jit.engine().WriteMessage(section, row, col, type, fmt::format(std::forward<Ts>(fmt_args)...).c_str());
+    jit.engine().WriteMessage(
+        section, row, col, type,
+        fmt::format(format_string, std::forward<Ts>(fmt_args)...).c_str()
+    );
 }
 
 template<typename... Ts>
@@ -58,21 +62,23 @@ void log(
     JitCompiler& jit,
     asIScriptFunction& script_func,
     LogSeverity severity,
+    fmt::format_string<Ts...> format_string,
     Ts&&... fmt_args
 ) {
     const char* decl_section;
     int decl_row, decl_col;
     script_func.GetDeclaredAt(&decl_section, &decl_row, &decl_col);
-    log_at(jit, decl_section != nullptr ? decl_section : "", decl_row, decl_col, severity, std::forward<Ts>(fmt_args)...);
+    log_at(jit, decl_section != nullptr ? decl_section : "", decl_row, decl_col, severity, format_string, std::forward<Ts>(fmt_args)...);
 }
 
 template<typename... Ts>
 void log(
     JitCompiler& jit,
     LogSeverity severity,
+    fmt::format_string<Ts...> format_string,
     Ts&&... fmt_args
 ) {
-    log_at(jit, "", 0, 0, severity, std::forward<Ts>(fmt_args)...);
+    log_at(jit, "", 0, 0, severity, format_string, std::forward<Ts>(fmt_args)...);
 }
 
 }

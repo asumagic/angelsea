@@ -14,6 +14,9 @@ class JitFunction
     public:
     JitFunction(JitCompiler& compiler, asIScriptFunction& script_function);
 
+    asIScriptFunction& script_function() { return *m_script_function; }
+    const asIScriptFunction& script_function() const { return *m_script_function; }
+
     private:
     JitCompiler& m_compiler;
     asIScriptFunction* m_script_function;

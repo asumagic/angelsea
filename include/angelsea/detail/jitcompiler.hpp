@@ -6,6 +6,7 @@
 #include <angelsea/config.hpp>
 #include <angelsea/detail/jitfunction.hpp>
 #include <unordered_map>
+#include <vector>
 
 namespace angelsea::detail
 {
@@ -28,6 +29,8 @@ class JitCompiler
 
     JitFunction* get_jit_function(asIScriptFunction& module);
     JitFunction& get_or_create_jit_function(asIScriptFunction& module);
+
+    std::unordered_map<asIScriptModule*, std::vector<JitFunction*>> compute_module_map();
 
     private:
     JitConfig m_config;

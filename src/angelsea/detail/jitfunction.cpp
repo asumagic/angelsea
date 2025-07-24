@@ -10,7 +10,11 @@ JitFunction::JitFunction(JitCompiler& compiler, asIScriptFunction& script_functi
     m_compiler(compiler),
     m_script_function(&script_function)
 {
-    detail::log(m_compiler, script_function, LogSeverity::VERBOSE, "Registering \"{}\" for compilation", script_function.GetDeclaration(true, true, true));
+    detail::log(
+        m_compiler, script_function, LogSeverity::VERBOSE,
+        "Registering \"{}\" for compilation",
+        script_function.GetDeclaration(true, true, true)
+    );
 }
 
 
