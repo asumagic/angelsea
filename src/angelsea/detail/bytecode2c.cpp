@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include "angelscript.h"
 #include "angelsea/detail/bytecodeinstruction.hpp"
 #define FMT_COMPILE
 #include <fmt/format.h>
@@ -7,6 +8,7 @@
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/bytecodedisasm.hpp>
 #include <angelsea/detail/bytecodetools.hpp>
+#include <angelsea/detail/log.hpp>
 
 namespace angelsea::detail
 {
@@ -69,8 +71,90 @@ FunctionId BytecodeToC::translate_function(
     // JIT entry signature is `void(asSVMRegisters *regs, asPWORD jitArg)`
     emit("void {name}(asSVMRegisters *regs, asPWORD entryLabel) {{\n", fmt::arg("name", func_name));
 
-    walk_bytecode(get_bytecode(function.script_function()), [&](BytecodeInstruction instruction) {
-        emit("\t// bytecode: {}\n", disassemble(m_compiler->engine(), instruction));
+    // Transpiled functions are compiled to be JIT entry points for the
+    // AngelScript VM.
+    //
+    // The conversion process is relatively simple: There is no deep analysis of
+    // bytecode; for each bytecode instruction we emit one block of C code,
+    // which is largely similar to the equivalent source code in the AngelScript
+    // VM (asCContext::ExecuteNext()).
+    // If we can't handle an instruction, we rebuild whatever state we need to
+    // return to the VM and we `return;` out of the function. This includes
+    // instructions we might not be supporting yet, or that are too complex to
+    // implement.
+    //
+    // A script function may have one equivalent JIT function (the one we are
+    // emitting here).
+    // To differentiate between JIT entry points, we can assign a non-zero
+    // asPWORD to each of them.
+    // We handle this by simply assigning each asBC_JitEntry a unique increasing
+    // number (we will call this an entry ID). We then simply `switch` on that
+    // entry ID (see later) to `goto` to the C handler of a given bytecode
+    // instruction.
+    //
+    // A transpiled function looks like this (simplified, with offsets made up,
+    // etc.):
+    //
+    // void asea_jit_mod1_fn3(asSVMRegisters *regs, asPWORD entryLabel) {
+    //     switch (entryLabel)
+    //     {
+    //     case 1: goto bc0;
+    //     case 2: goto bc7;
+    //     }
+    // 
+    //     /* bytecode: JitEntry 1 */
+    //     bc0: { /* <-- unique C label where the value is the equivalent bytecode offset */
+    //         /* <- no useful handler for jit entries */
+    //     }
+    //     /* fallthrough to the next instruction */
+    //
+    //     /* bytecode: [DISASSEMBLED INSTRUCTION] */
+    //     bc3: {
+    //         blah blah do stuff
+    //         /* <-- code handling the instruction */
+    //     }
+    //     /* fallthrough to the next instruction */
+    //
+    //     /* bytecode: JitEntry 2 */
+    //     bc3: {
+    //     }
+    //
+    //     etc.
+    // }
+
+    emit_entry_dispatch(function);
+
+    walk_bytecode(get_bytecode(function.script_function()), [&](BytecodeInstruction ins) {
+        if (is_human_readable())
+        {
+            emit("\t/* bytecode: {} */\n", disassemble(m_compiler->engine(), ins));
+        }
+
+        emit("\tbc{}: {{\n", ins.offset);
+
+        switch(ins.info->bc)
+        {
+        case asBC_JitEntry:
+        {
+            // no need to emit anything
+            break;
+        }
+
+        case asBC_SUSPEND:
+        {
+            log(*m_compiler, function.script_function(), LogSeverity::PERF_WARNING, "asBC_SUSPEND found; this will fallback to the VM and be slow!");
+            emit_vm_fallback(function, "SUSPEND is not implemented yet");
+            break;
+        }
+
+        default:
+        {
+            emit_vm_fallback(function, "unsupported instruction");
+            break;
+        }
+        }
+
+        emit("\t}}\n");
     });
 
     emit("}}\n");
@@ -83,6 +167,42 @@ std::string BytecodeToC::entry_point_name(
     FunctionId function_id
 ) const {
     return fmt::format("asea_jit_mod{}_fn{}", module_id, function_id);
+}
+
+void BytecodeToC::emit_entry_dispatch(JitFunction& function)
+{
+    // 0 means the JIT entry point will not be used, start at 1
+    asPWORD current_entry_id = 1;
+
+    emit("\tswitch(entryLabel) {{\n");
+
+    walk_bytecode(get_bytecode(function.script_function()), [&](BytecodeInstruction ins) {
+        if (ins.info->bc != asBC_JitEntry)
+        {
+            return; // skip to the next
+        }
+
+        // patch the JIT entry with the index we use in the switch
+        ins.arg_pword() = current_entry_id;
+
+        emit("\tcase {}: goto bc{};\n", current_entry_id, ins.offset);
+
+        ++current_entry_id;
+    });
+
+    emit("\t}}\n\n");
+}
+
+void BytecodeToC::emit_vm_fallback(JitFunction& function, std::string_view reason)
+{
+    if (is_human_readable())
+    {
+        emit("\t\treturn; /* {} */\n", reason);
+    }
+    else
+    {
+        emit("\t\treturn;\n");
+    }
 }
 
 bool BytecodeToC::is_human_readable() const

@@ -62,6 +62,9 @@ class BytecodeToC
         fmt::format_to(std::back_inserter(m_buffer), format, std::forward<Ts>(format_args)...);
     }
 
+    void emit_entry_dispatch(JitFunction& function);
+    void emit_vm_fallback(JitFunction& function, std::string_view reason);
+
     JitCompiler* m_compiler;
     std::string m_buffer;
     ModuleId m_current_module_id;

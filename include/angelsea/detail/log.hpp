@@ -16,6 +16,7 @@ enum class LogSeverity
     VERBOSE,
     INFO,
     WARNING,
+    PERF_WARNING,
     ERROR
 };
 
@@ -42,6 +43,7 @@ void log_at(
         type = asMSGTYPE_INFORMATION;
         break;
 
+    case LogSeverity::PERF_WARNING:
     case LogSeverity::WARNING:
         type = asMSGTYPE_WARNING;
         break;
