@@ -58,6 +58,9 @@ void JitCompiler::compile_all()
     };
 
     BytecodeToC c_generator{*this};
+    c_generator.set_map_function_callback([](JitFunction& function, const std::string& name) {
+        // TODO
+    });
 
     auto modules = compute_module_map();
 

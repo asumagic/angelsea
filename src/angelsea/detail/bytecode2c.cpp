@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include "angelsea/detail/bytecodeinstruction.hpp"
 #define FMT_COMPILE
 #include <fmt/format.h>
 
 #include <angelsea/detail/bytecode2c.hpp>
+#include <angelsea/detail/bytecodedisasm.hpp>
+#include <angelsea/detail/bytecodetools.hpp>
 
 namespace angelsea::detail
 {
@@ -50,6 +53,10 @@ FunctionId BytecodeToC::translate_function(
     ++m_current_function_id;
 
     const auto func_name = entry_point_name(m_current_module_id, m_current_function_id);
+    if (m_on_map_function_callback)
+    {
+        m_on_map_function_callback(function, func_name);
+    }
 
     if (is_human_readable())
     {
@@ -61,6 +68,10 @@ FunctionId BytecodeToC::translate_function(
 
     // JIT entry signature is `void(asSVMRegisters *regs, asPWORD jitArg)`
     emit("void {name}(asSVMRegisters *regs, asPWORD entryLabel) {{\n", fmt::arg("name", func_name));
+
+    walk_bytecode(get_bytecode(function.script_function()), [&](BytecodeInstruction instruction) {
+        emit("\t// bytecode: {}\n", disassemble(m_compiler->engine(), instruction));
+    });
 
     emit("}}\n");
 
@@ -81,7 +92,7 @@ bool BytecodeToC::is_human_readable() const
 
 void BytecodeToC::write_header()
 {
-    m_buffer += R"$(/* angelsea static header */
+    m_buffer += R"$(/* start of angelsea static header */
 
 /*
     This generated source file contains macro definitions and references to
@@ -165,7 +176,7 @@ typedef signed int     asINT32;
 typedef unsigned char  asBYTE;
 typedef unsigned short asWORD;
 typedef unsigned int   asUINT;
-typedef unsigned long long asPWORD; /* angelsea: asPWORD as unsigned long... FIXME: probably broken for 32-bit? */
+typedef unsigned long long asPWORD; /* angelsea: asPWORD as unsigned long... can we use stdddef/stdint? FIXME: probably broken for 32-bit? */
 
 #endif
 
