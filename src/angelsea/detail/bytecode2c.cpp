@@ -69,7 +69,18 @@ FunctionId BytecodeToC::translate_function(
     }
 
     // JIT entry signature is `void(asSVMRegisters *regs, asPWORD jitArg)`
-    emit("void {name}(asSVMRegisters *regs, asPWORD entryLabel) {{\n", fmt::arg("name", func_name));
+    emit(
+        "void {name}(asSVMRegisters *regs, asPWORD entryLabel) {{\n",
+        fmt::arg("name", func_name)
+    );
+
+    // Local VM variables; load them from the registers
+    emit(
+        "\tasDWORD *l_bc = m_regs.programPointer;\n"
+        "\tasDWORD *l_sp = m_regs.stackPointer;\n"
+        "\tasDWORD *l_fp = m_regs.stackFramePointer;\n"
+        "\n"
+    );
 
     // Transpiled functions are compiled to be JIT entry points for the
     // AngelScript VM.
@@ -132,11 +143,14 @@ FunctionId BytecodeToC::translate_function(
 
         emit("\tbc{}: {{\n", ins.offset);
 
+        // TODO: after a fallback don't bother emitting fallback code at all
+        // until the next JitEntry
+
         switch(ins.info->bc)
         {
         case asBC_JitEntry:
         {
-            // no need to emit anything
+            emit("\t\tl_bc += 1+AS_PTR_SIZE;\n");
             break;
         }
 
@@ -195,6 +209,13 @@ void BytecodeToC::emit_entry_dispatch(JitFunction& function)
 
 void BytecodeToC::emit_vm_fallback(JitFunction& function, std::string_view reason)
 {
+    // update VM registers
+    emit(
+        "\t\tm_regs.programPointer = l_bc;\n"
+        "\t\tm_regs.stackPointer = l_sp;\n"
+        "\t\tm_regs.stackFramePointer = l_fp;\n"
+    );
+
     if (is_human_readable())
     {
         emit("\t\treturn; /* {} */\n", reason);
