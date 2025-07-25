@@ -11,7 +11,7 @@ void Jit::CleanFunction(asIScriptFunction* scriptFunc, asJITFunction jitFunc) {
 	std::ignore = jitFunc;
 }
 
-void Jit::CompileModules() { m_compiler.compile_all(); }
+bool Jit::CompileModules() { return m_compiler.compile_all(); }
 
 Jit::~Jit() {}
 

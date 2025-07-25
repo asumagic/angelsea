@@ -115,7 +115,7 @@ asIScriptModule& EngineContext::build(const char* name, const char* script_path)
 
 void EngineContext::prepare_execution() {
 #ifndef DEBUG_DISABLE_JIT
-	jit.CompileModules();
+	ANGELSEA_TEST_CHECK(jit.CompileModules());
 #endif
 }
 

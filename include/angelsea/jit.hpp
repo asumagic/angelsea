@@ -17,7 +17,7 @@ class Jit final : public asIJITCompilerV2 {
 	virtual void NewFunction(asIScriptFunction* scriptFunc) override;
 	virtual void CleanFunction(asIScriptFunction* scriptFunc, asJITFunction jitFunc) override;
 
-	void CompileModules();
+	bool CompileModules();
 
 	private:
 	detail::JitCompiler m_compiler;

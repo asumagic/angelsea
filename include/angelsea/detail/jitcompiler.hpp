@@ -20,7 +20,7 @@ class JitCompiler {
 	void register_function(asIScriptFunction& script_function);
 	void unregister_function(asIScriptFunction& script_function);
 
-	void compile_all();
+	bool compile_all();
 
 	JitFunction* get_jit_function(asIScriptFunction& module);
 	JitFunction& get_or_create_jit_function(asIScriptFunction& module);

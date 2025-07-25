@@ -34,7 +34,7 @@ struct InputData {
 	InputData(std::string& source) : c_source{&source}, current_offset{0} {}
 };
 
-void JitCompiler::compile_all() {
+bool JitCompiler::compile_all() {
 	detail::log(*this, LogSeverity::VERBOSE, "Requesting compilation for {} functions", m_functions.size());
 
 	MIR_context_t mir = MIR_init();
@@ -83,6 +83,8 @@ void JitCompiler::compile_all() {
 		return c;
 	};
 
+	bool success = true;
+
 	// NOTE: I don't think there is fundamentally something that makes it
 	// impossible or impractical to generate all modules within the same C
 	// source file other than maybe compile time overhead.
@@ -109,6 +111,7 @@ void JitCompiler::compile_all() {
 		      InputData input_data(c_generator.source());
 		      if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, internal_module_name, nullptr)) {
 			      log(*this, LogSeverity::ERROR, "Failed to compile translated C module \"{}\"", internal_module_name);
+			      success = false;
 		      }
 
 		      if (c_generator.get_fallback_count() > 0) {
@@ -182,6 +185,8 @@ void JitCompiler::compile_all() {
 					    LogSeverity::ERROR,
 					    "Failed to compile function `{}`",
 					    jit_function.script_function().GetDeclaration(true, true, true));
+
+					success = false;
 				}
 
 				const auto err = jit_function.script_function().SetJITFunction(entry_point);
@@ -192,6 +197,8 @@ void JitCompiler::compile_all() {
 					    LogSeverity::ERROR,
 					    "Failed to set JIT function (asNOT_SUPPORTED), did you forget to set "
 					    "asEP_JIT_INTERFACE_VERSION to 2?");
+
+					success = false;
 				}
 			}
 		}
@@ -205,6 +212,8 @@ void JitCompiler::compile_all() {
 	MIR_gen_finish(mir);
 
 	// FIXME: free MIR context at destruction time
+
+	return success;
 }
 
 JitFunction* JitCompiler::get_jit_function(asIScriptFunction& function) {
