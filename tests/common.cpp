@@ -42,6 +42,11 @@ void print_uint(unsigned long value) { out << value << '\n'; }
 void print_char(char value) { out << value; }
 } // namespace bindings
 
+bool is_env_set(const char* env) {
+	const char* env_value = getenv(env);
+	return env_value != nullptr && *env_value != '\0';
+}
+
 bool set_env_int_variable(const char* env, int& target) {
 	const char* env_value = getenv(env);
 
@@ -58,8 +63,8 @@ angelsea::JitConfig get_test_jit_config() {
 	angelsea::JitConfig config{
 	    .warn_if_never_compiled = false,
 	    .log_targets            = {},
-	    .dump_c_code            = (getenv("ASEA_DUMP_C") != nullptr),
-	    .dump_mir_code          = (getenv("ASEA_DUMP_MIR") != nullptr)
+	    .dump_c_code            = is_env_set("ASEA_DUMP_C"),
+	    .dump_mir_code          = is_env_set("ASEA_DUMP_MIR"),
 	};
 
 	set_env_int_variable("ASEA_MIR_DEBUG_LEVEL", config.mir_debug_level);
