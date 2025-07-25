@@ -330,6 +330,14 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		emit_arithmetic_simple_stack_stack(ins, "+", "int");
 		break;
 	}
+	case asBC_SUBi: {
+		emit_arithmetic_simple_stack_stack(ins, "-", "int");
+		break;
+	}
+	case asBC_MULi: {
+		emit_arithmetic_simple_stack_stack(ins, "*", "int");
+		break;
+	}
 
 	case asBC_SUBIi: {
 		emit_arithmetic_simple_stack_imm(ins, "-", "int", fmt::to_string(ins.int0(1)));
@@ -436,8 +444,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_iTOd:
 	case asBC_uTOd:
 	case asBC_fTOd:
-	case asBC_SUBi:
-	case asBC_MULi:
 	case asBC_DIVi:
 	case asBC_MODi:
 	case asBC_ADDf:
