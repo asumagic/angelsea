@@ -294,6 +294,17 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
         break;
     }
 
+    case asBC_JMP:
+    {
+        emit(
+            "\t\tl_bc += {BRANCH_OFFSET};\n"
+            "\t\tgoto bc{BRANCH_TARGET};\n",
+            fmt::arg("BRANCH_OFFSET", ins.int0() + 2),
+            fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + 2))
+        );
+        break;
+    }
+
     case asBC_JZ: { emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) == 0"); break; }
     case asBC_JNZ: { emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) != 0"); break; }
     case asBC_JS: { emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) < 0"); break; }
@@ -310,7 +321,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
     case asBC_PshG4:
     case asBC_LdGRdR4:
     case asBC_RET:
-    case asBC_JMP:
     case asBC_TZ:
     case asBC_TNZ:
     case asBC_TS:
