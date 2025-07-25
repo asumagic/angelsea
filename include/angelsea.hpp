@@ -2,4 +2,5 @@
 
 #pragma once
 
-#include <angelsea.hpp>
+#include <angelsea/config.hpp>
+#include <angelsea/jit.hpp>
