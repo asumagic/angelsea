@@ -54,7 +54,7 @@ void JitCompiler::compile_all()
     }};
 
     c2mir_options c_options {
-        .message_file = nullptr, // TODO: optional
+        .message_file = stderr, // TODO: optional
         .debug_p = false,
         .verbose_p = false,
         .ignore_warnings_p = false,
@@ -105,6 +105,7 @@ void JitCompiler::compile_all()
     // TODO: Investigate if partial recompiles work, and make them more
     // efficient
 
+
     for (auto& [script_module, functions] : modules)
     {
         if (script_module == nullptr)
@@ -120,9 +121,13 @@ void JitCompiler::compile_all()
                     script_module,
                     std::span{functions}.subspan(i, 1)
                 );
+                // fmt::print(stderr, "Translated function:\n{}", c_generator.source());
 
                 InputData input_data(c_generator.source());
-                c2mir_compile(mir, &c_options, getc_callback, &input_data, "<anon>", nullptr);
+                if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, "<anon>", nullptr))
+                {
+                    log(*this, functions[i]->script_function(), LogSeverity::ERROR, "Failed to compile translated C function `{}`", functions[i]->script_function().GetDeclaration(true, true, true));
+                }
             }
         }
         else
@@ -134,10 +139,13 @@ void JitCompiler::compile_all()
                 std::span{functions}
             );
 
-            fmt::print("Compiled function:\n{}", c_generator.source());
+            // fmt::print(stderr, "Translated function:\n{}", c_generator.source());
 
             InputData input_data(c_generator.source());
-            c2mir_compile(mir, &c_options, getc_callback, &input_data, script_module->GetName(), nullptr);
+            if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, script_module->GetName(), nullptr))
+            {
+                log(*this, LogSeverity::ERROR, "Failed to compile translated C module \"{}\"", script_module->GetName());
+            }
         }
     }
 
@@ -202,7 +210,7 @@ void JitCompiler::compile_all()
         }
     }
 
-    MIR_output(mir, stderr);
+    // MIR_output(mir, stderr);
 
     MIR_gen_finish(mir);
 

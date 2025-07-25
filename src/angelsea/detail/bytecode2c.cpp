@@ -65,7 +65,13 @@ FunctionId BytecodeToC::translate_function(
         const char* section_name;
         int row, col;
         function.script_function().GetDeclaredAt(&section_name, &row, &col);
-        emit("/* {}:{}:{}: {} */\n", section_name, row, col, function.script_function().GetDeclaration(true, true, true));
+        emit(
+            "/* {}:{}:{}: {} */\n",
+            section_name != nullptr ? section_name : "<anon>",
+            row,
+            col,
+            function.script_function().GetDeclaration(true, true, true)
+        );
     }
 
     // JIT entry signature is `void(asSVMRegisters *regs, asPWORD jitArg)`
