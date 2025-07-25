@@ -422,6 +422,16 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		break;
 	}
 
+	case asBC_i64TOi: {
+		emit(
+		    "\t\t*(l_fp - {SWORD0}) = (int)(*(asINT64*)(l_fp - {SWORD1}));\n"
+		    "\t\tl_bc += 2;\n",
+		    fmt::arg("SWORD0", ins.sword0()),
+		    fmt::arg("SWORD1", ins.sword1())
+		);
+		break;
+	}
+
 	case asBC_PopPtr:
 	case asBC_PshGPtr:
 	case asBC_PSF:
@@ -542,7 +552,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_iTOb:
 	case asBC_iTOw:
 	case asBC_Cast:
-	case asBC_i64TOi:
 	case asBC_uTOi64:
 	case asBC_iTOi64:
 	case asBC_fTOi64:
