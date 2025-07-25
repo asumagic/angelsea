@@ -252,7 +252,8 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
     case asBC_CpyRtoV4:
     {
         emit(
-            "\t\t*(asDWORD*)(l_fp - {SWORDARG0}) = DEREF_VALUEREG(asDWORD);\n",
+            "\t\t*(asDWORD*)(l_fp - {SWORDARG0}) = DEREF_VALUEREG(asDWORD);\n"
+            "\t\tl_bc++;\n",
             fmt::arg("SWORDARG0", ins.sword0())
         );
         break;
