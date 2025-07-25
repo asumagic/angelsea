@@ -1,0 +1,1147 @@
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bcb2001b0, len=336) -- time 1.92 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca73c1b0, len=336) -- time 1.59 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca73b1b0, len=336) -- time 1.56 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca7261b0, len=336) -- time 1.46 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca7251b0, len=336) -- time 1.02 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca7241b0, len=336) -- time 1.07 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca7231b0, len=336) -- time 1.02 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca7221b0, len=336) -- time 1.03 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca7211b0, len=336) -- time 1.05 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca7201b0, len=336) -- time 1.03 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca71f1b0, len=336) -- time 1.05 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca71e1b0, len=336) -- time 1.03 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca71d1b0, len=336) -- time 1.08 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca71c1b0, len=336) -- time 1.05 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca71b1b0, len=336) -- time 1.04 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca71a1b0, len=336) -- time 1.08 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca7191b0, len=336) -- time 1.05 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca7181b0, len=336) -- time 4.68 ms
+str:1:1: WARN: asBC_SUSPEND found; this will fallback to the VM and be slow!
+:0:0: WARN: Number of fallbacks for module "build": 4
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 91 MIR insns (addr=7f3bca7171b0, len=384) -- time 1.29 ms
+:0:0: WARN: Number of fallbacks for module "build": 191
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 20 MIR insns (addr=7f3bca7164f0, len=80) -- time 0.37 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 30 MIR insns (addr=7f3bca716540, len=112) -- time 0.41 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 53 MIR insns (addr=7f3bca7165b0, len=240) -- time 0.70 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 49 MIR insns (addr=7f3bca7166a0, len=208) -- time 0.52 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 65 MIR insns (addr=7f3bca716770, len=288) -- time 0.65 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 61 MIR insns (addr=7f3bca716890, len=272) -- time 0.77 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 26 MIR insns (addr=7f3bca7169a0, len=96) -- time 0.38 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 57 MIR insns (addr=7f3bca716a00, len=240) -- time 0.59 ms
+Code generation of function asea_jit_mod1_fn9:
+  Code generation for asea_jit_mod1_fn9: 45 MIR insns (addr=7f3bca716af0, len=192) -- time 0.47 ms
+Code generation of function asea_jit_mod1_fn10:
+  Code generation for asea_jit_mod1_fn10: 20 MIR insns (addr=7f3bca716bb0, len=80) -- time 0.27 ms
+Code generation of function asea_jit_mod1_fn11:
+  Code generation for asea_jit_mod1_fn11: 78 MIR insns (addr=7f3bca716c00, len=320) -- time 1.06 ms
+Code generation of function asea_jit_mod1_fn12:
+  Code generation for asea_jit_mod1_fn12: 231 MIR insns (addr=7f3bca715000, len=1008) -- time 2.95 ms
+Code generation of function asea_jit_mod1_fn13:
+  Code generation for asea_jit_mod1_fn13: 41 MIR insns (addr=7f3bca7153f0, len=176) -- time 0.49 ms
+Code generation of function asea_jit_mod1_fn14:
+  Code generation for asea_jit_mod1_fn14: 109 MIR insns (addr=7f3bca7154a0, len=464) -- time 1.15 ms
+:0:0: WARN: Number of fallbacks for module "build": 191
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 20 MIR insns (addr=7f3bca7144f0, len=80) -- time 0.37 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 30 MIR insns (addr=7f3bca714540, len=112) -- time 0.41 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 53 MIR insns (addr=7f3bca7145b0, len=240) -- time 0.66 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 49 MIR insns (addr=7f3bca7146a0, len=208) -- time 0.51 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 65 MIR insns (addr=7f3bca714770, len=288) -- time 0.66 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 61 MIR insns (addr=7f3bca714890, len=272) -- time 0.76 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 26 MIR insns (addr=7f3bca7149a0, len=96) -- time 0.41 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 57 MIR insns (addr=7f3bca714a00, len=240) -- time 0.57 ms
+Code generation of function asea_jit_mod1_fn9:
+  Code generation for asea_jit_mod1_fn9: 45 MIR insns (addr=7f3bca714af0, len=192) -- time 0.49 ms
+Code generation of function asea_jit_mod1_fn10:
+  Code generation for asea_jit_mod1_fn10: 20 MIR insns (addr=7f3bca714bb0, len=80) -- time 0.27 ms
+Code generation of function asea_jit_mod1_fn11:
+  Code generation for asea_jit_mod1_fn11: 78 MIR insns (addr=7f3bca714c00, len=320) -- time 1.04 ms
+Code generation of function asea_jit_mod1_fn12:
+  Code generation for asea_jit_mod1_fn12: 231 MIR insns (addr=7f3bca713000, len=1008) -- time 2.96 ms
+Code generation of function asea_jit_mod1_fn13:
+  Code generation for asea_jit_mod1_fn13: 41 MIR insns (addr=7f3bca7133f0, len=176) -- time 0.49 ms
+Code generation of function asea_jit_mod1_fn14:
+  Code generation for asea_jit_mod1_fn14: 109 MIR insns (addr=7f3bca7134a0, len=464) -- time 1.14 ms
+:0:0: WARN: Number of fallbacks for module "build": 191
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 20 MIR insns (addr=7f3bca7124f0, len=80) -- time 0.37 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 30 MIR insns (addr=7f3bca712540, len=112) -- time 0.41 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 53 MIR insns (addr=7f3bca7125b0, len=240) -- time 0.69 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 49 MIR insns (addr=7f3bca7126a0, len=208) -- time 0.52 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 65 MIR insns (addr=7f3bca712770, len=288) -- time 0.62 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 61 MIR insns (addr=7f3bca712890, len=272) -- time 0.77 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 26 MIR insns (addr=7f3bca7129a0, len=96) -- time 0.39 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 57 MIR insns (addr=7f3bca712a00, len=240) -- time 0.57 ms
+Code generation of function asea_jit_mod1_fn9:
+  Code generation for asea_jit_mod1_fn9: 45 MIR insns (addr=7f3bca712af0, len=192) -- time 0.50 ms
+Code generation of function asea_jit_mod1_fn10:
+  Code generation for asea_jit_mod1_fn10: 20 MIR insns (addr=7f3bca712bb0, len=80) -- time 0.27 ms
+Code generation of function asea_jit_mod1_fn11:
+  Code generation for asea_jit_mod1_fn11: 78 MIR insns (addr=7f3bca712c00, len=320) -- time 1.07 ms
+Code generation of function asea_jit_mod1_fn12:
+  Code generation for asea_jit_mod1_fn12: 231 MIR insns (addr=7f3bca711000, len=1008) -- time 2.94 ms
+Code generation of function asea_jit_mod1_fn13:
+  Code generation for asea_jit_mod1_fn13: 41 MIR insns (addr=7f3bca7113f0, len=176) -- time 0.52 ms
+Code generation of function asea_jit_mod1_fn14:
+  Code generation for asea_jit_mod1_fn14: 109 MIR insns (addr=7f3bca7114a0, len=464) -- time 1.17 ms
+:0:0: WARN: Number of fallbacks for module "build": 191
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 20 MIR insns (addr=7f3bca7104f0, len=80) -- time 0.38 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 30 MIR insns (addr=7f3bca710540, len=112) -- time 0.60 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 53 MIR insns (addr=7f3bca7105b0, len=240) -- time 0.68 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 49 MIR insns (addr=7f3bca7106a0, len=208) -- time 0.51 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 65 MIR insns (addr=7f3bca710770, len=288) -- time 0.64 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 61 MIR insns (addr=7f3bca710890, len=272) -- time 0.80 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 26 MIR insns (addr=7f3bca7109a0, len=96) -- time 0.38 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 57 MIR insns (addr=7f3bca710a00, len=240) -- time 0.60 ms
+Code generation of function asea_jit_mod1_fn9:
+  Code generation for asea_jit_mod1_fn9: 45 MIR insns (addr=7f3bca710af0, len=192) -- time 0.49 ms
+Code generation of function asea_jit_mod1_fn10:
+  Code generation for asea_jit_mod1_fn10: 20 MIR insns (addr=7f3bca710bb0, len=80) -- time 0.27 ms
+Code generation of function asea_jit_mod1_fn11:
+  Code generation for asea_jit_mod1_fn11: 78 MIR insns (addr=7f3bca710c00, len=320) -- time 1.05 ms
+Code generation of function asea_jit_mod1_fn12:
+  Code generation for asea_jit_mod1_fn12: 231 MIR insns (addr=7f3bca70f000, len=1008) -- time 2.94 ms
+Code generation of function asea_jit_mod1_fn13:
+  Code generation for asea_jit_mod1_fn13: 41 MIR insns (addr=7f3bca70f3f0, len=176) -- time 0.52 ms
+Code generation of function asea_jit_mod1_fn14:
+  Code generation for asea_jit_mod1_fn14: 109 MIR insns (addr=7f3bca70f4a0, len=464) -- time 1.17 ms
+:0:0: WARN: Number of fallbacks for module "build": 191
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 20 MIR insns (addr=7f3bca70e4f0, len=80) -- time 0.38 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 30 MIR insns (addr=7f3bca70e540, len=112) -- time 0.40 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 53 MIR insns (addr=7f3bca70e5b0, len=240) -- time 0.69 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 49 MIR insns (addr=7f3bca70e6a0, len=208) -- time 0.56 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 65 MIR insns (addr=7f3bca70e770, len=288) -- time 0.65 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 61 MIR insns (addr=7f3bca70e890, len=272) -- time 0.76 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 26 MIR insns (addr=7f3bca70e9a0, len=96) -- time 0.39 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 57 MIR insns (addr=7f3bca70ea00, len=240) -- time 0.57 ms
+Code generation of function asea_jit_mod1_fn9:
+  Code generation for asea_jit_mod1_fn9: 45 MIR insns (addr=7f3bca70eaf0, len=192) -- time 0.51 ms
+Code generation of function asea_jit_mod1_fn10:
+  Code generation for asea_jit_mod1_fn10: 20 MIR insns (addr=7f3bca70ebb0, len=80) -- time 0.26 ms
+Code generation of function asea_jit_mod1_fn11:
+  Code generation for asea_jit_mod1_fn11: 78 MIR insns (addr=7f3bca70ec00, len=320) -- time 1.05 ms
+Code generation of function asea_jit_mod1_fn12:
+  Code generation for asea_jit_mod1_fn12: 231 MIR insns (addr=7f3bca70d000, len=1008) -- time 3.00 ms
+Code generation of function asea_jit_mod1_fn13:
+  Code generation for asea_jit_mod1_fn13: 41 MIR insns (addr=7f3bca70d3f0, len=176) -- time 0.51 ms
+Code generation of function asea_jit_mod1_fn14:
+  Code generation for asea_jit_mod1_fn14: 109 MIR insns (addr=7f3bca70d4a0, len=464) -- time 1.17 ms
+:0:0: WARN: Number of fallbacks for module "build": 191
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 20 MIR insns (addr=7f3bca70c4f0, len=80) -- time 0.39 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 30 MIR insns (addr=7f3bca70c540, len=112) -- time 0.43 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 53 MIR insns (addr=7f3bca70c5b0, len=240) -- time 0.67 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 49 MIR insns (addr=7f3bca70c6a0, len=208) -- time 0.50 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 65 MIR insns (addr=7f3bca70c770, len=288) -- time 0.81 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 61 MIR insns (addr=7f3bca70c890, len=272) -- time 0.76 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 26 MIR insns (addr=7f3bca70c9a0, len=96) -- time 0.41 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 57 MIR insns (addr=7f3bca70ca00, len=240) -- time 0.58 ms
+Code generation of function asea_jit_mod1_fn9:
+  Code generation for asea_jit_mod1_fn9: 45 MIR insns (addr=7f3bca70caf0, len=192) -- time 0.49 ms
+Code generation of function asea_jit_mod1_fn10:
+  Code generation for asea_jit_mod1_fn10: 20 MIR insns (addr=7f3bca70cbb0, len=80) -- time 0.28 ms
+Code generation of function asea_jit_mod1_fn11:
+  Code generation for asea_jit_mod1_fn11: 78 MIR insns (addr=7f3bca70cc00, len=320) -- time 1.06 ms
+Code generation of function asea_jit_mod1_fn12:
+  Code generation for asea_jit_mod1_fn12: 231 MIR insns (addr=7f3bca70b000, len=1008) -- time 2.94 ms
+Code generation of function asea_jit_mod1_fn13:
+  Code generation for asea_jit_mod1_fn13: 41 MIR insns (addr=7f3bca70b3f0, len=176) -- time 0.51 ms
+Code generation of function asea_jit_mod1_fn14:
+  Code generation for asea_jit_mod1_fn14: 109 MIR insns (addr=7f3bca70b4a0, len=464) -- time 1.19 ms
+:0:0: WARN: Number of fallbacks for module "build": 19
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 50 MIR insns (addr=7f3bca70a1f0, len=224) -- time 0.71 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 200 MIR insns (addr=7f3bca70a2d0, len=864) -- time 2.46 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 73 MIR insns (addr=7f3bca7091b0, len=320) -- time 0.92 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 73 MIR insns (addr=7f3bca7081b0, len=320) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 72 MIR insns (addr=7f3bca7071b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 72 MIR insns (addr=7f3bca7061b0, len=320) -- time 1.05 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 73 MIR insns (addr=7f3bca7051b0, len=320) -- time 0.96 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca7041b0, len=320) -- time 1.04 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 72 MIR insns (addr=7f3bca7031b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca7021b0, len=320) -- time 1.05 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 73 MIR insns (addr=7f3bca7011b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca7001b0, len=320) -- time 0.99 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 72 MIR insns (addr=7f3bca51b1b0, len=320) -- time 1.09 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca51a1b0, len=320) -- time 0.99 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca5191b0, len=320) -- time 1.02 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca5181b0, len=320) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca5171b0, len=320) -- time 0.99 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca5161b0, len=320) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5151b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5141b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5131b0, len=320) -- time 0.95 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5121b0, len=320) -- time 1.04 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5111b0, len=320) -- time 0.95 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5101b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca50f1b0, len=320) -- time 0.95 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca50e1b0, len=320) -- time 0.96 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca50d1b0, len=320) -- time 0.95 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca50c1b0, len=320) -- time 0.97 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca50b1b0, len=320) -- time 0.97 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca50a1b0, len=320) -- time 0.98 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5091b0, len=320) -- time 0.99 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5081b0, len=320) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5071b0, len=320) -- time 0.97 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5061b0, len=320) -- time 0.95 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5051b0, len=320) -- time 0.96 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5041b0, len=320) -- time 0.97 ms
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+/home/sdelang/projects/src/cpp/angelsea/tests/scripts/arrays/userclass.as:9:1: WARN: asBC_SUSPEND found; this will fallback to the VM and be slow!
+:0:0: WARN: Number of fallbacks for module "build": 52
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 11 MIR insns (addr=7f3bca5031b0, len=32) -- time 0.26 ms
+Code generation of function asea_jit_mod2_fn2:
+  Code generation for asea_jit_mod2_fn2: 11 MIR insns (addr=7f3bca503210, len=32) -- time 0.20 ms
+Code generation of function asea_jit_mod3_fn3:
+  Code generation for asea_jit_mod3_fn3: 11 MIR insns (addr=7f3bca503270, len=32) -- time 0.19 ms
+Code generation of function asea_jit_mod4_fn4:
+  Code generation for asea_jit_mod4_fn4: 11 MIR insns (addr=7f3bca5032d0, len=32) -- time 0.20 ms
+Code generation of function asea_jit_mod5_fn5:
+  Code generation for asea_jit_mod5_fn5: 20 MIR insns (addr=7f3bca503430, len=80) -- time 0.31 ms
+Code generation of function asea_jit_mod5_fn6:
+  Code generation for asea_jit_mod5_fn6: 23 MIR insns (addr=7f3bca503480, len=80) -- time 0.34 ms
+Code generation of function asea_jit_mod5_fn7:
+  Code generation for asea_jit_mod5_fn7: 20 MIR insns (addr=7f3bca5034d0, len=80) -- time 0.26 ms
+Code generation of function asea_jit_mod5_fn8:
+  Code generation for asea_jit_mod5_fn8: 15 MIR insns (addr=7f3bca503520, len=64) -- time 0.25 ms
+Code generation of function asea_jit_mod5_fn9:
+  Code generation for asea_jit_mod5_fn9: 186 MIR insns (addr=7f3bca503560, len=800) -- time 2.21 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 64 MIR insns (addr=7f3bca5021b0, len=272) -- time 0.97 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 85 MIR insns (addr=7f3bca5011b0, len=368) -- time 1.28 ms
+:0:0: WARN: Number of fallbacks for module "build": 6
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5001b0, len=304) -- time 0.99 ms
+:0:0: WARN: Number of fallbacks for module "build": 7
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca31b1b0, len=320) -- time 1.09 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 48 MIR insns (addr=7f3bca31a1b0, len=208) -- time 0.85 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 48 MIR insns (addr=7f3bca3191b0, len=208) -- time 0.87 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 48 MIR insns (addr=7f3bca3181b0, len=208) -- time 0.86 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 53 MIR insns (addr=7f3bca3171b0, len=224) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 53 MIR insns (addr=7f3bca3161b0, len=224) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 53 MIR insns (addr=7f3bca3151b0, len=224) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 53 MIR insns (addr=7f3bca3141b0, len=224) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 53 MIR insns (addr=7f3bca3131b0, len=224) -- time 0.97 ms
+str:1:1: INFO: Compiling void main()
+str:1:24: WARN: Implicit conversion changed sign of value
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 53 MIR insns (addr=7f3bca3121b0, len=224) -- time 1.05 ms
+str:1:1: INFO: Compiling void main()
+str:1:24: WARN: Implicit conversion changed sign of value
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 53 MIR insns (addr=7f3bca3111b0, len=224) -- time 0.95 ms
+str:1:1: INFO: Compiling void main()
+str:1:24: WARN: Implicit conversion changed sign of value
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 45 MIR insns (addr=7f3bca3101b0, len=208) -- time 0.82 ms
+:0:0: WARN: Number of fallbacks for module "build": 177
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 105 MIR insns (addr=7f3bca30f370, len=448) -- time 1.31 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 65 MIR insns (addr=7f3bca30f530, len=288) -- time 0.70 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 26 MIR insns (addr=7f3bca30f650, len=96) -- time 0.52 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 65 MIR insns (addr=7f3bca30f6b0, len=288) -- time 0.67 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 229 MIR insns (addr=7f3bca30f7d0, len=960) -- time 2.29 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 65 MIR insns (addr=7f3bca30fb90, len=288) -- time 0.70 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 85 MIR insns (addr=7f3bca30fcb0, len=368) -- time 0.85 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 53 MIR insns (addr=7f3bca30fe20, len=224) -- time 0.56 ms
+:0:0: WARN: Number of fallbacks for module "build": 177
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 105 MIR insns (addr=7f3bca30e370, len=448) -- time 1.26 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 65 MIR insns (addr=7f3bca30e530, len=288) -- time 0.73 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 26 MIR insns (addr=7f3bca30e650, len=96) -- time 0.40 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 65 MIR insns (addr=7f3bca30e6b0, len=288) -- time 0.67 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 229 MIR insns (addr=7f3bca30e7d0, len=960) -- time 2.26 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 65 MIR insns (addr=7f3bca30eb90, len=288) -- time 0.68 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 85 MIR insns (addr=7f3bca30ecb0, len=368) -- time 0.83 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 53 MIR insns (addr=7f3bca30ee20, len=224) -- time 0.56 ms
+:0:0: WARN: Number of fallbacks for module "build": 177
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 105 MIR insns (addr=7f3bca30d370, len=448) -- time 1.25 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 65 MIR insns (addr=7f3bca30d530, len=288) -- time 0.69 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 26 MIR insns (addr=7f3bca30d650, len=96) -- time 0.44 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 65 MIR insns (addr=7f3bca30d6b0, len=288) -- time 0.66 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 229 MIR insns (addr=7f3bca30d7d0, len=960) -- time 2.29 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 65 MIR insns (addr=7f3bca30db90, len=288) -- time 0.70 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 85 MIR insns (addr=7f3bca30dcb0, len=368) -- time 0.87 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 53 MIR insns (addr=7f3bca30de20, len=224) -- time 0.57 ms
+:0:0: WARN: Number of fallbacks for module "build": 177
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 105 MIR insns (addr=7f3bca30c370, len=448) -- time 1.23 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 65 MIR insns (addr=7f3bca30c530, len=288) -- time 0.69 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 26 MIR insns (addr=7f3bca30c650, len=96) -- time 0.41 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 65 MIR insns (addr=7f3bca30c6b0, len=288) -- time 0.67 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 229 MIR insns (addr=7f3bca30c7d0, len=960) -- time 2.32 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 65 MIR insns (addr=7f3bca30cb90, len=288) -- time 0.69 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 85 MIR insns (addr=7f3bca30ccb0, len=368) -- time 0.86 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 53 MIR insns (addr=7f3bca30ce20, len=224) -- time 0.55 ms
+:0:0: WARN: Number of fallbacks for module "build": 177
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 105 MIR insns (addr=7f3bca30b370, len=448) -- time 1.29 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 65 MIR insns (addr=7f3bca30b530, len=288) -- time 0.73 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 26 MIR insns (addr=7f3bca30b650, len=96) -- time 0.46 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 65 MIR insns (addr=7f3bca30b6b0, len=288) -- time 0.68 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 229 MIR insns (addr=7f3bca30b7d0, len=960) -- time 2.35 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 65 MIR insns (addr=7f3bca30bb90, len=288) -- time 0.69 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 85 MIR insns (addr=7f3bca30bcb0, len=368) -- time 0.86 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 53 MIR insns (addr=7f3bca30be20, len=224) -- time 0.60 ms
+:0:0: WARN: Number of fallbacks for module "build": 177
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 105 MIR insns (addr=7f3bca30a370, len=448) -- time 1.22 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 65 MIR insns (addr=7f3bca30a530, len=288) -- time 0.72 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 26 MIR insns (addr=7f3bca30a650, len=96) -- time 0.40 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 65 MIR insns (addr=7f3bca30a6b0, len=288) -- time 0.68 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 229 MIR insns (addr=7f3bca30a7d0, len=960) -- time 2.28 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 65 MIR insns (addr=7f3bca30ab90, len=288) -- time 0.75 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 85 MIR insns (addr=7f3bca30acb0, len=368) -- time 0.87 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 53 MIR insns (addr=7f3bca30ae20, len=224) -- time 0.56 ms
+:0:0: WARN: Number of fallbacks for module "build": 7
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 41 MIR insns (addr=7f3bca3091b0, len=176) -- time 0.62 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 46 MIR insns (addr=7f3bca3081b0, len=208) -- time 0.83 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 46 MIR insns (addr=7f3bca3071b0, len=208) -- time 0.82 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 46 MIR insns (addr=7f3bca3061b0, len=208) -- time 0.83 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 48 MIR insns (addr=7f3bca3051b0, len=208) -- time 0.81 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 48 MIR insns (addr=7f3bca3041b0, len=208) -- time 0.81 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 49 MIR insns (addr=7f3bca3031b0, len=208) -- time 0.80 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 47 MIR insns (addr=7f3bca3021b0, len=208) -- time 0.80 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 48 MIR insns (addr=7f3bca3011b0, len=208) -- time 0.81 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 38 MIR insns (addr=7f3bca3001b0, len=176) -- time 0.64 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 38 MIR insns (addr=7f3bca11b1b0, len=176) -- time 0.66 ms
+:0:0: WARN: Number of fallbacks for module "build": 13
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 59 MIR insns (addr=7f3bca11a1f0, len=256) -- time 0.91 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 23 MIR insns (addr=7f3bca11a2f0, len=80) -- time 0.35 ms
+:0:0: WARN: Number of fallbacks for module "build": 5
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 47 MIR insns (addr=7f3bca5ff1f0, len=208) -- time 0.82 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 51 MIR insns (addr=7f3bca5ff2c0, len=224) -- time 0.69 ms
+:0:0: WARN: Number of fallbacks for module "build": 493
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 20 MIR insns (addr=7f3bca58c830, len=80) -- time 0.39 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 30 MIR insns (addr=7f3bca58c880, len=112) -- time 0.46 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 93 MIR insns (addr=7f3bca58c8f0, len=400) -- time 0.98 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 93 MIR insns (addr=7f3bca58ca80, len=400) -- time 1.02 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 129 MIR insns (addr=7f3bca58cc10, len=544) -- time 1.29 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 23 MIR insns (addr=7f3bca58ce30, len=80) -- time 0.55 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 45 MIR insns (addr=7f3bca58ce80, len=192) -- time 0.49 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 45 MIR insns (addr=7f3bca58cf40, len=192) -- time 0.51 ms
+Code generation of function asea_jit_mod1_fn9:
+  Code generation for asea_jit_mod1_fn9: 23 MIR insns (addr=7f3bca53d000, len=80) -- time 0.41 ms
+Code generation of function asea_jit_mod1_fn10:
+  Code generation for asea_jit_mod1_fn10: 23 MIR insns (addr=7f3bca53d050, len=80) -- time 0.44 ms
+Code generation of function asea_jit_mod1_fn11:
+  Code generation for asea_jit_mod1_fn11: 23 MIR insns (addr=7f3bca53d0a0, len=80) -- time 0.42 ms
+Code generation of function asea_jit_mod1_fn12:
+  Code generation for asea_jit_mod1_fn12: 45 MIR insns (addr=7f3bca53d0f0, len=192) -- time 0.50 ms
+Code generation of function asea_jit_mod1_fn13:
+  Code generation for asea_jit_mod1_fn13: 23 MIR insns (addr=7f3bca53d1b0, len=80) -- time 0.44 ms
+Code generation of function asea_jit_mod1_fn14:
+  Code generation for asea_jit_mod1_fn14: 16 MIR insns (addr=7f3bca53d200, len=64) -- time 0.34 ms
+Code generation of function asea_jit_mod1_fn15:
+  Code generation for asea_jit_mod1_fn15: 45 MIR insns (addr=7f3bca53d240, len=192) -- time 0.48 ms
+Code generation of function asea_jit_mod1_fn16:
+  Code generation for asea_jit_mod1_fn16: 23 MIR insns (addr=7f3bca53d300, len=80) -- time 0.57 ms
+Code generation of function asea_jit_mod1_fn17:
+  Code generation for asea_jit_mod1_fn17: 169 MIR insns (addr=7f3bca53d350, len=736) -- time 1.90 ms
+Code generation of function asea_jit_mod1_fn18:
+  Code generation for asea_jit_mod1_fn18: 48 MIR insns (addr=7f3bca53d630, len=208) -- time 0.57 ms
+Code generation of function asea_jit_mod1_fn19:
+  Code generation for asea_jit_mod1_fn19: 20 MIR insns (addr=7f3bca53d700, len=80) -- time 0.27 ms
+Code generation of function asea_jit_mod1_fn20:
+  Code generation for asea_jit_mod1_fn20: 45 MIR insns (addr=7f3bca53d750, len=192) -- time 0.43 ms
+Code generation of function asea_jit_mod1_fn21:
+  Code generation for asea_jit_mod1_fn21: 20 MIR insns (addr=7f3bca53d810, len=80) -- time 0.29 ms
+Code generation of function asea_jit_mod1_fn22:
+  Code generation for asea_jit_mod1_fn22: 23 MIR insns (addr=7f3bca53d860, len=80) -- time 0.50 ms
+Code generation of function asea_jit_mod1_fn23:
+  Code generation for asea_jit_mod1_fn23: 23 MIR insns (addr=7f3bca53d8b0, len=80) -- time 0.40 ms
+Code generation of function asea_jit_mod1_fn24:
+  Code generation for asea_jit_mod1_fn24: 45 MIR insns (addr=7f3bca53d900, len=192) -- time 0.52 ms
+Code generation of function asea_jit_mod1_fn25:
+  Code generation for asea_jit_mod1_fn25: 45 MIR insns (addr=7f3bca53d9c0, len=192) -- time 0.49 ms
+Code generation of function asea_jit_mod1_fn26:
+  Code generation for asea_jit_mod1_fn26: 23 MIR insns (addr=7f3bca53da80, len=80) -- time 0.46 ms
+Code generation of function asea_jit_mod1_fn27:
+  Code generation for asea_jit_mod1_fn27: 23 MIR insns (addr=7f3bca53dad0, len=80) -- time 0.40 ms
+:0:0: WARN: Number of fallbacks for module "build": 4
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca53c1b0, len=192) -- time 0.78 ms
+:0:0: WARN: Number of fallbacks for module "build": 4
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca53b1b0, len=192) -- time 0.79 ms
+:0:0: WARN: Number of fallbacks for module "build": 4
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca53a1b0, len=192) -- time 0.81 ms
+:0:0: WARN: Number of fallbacks for module "build": 5
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca5391b0, len=192) -- time 0.77 ms
+:0:0: WARN: Number of fallbacks for module "build": 5
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca5381b0, len=192) -- time 0.77 ms
+:0:0: WARN: Number of fallbacks for module "build": 6
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 39 MIR insns (addr=7f3bca5371b0, len=176) -- time 0.65 ms
+:0:0: WARN: Number of fallbacks for module "build": 6
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 39 MIR insns (addr=7f3bca5361b0, len=176) -- time 0.63 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 46 MIR insns (addr=7f3bca5351b0, len=208) -- time 0.76 ms
+:0:0: WARN: Number of fallbacks for module "build": 36
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 20 MIR insns (addr=7f3bca5343f0, len=80) -- time 0.37 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 23 MIR insns (addr=7f3bca534440, len=80) -- time 0.34 ms
+Code generation of function asea_jit_mod1_fn3:
+  Code generation for asea_jit_mod1_fn3: 20 MIR insns (addr=7f3bca534490, len=80) -- time 0.27 ms
+Code generation of function asea_jit_mod1_fn4:
+  Code generation for asea_jit_mod1_fn4: 20 MIR insns (addr=7f3bca5344e0, len=80) -- time 0.25 ms
+Code generation of function asea_jit_mod1_fn5:
+  Code generation for asea_jit_mod1_fn5: 20 MIR insns (addr=7f3bca534530, len=80) -- time 0.26 ms
+Code generation of function asea_jit_mod1_fn6:
+  Code generation for asea_jit_mod1_fn6: 10 MIR insns (addr=7f3bca534580, len=32) -- time 0.16 ms
+Code generation of function asea_jit_mod1_fn7:
+  Code generation for asea_jit_mod1_fn7: 20 MIR insns (addr=7f3bca5345a0, len=80) -- time 0.24 ms
+Code generation of function asea_jit_mod1_fn8:
+  Code generation for asea_jit_mod1_fn8: 10 MIR insns (addr=7f3bca5345f0, len=32) -- time 0.15 ms
+Code generation of function asea_jit_mod1_fn9:
+  Code generation for asea_jit_mod1_fn9: 26 MIR insns (addr=7f3bca534610, len=96) -- time 0.37 ms
+Code generation of function asea_jit_mod1_fn10:
+  Code generation for asea_jit_mod1_fn10: 45 MIR insns (addr=7f3bca534670, len=192) -- time 0.46 ms
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "build": 27
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 11 MIR insns (addr=7f3bca5331b0, len=32) -- time 0.29 ms
+Code generation of function asea_jit_mod2_fn2:
+  Code generation for asea_jit_mod2_fn2: 11 MIR insns (addr=7f3bca533210, len=32) -- time 0.19 ms
+Code generation of function asea_jit_mod3_fn3:
+  Code generation for asea_jit_mod3_fn3: 11 MIR insns (addr=7f3bca533270, len=32) -- time 0.19 ms
+Code generation of function asea_jit_mod4_fn4:
+  Code generation for asea_jit_mod4_fn4: 11 MIR insns (addr=7f3bca5332d0, len=32) -- time 0.17 ms
+Code generation of function asea_jit_mod5_fn5:
+  Code generation for asea_jit_mod5_fn5: 11 MIR insns (addr=7f3bca533330, len=32) -- time 0.18 ms
+Code generation of function asea_jit_mod6_fn6:
+  Code generation for asea_jit_mod6_fn6: 11 MIR insns (addr=7f3bca533390, len=32) -- time 0.19 ms
+Code generation of function asea_jit_mod7_fn7:
+  Code generation for asea_jit_mod7_fn7: 11 MIR insns (addr=7f3bca5333f0, len=32) -- time 0.17 ms
+Code generation of function asea_jit_mod8_fn8:
+  Code generation for asea_jit_mod8_fn8: 11 MIR insns (addr=7f3bca533450, len=32) -- time 0.19 ms
+Code generation of function asea_jit_mod9_fn9:
+  Code generation for asea_jit_mod9_fn9: 140 MIR insns (addr=7f3bca5334b0, len=608) -- time 1.45 ms
+:0:0: WARN: Number of fallbacks for module "build": 13
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 76 MIR insns (addr=7f3bca5321b0, len=336) -- time 0.97 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5311b0, len=336) -- time 0.99 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5301b0, len=336) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca52f1b0, len=336) -- time 0.99 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca52e1b0, len=336) -- time 1.01 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca52d1b0, len=336) -- time 1.01 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca52c1b0, len=320) -- time 0.96 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 86 MIR insns (addr=7f3bca52b1b0, len=384) -- time 1.08 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 86 MIR insns (addr=7f3bca52a1b0, len=384) -- time 1.08 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 86 MIR insns (addr=7f3bca5291b0, len=384) -- time 1.07 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 86 MIR insns (addr=7f3bca5281b0, len=384) -- time 1.19 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 86 MIR insns (addr=7f3bca5271b0, len=384) -- time 1.09 ms
+:0:0: WARN: Number of fallbacks for module "build": 16
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 72 MIR insns (addr=7f3bca5261b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 16
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 72 MIR insns (addr=7f3bca5251b0, len=320) -- time 0.92 ms
+:0:0: WARN: Number of fallbacks for module "build": 4
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca5241b0, len=192) -- time 0.81 ms
+:0:0: WARN: Number of fallbacks for module "build": 4
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca5231b0, len=192) -- time 0.79 ms
+:0:0: WARN: Number of fallbacks for module "build": 4
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca5221b0, len=192) -- time 0.76 ms
+:0:0: WARN: Number of fallbacks for module "build": 5
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca5211b0, len=192) -- time 0.75 ms
+:0:0: WARN: Number of fallbacks for module "build": 5
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca5201b0, len=192) -- time 0.74 ms
+:0:0: WARN: Number of fallbacks for module "build": 6
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 39 MIR insns (addr=7f3bca51f1b0, len=176) -- time 0.62 ms
+:0:0: WARN: Number of fallbacks for module "build": 6
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 39 MIR insns (addr=7f3bca51e1b0, len=176) -- time 0.62 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca51d1b0, len=192) -- time 0.72 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca51c1b0, len=336) -- time 1.02 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca31f1b0, len=336) -- time 1.01 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca31e1b0, len=336) -- time 1.01 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca31d1b0, len=336) -- time 1.05 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca31c1b0, len=336) -- time 1.03 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca12d1b0, len=336) -- time 1.04 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca12c1b0, len=336) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca12b1b0, len=336) -- time 0.99 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca12a1b0, len=336) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca1291b0, len=336) -- time 0.99 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca1281b0, len=336) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca1271b0, len=336) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca1261b0, len=336) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca1251b0, len=336) -- time 1.02 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca1241b0, len=336) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca1231b0, len=336) -- time 1.01 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca1221b0, len=336) -- time 1.04 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca1211b0, len=336) -- time 1.04 ms
+:0:0: WARN: Number of fallbacks for module "build": 4
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca1201b0, len=192) -- time 0.79 ms
+:0:0: WARN: Number of fallbacks for module "build": 4
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 44 MIR insns (addr=7f3bca11f1b0, len=192) -- time 0.76 ms
+:0:0: WARN: Number of fallbacks for module "build": 2
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 47 MIR insns (addr=7f3bca11e1b0, len=208) -- time 0.81 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 42 MIR insns (addr=7f3bca11d1b0, len=192) -- time 0.73 ms
+str:1:1: WARN: asBC_SUSPEND found; this will fallback to the VM and be slow!
+:0:0: WARN: Number of fallbacks for module "build": 4
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 87 MIR insns (addr=7f3bca11c1b0, len=368) -- time 1.26 ms
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+/home/sdelang/projects/src/cpp/angelsea/tests/scripts/arrays/initializationlists.as:8:1: WARN: asBC_SUSPEND found; this will fallback to the VM and be slow!
+/home/sdelang/projects/src/cpp/angelsea/tests/scripts/arrays/initializationlists.as:8:1: WARN: asBC_SUSPEND found; this will fallback to the VM and be slow!
+/home/sdelang/projects/src/cpp/angelsea/tests/scripts/arrays/initializationlists.as:8:1: WARN: asBC_SUSPEND found; this will fallback to the VM and be slow!
+:0:0: WARN: Number of fallbacks for module "build": 97
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 11 MIR insns (addr=7f3bca1191b0, len=32) -- time 0.28 ms
+Code generation of function asea_jit_mod2_fn2:
+  Code generation for asea_jit_mod2_fn2: 11 MIR insns (addr=7f3bca119210, len=32) -- time 0.20 ms
+Code generation of function asea_jit_mod3_fn3:
+  Code generation for asea_jit_mod3_fn3: 11 MIR insns (addr=7f3bca119270, len=32) -- time 0.18 ms
+Code generation of function asea_jit_mod4_fn4:
+  Code generation for asea_jit_mod4_fn4: 11 MIR insns (addr=7f3bca1192d0, len=32) -- time 0.19 ms
+Code generation of function asea_jit_mod5_fn5:
+  Code generation for asea_jit_mod5_fn5: 11 MIR insns (addr=7f3bca119330, len=32) -- time 0.18 ms
+Code generation of function asea_jit_mod6_fn6:
+  Code generation for asea_jit_mod6_fn6: 11 MIR insns (addr=7f3bca119390, len=32) -- time 0.18 ms
+Code generation of function asea_jit_mod7_fn7:
+  Code generation for asea_jit_mod7_fn7: 11 MIR insns (addr=7f3bca1193f0, len=32) -- time 0.18 ms
+Code generation of function asea_jit_mod8_fn8:
+  Code generation for asea_jit_mod8_fn8: 11 MIR insns (addr=7f3bca119450, len=32) -- time 0.17 ms
+Code generation of function asea_jit_mod9_fn9:
+  Code generation for asea_jit_mod9_fn9: 11 MIR insns (addr=7f3bca1194b0, len=32) -- time 0.18 ms
+Code generation of function asea_jit_mod10_fn10:
+  Code generation for asea_jit_mod10_fn10: 11 MIR insns (addr=7f3bca119510, len=32) -- time 0.17 ms
+Code generation of function asea_jit_mod11_fn11:
+  Code generation for asea_jit_mod11_fn11: 11 MIR insns (addr=7f3bca119570, len=32) -- time 0.17 ms
+Code generation of function asea_jit_mod12_fn12:
+  Code generation for asea_jit_mod12_fn12: 11 MIR insns (addr=7f3bca1195d0, len=32) -- time 0.17 ms
+Code generation of function asea_jit_mod13_fn13:
+  Code generation for asea_jit_mod13_fn13: 20 MIR insns (addr=7f3bca119730, len=80) -- time 0.30 ms
+Code generation of function asea_jit_mod13_fn14:
+  Code generation for asea_jit_mod13_fn14: 23 MIR insns (addr=7f3bca119780, len=80) -- time 0.32 ms
+Code generation of function asea_jit_mod13_fn15:
+  Code generation for asea_jit_mod13_fn15: 20 MIR insns (addr=7f3bca1197d0, len=80) -- time 0.26 ms
+Code generation of function asea_jit_mod13_fn16:
+  Code generation for asea_jit_mod13_fn16: 15 MIR insns (addr=7f3bca119820, len=64) -- time 0.22 ms
+Code generation of function asea_jit_mod13_fn17:
+  Code generation for asea_jit_mod13_fn17: 329 MIR insns (addr=7f3bca119860, len=1392) -- time 6.44 ms
+:0:0: WARN: Number of fallbacks for module "build": 13
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca1181b0, len=320) -- time 0.91 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1171b0, len=320) -- time 0.88 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1161b0, len=320) -- time 0.88 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1151b0, len=320) -- time 0.89 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1141b0, len=320) -- time 0.86 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1131b0, len=320) -- time 0.88 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 72 MIR insns (addr=7f3bca1121b0, len=320) -- time 0.90 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 82 MIR insns (addr=7f3bca1111b0, len=352) -- time 0.98 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 82 MIR insns (addr=7f3bca1101b0, len=352) -- time 1.16 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 82 MIR insns (addr=7f3bca10f1b0, len=352) -- time 1.01 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 83 MIR insns (addr=7f3bca10e1b0, len=368) -- time 1.03 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 83 MIR insns (addr=7f3bca10d1b0, len=368) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 16
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 70 MIR insns (addr=7f3bca10c1b0, len=304) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 16
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 70 MIR insns (addr=7f3bca10b1b0, len=304) -- time 0.86 ms
+:0:0: WARN: Number of fallbacks for module "build": 10
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 62 MIR insns (addr=7f3bca10a1b0, len=256) -- time 0.80 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca1091b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca1081b0, len=320) -- time 0.97 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1071b0, len=320) -- time 0.90 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1061b0, len=320) -- time 0.91 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1051b0, len=320) -- time 0.90 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1041b0, len=320) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1031b0, len=320) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1021b0, len=320) -- time 0.92 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1011b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca1001b0, len=320) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7b3bc8a261b0, len=320) -- time 0.92 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7b3bc8a251b0, len=320) -- time 0.91 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7b3bc8a241b0, len=320) -- time 0.92 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7b3bc8a231b0, len=320) -- time 0.90 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7b3bc8a221b0, len=320) -- time 0.89 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7b3bc8a211b0, len=320) -- time 0.90 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7b3bc8a201b0, len=320) -- time 0.92 ms
+:0:0: WARN: Number of fallbacks for module "build": 21
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 104 MIR insns (addr=7b3bc8a1f1b0, len=448) -- time 1.29 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7b3bc8a1e1b0, len=320) -- time 0.96 ms
+:0:0: WARN: Number of fallbacks for module "build": 14
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 72 MIR insns (addr=7b3bc8a1d1b0, len=320) -- time 0.92 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 42 MIR insns (addr=7b3bc8a1c1b0, len=192) -- time 0.73 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 42 MIR insns (addr=7b3bc8a1b1b0, len=192) -- time 0.71 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7b3bc8a1a1b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7b3bc8a191b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7b3bc8a181b0, len=320) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5fe1b0, len=320) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5fd1b0, len=320) -- time 0.91 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5fc1b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5fb1b0, len=320) -- time 0.95 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5fa1b0, len=320) -- time 0.90 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5f91b0, len=320) -- time 0.92 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5f81b0, len=320) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5f71b0, len=320) -- time 0.91 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5f61b0, len=320) -- time 0.92 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5f51b0, len=320) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5f41b0, len=320) -- time 0.92 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5f31b0, len=320) -- time 0.94 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5f21b0, len=320) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5f11b0, len=320) -- time 0.91 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 71 MIR insns (addr=7f3bca5f01b0, len=320) -- time 0.90 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 26 MIR insns (addr=7f3bca5ef1b0, len=96) -- time 0.45 ms
+:0:0: WARN: Number of fallbacks for module "a": 4
+:0:0: WARN: Number of fallbacks for module "b": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 51 MIR insns (addr=7f3bca5ee1f0, len=224) -- time 0.78 ms
+Code generation of function asea_jit_mod1_fn2:
+  Code generation for asea_jit_mod1_fn2: 19 MIR insns (addr=7f3bca5ee2d0, len=64) -- time 0.36 ms
+Code generation of function asea_jit_mod2_fn3:
+  Code generation for asea_jit_mod2_fn3: 51 MIR insns (addr=7f3bca5ee350, len=224) -- time 0.67 ms
+:0:0: WARN: There is an external reference to an object in module 'b', preventing it from being deleted
+:0:0: INFO: The function in previous message is named 'main'. The func type is 1
+:0:0: WARN: Number of fallbacks for module "build": 13
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 74 MIR insns (addr=7f3bca5ed1b0, len=320) -- time 0.93 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 42 MIR insns (addr=7f3bca5ec1b0, len=192) -- time 0.68 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 42 MIR insns (addr=7f3bca5eb1b0, len=192) -- time 0.72 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 42 MIR insns (addr=7f3bca5ea1b0, len=192) -- time 0.68 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 42 MIR insns (addr=7f3bca5e91b0, len=192) -- time 0.72 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 42 MIR insns (addr=7f3bca5e81b0, len=192) -- time 0.70 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 41 MIR insns (addr=7f3bca5e71b0, len=176) -- time 0.65 ms
+:0:0: WARN: Number of fallbacks for module "build": 5
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 39 MIR insns (addr=7f3bca5e61b0, len=176) -- time 0.62 ms
+:0:0: WARN: Number of fallbacks for module "build": 5
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 39 MIR insns (addr=7f3bca5e51b0, len=176) -- time 0.62 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5e41b0, len=336) -- time 1.01 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5e31b0, len=336) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5e21b0, len=336) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5e11b0, len=336) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5e01b0, len=336) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5df1b0, len=336) -- time 1.01 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5de1b0, len=336) -- time 1.05 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5dd1b0, len=336) -- time 1.01 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5dc1b0, len=336) -- time 1.01 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5db1b0, len=336) -- time 1.04 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5da1b0, len=336) -- time 1.05 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5d91b0, len=336) -- time 1.05 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5d81b0, len=336) -- time 1.15 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5d71b0, len=336) -- time 0.99 ms
+:0:0: WARN: Number of fallbacks for module "build": 15
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 75 MIR insns (addr=7f3bca5d61b0, len=336) -- time 1.00 ms
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+:0:0: WARN: Number of fallbacks for module "<anon>": 3
+/home/sdelang/projects/src/cpp/angelsea/tests/scripts/bfint.as:3:1: WARN: asBC_SUSPEND found; this will fallback to the VM and be slow!
+/home/sdelang/projects/src/cpp/angelsea/tests/scripts/bfint.as:3:1: WARN: asBC_SUSPEND found; this will fallback to the VM and be slow!
+/home/sdelang/projects/src/cpp/angelsea/tests/scripts/bfint.as:3:1: WARN: asBC_SUSPEND found; this will fallback to the VM and be slow!
+:0:0: WARN: Number of fallbacks for module "build": 64
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 11 MIR insns (addr=7f3bca5d51b0, len=32) -- time 0.29 ms
+Code generation of function asea_jit_mod2_fn2:
+  Code generation for asea_jit_mod2_fn2: 11 MIR insns (addr=7f3bca5d5210, len=32) -- time 0.19 ms
+Code generation of function asea_jit_mod3_fn3:
+  Code generation for asea_jit_mod3_fn3: 11 MIR insns (addr=7f3bca5d5270, len=32) -- time 0.19 ms
+Code generation of function asea_jit_mod4_fn4:
+  Code generation for asea_jit_mod4_fn4: 11 MIR insns (addr=7f3bca5d52d0, len=32) -- time 0.18 ms
+Code generation of function asea_jit_mod5_fn5:
+  Code generation for asea_jit_mod5_fn5: 26 MIR insns (addr=7f3bca5d5370, len=96) -- time 0.40 ms
+Code generation of function asea_jit_mod5_fn6:
+  Code generation for asea_jit_mod5_fn6: 582 MIR insns (addr=7f3bca5d53d0, len=2464) -- time 7.75 ms
+:0:0: WARN: Number of fallbacks for module "build": 3
+Code generation of function asea_jit_mod1_fn1:
+  Code generation for asea_jit_mod1_fn1: 92 MIR insns (addr=7f3bca5a91b0, len=368) -- time 1.39 ms
+:0:0: WARN: There is an external reference to an object in module 'build', preventing it from being deleted
+:0:0: INFO: The function in previous message is named 'fib'. The func type is 1

@@ -71,7 +71,17 @@ FunctionId BytecodeToC::translate_function(std::string_view internal_module_name
 	// JIT entry signature is `void(asSVMRegisters *regs, asPWORD jitArg)`
 	emit("void {name}(asSVMRegisters *regs, asPWORD entryLabel) {{\n", fmt::arg("name", func_name));
 
-	emit("\tasDWORD *l_bc, *l_sp, *l_fp;\n");
+	emit(
+	    // "#ifdef __MIRC__\n"
+	    // "\tasDWORD *l_bc __attribute__((antialias(\"bc-sp\")));\n"
+	    // "\tasDWORD *l_sp __attribute__((antialias(\"bc-sp\")));\n"
+	    // "\tasDWORD *l_fp;\n"
+	    // "#else\n"
+	    "\tasDWORD *l_bc;\n"
+	    "\tasDWORD *l_sp;\n"
+	    "\tasDWORD *l_fp;\n"
+	    // "#endif\n"
+	);
 	emit_load_vm_registers();
 
 	// Transpiled functions are compiled to be JIT entry points for the
