@@ -34,6 +34,17 @@ struct JitConfig {
 
 	/// Whether to dump optimized MIR code to stdout.
 	bool dump_mir_code = false;
+
+	/// MIR debugging level, as passed to `MIR_gen_set_debug_level`, to dump
+	/// verbose information on the commandline.
+	/// -1 disables them. As of writing this, meaningful values are -1, 0, 2, 4.
+	int mir_debug_level = -1;
+
+	/// MIR optimization level, as passed to `MIR_gen_set_optimize_level`, to
+	/// balance between runtime speed and compile times (higher improves
+	/// codegen).
+	/// MIR default is `2`. Meaningful values are 0 through 3.
+	int mir_optimization_level = 3;
 };
 
 } // namespace angelsea

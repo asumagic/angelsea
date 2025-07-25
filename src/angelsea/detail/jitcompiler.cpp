@@ -134,11 +134,11 @@ void JitCompiler::compile_all() {
 	}
 
 	MIR_gen_init(mir);
-	// MIR_gen_set_debug_file(mir, stdout);
-	// MIR_gen_set_debug_level(mir, 10);
 
-	// TODO: expose as an option
-	MIR_gen_set_optimize_level(mir, 3);
+	MIR_gen_set_debug_file(mir, stdout);
+	MIR_gen_set_debug_level(mir, config().mir_debug_level);
+
+	MIR_gen_set_optimize_level(mir, config().mir_optimization_level);
 
 	c2mir_finish(mir);
 
