@@ -41,7 +41,7 @@ void JitCompiler::compile_all() {
 	c2mir_init(mir);
 
 	// no include dir
-	std::array<const char*, 2> include_dirs{nullptr};
+	std::array<const char*, 1> include_dirs{nullptr};
 
 	std::array<c2mir_macro_command, 1> macros{{{.def_p = true, .name = "ANGELSEA_SUPPORT", .def = "1"}}};
 
