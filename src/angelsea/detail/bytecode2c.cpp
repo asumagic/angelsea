@@ -8,6 +8,7 @@
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/bytecodedisasm.hpp>
 #include <angelsea/detail/bytecodetools.hpp>
+#include <angelsea/detail/debug.hpp>
 #include <angelsea/detail/log.hpp>
 
 namespace angelsea::detail {
@@ -465,16 +466,49 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		break;
 	}
 
+	// float cases need reinterpreting, this is broken
+	// case asBC_iTOf: {
+	// 	emit_primitive_cast_stack(ins, var_types::s32, var_types::f32, true);
+	// 	break;
+	// }
+	// case asBC_fTOi: {
+	// 	emit_primitive_cast_stack(ins, var_types::f32, var_types::s32, true);
+	// 	break;
+	// }
+	// case asBC_uTOf: {
+	// 	emit_primitive_cast_stack(ins, var_types::u32, var_types::f32, true);
+	// 	break;
+	// }
+	// case asBC_fTOu: {
+	// 	emit_primitive_cast_stack(ins, var_types::f32, var_types::u32, true);
+	// 	break;
+	// }
+	case asBC_sbTOi: {
+		emit_primitive_cast_stack(ins, var_types::s8, var_types::s32, true);
+		break;
+	}
+	case asBC_swTOi: {
+		emit_primitive_cast_stack(ins, var_types::s16, var_types::s32, true);
+		break;
+	}
+	case asBC_ubTOi: {
+		emit_primitive_cast_stack(ins, var_types::u8, var_types::s32, true);
+		break;
+	}
+	case asBC_uwTOi: {
+		emit_primitive_cast_stack(ins, var_types::u16, var_types::s32, true);
+		break;
+	}
 	case asBC_i64TOi: {
-		emit_primitive_cast_stack(ins, var_types::s64, var_types::s32);
+		emit_primitive_cast_stack(ins, var_types::s64, var_types::s32, false);
 		break;
 	}
 	case asBC_uTOi64: {
-		emit_primitive_cast_stack(ins, var_types::u32, var_types::s64);
+		emit_primitive_cast_stack(ins, var_types::u32, var_types::s64, false);
 		break;
 	}
 	case asBC_iTOi64: {
-		emit_primitive_cast_stack(ins, var_types::s32, var_types::s64);
+		emit_primitive_cast_stack(ins, var_types::s32, var_types::s64, false);
 		break;
 	}
 
@@ -553,14 +587,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_PGA:
 	case asBC_CmpPtr:
 	case asBC_VAR:
-	case asBC_iTOf:
-	case asBC_fTOi:
-	case asBC_uTOf:
-	case asBC_fTOu:
-	case asBC_sbTOi:
-	case asBC_swTOi:
-	case asBC_ubTOi:
-	case asBC_uwTOi:
 	case asBC_dTOi:
 	case asBC_dTOu:
 	case asBC_dTOf:
@@ -676,8 +702,8 @@ void BytecodeToC::emit_load_vm_registers() {
 	);
 }
 
-void BytecodeToC::emit_primitive_cast_stack(BytecodeInstruction ins, VarType src, VarType dst) {
-	const bool in_place = src == dst;
+void BytecodeToC::emit_primitive_cast_stack(BytecodeInstruction ins, VarType src, VarType dst, bool in_place) {
+	angelsea_assert(src.is_trivial_cast_to(dst));
 	emit(
 	    "\t\t{STORE_OP}(l_fp - {DST}, ({DST_TYPE}){LOAD_OP}({SRC_TYPE}, l_fp - {SRC}));\n"
 	    "\t\tl_bc += {INSTRUCTION_LENGTH};\n",
@@ -911,6 +937,13 @@ int asea_call_script_function(void* vm_registers, int function_idx);
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset) {
 	return std::size_t(std::int64_t(base_offset) + std::int64_t(relative_offset));
+}
+
+std::string_view VarType::load_op_name() const {
+	return granularity == AccessGranularity::QWORD ? "ASEA_LOAD64" : "ASEA_LOAD32";
+}
+std::string_view VarType::store_op_name() const {
+	return granularity == AccessGranularity::QWORD ? "ASEA_STORE64" : "ASEA_STORE32";
 }
 
 } // namespace angelsea::detail

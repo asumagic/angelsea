@@ -23,7 +23,7 @@ TEST_CASE("32-bit float math", "[floatmath32]") {
 	REQUIRE(run_string("float a = 10.0f; print(''+ --a);") == "9\n");
 }
 
-TEST_CASE("64-bit float math", "[floatmath32]") {
+TEST_CASE("64-bit float math", "[floatmath64]") {
 	REQUIRE(run_string("double a = 3.141; print(''+a);") == "3.141\n");
 
 	REQUIRE(run_string("double a = 1.0, b = 2.0; print(''+(a + b));") == "3\n");
