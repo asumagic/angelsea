@@ -115,7 +115,7 @@ void JitCompiler::compile_all() {
 			log(*this,
 			    LogSeverity::PERF_WARNING,
 			    "Number of fallbacks for module \"{}\": {}",
-			    script_module->GetName(),
+			    internal_module_name,
 			    c_generator.get_fallback_count());
 		}
 	};
