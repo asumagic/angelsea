@@ -281,6 +281,16 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		break;
 	}
 
+	case asBC_CpyVtoV4: {
+		emit(
+		    "\t\t*(l_fp - {SWORD0}) = *(l_fp - {SWORD1});\n"
+		    "\t\tl_bc += 2;\n",
+		    fmt::arg("SWORD0", ins.sword0()),
+		    fmt::arg("SWORD1", ins.sword1())
+		);
+		break;
+	}
+
 	case asBC_CpyVtoV8: {
 		emit(
 		    "\t\t*(asQWORD*)(l_fp - {SWORD0}) = *(asQWORD*)(l_fp - {SWORD1});\n"
@@ -456,7 +466,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_OBJTYPE:
 	case asBC_TYPEID:
 	case asBC_ADDSi:
-	case asBC_CpyVtoV4:
 	case asBC_CpyVtoR8:
 	case asBC_CpyVtoG4:
 	case asBC_CpyRtoV8:
