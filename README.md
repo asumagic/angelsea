@@ -39,6 +39,10 @@ JIT interface.
 Enabling the JIT engine amounts to:
 
 ```cpp
+#include <angelsea.hpp>
+
+// ...
+
 engine->SetEngineProperty(asEP_INCLUDE_JIT_INSTRUCTIONS, true);
 engine->SetEngineProperty(asEP_JIT_INTERFACE_VERSION, 2);
 
