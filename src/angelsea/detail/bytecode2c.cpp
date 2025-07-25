@@ -234,6 +234,8 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
     case asBC_CALL:
     {
+        // TODO: when possible, translate this to a JIT to JIT function call
+
         int fn = ins.arg_int();
         emit(
             "\t\tint i = {FN_ID};\n"
