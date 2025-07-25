@@ -416,6 +416,9 @@ std::string BytecodeToC::entry_point_name(
 
 void BytecodeToC::emit_entry_dispatch(JitFunction& function)
 {
+    // TODO: (optionally) generate a goto dispatch table, which should be
+    // supported by c2mir and probably would at least elide a branch
+
     // 0 means the JIT entry point will not be used, start at 1
     asPWORD current_entry_id = 1;
 
