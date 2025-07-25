@@ -446,7 +446,13 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		break;
 	}
 	case asBC_BSRA: {
-		emit_arithmetic_simple_stack_stack(ins, ">>", "asINT32");
+		emit(
+		    "\t\t*(l_fp - {SWORD0}) = *(asINT32*)(l_fp - {SWORD1}) >> *(asINT32*)(l_fp - {SWORD2});\n"
+		    "\t\tl_bc += 2;\n",
+		    fmt::arg("SWORD0", ins.sword0()),
+		    fmt::arg("SWORD1", ins.sword1()),
+		    fmt::arg("SWORD2", ins.sword2())
+		);
 		break;
 	}
 
@@ -461,6 +467,10 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	}
 	case asBC_uTOi64: {
 		emit_primitive_cast_stack(ins, "asUINT", "asINT64", false);
+		break;
+	}
+	case asBC_iTOi64: {
+		emit_primitive_cast_stack(ins, "int", "asINT64", false);
 		break;
 	}
 
@@ -577,7 +587,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_iTOb:
 	case asBC_iTOw:
 	case asBC_Cast:
-	case asBC_iTOi64:
 	case asBC_fTOi64:
 	case asBC_dTOi64:
 	case asBC_fTOu64:
