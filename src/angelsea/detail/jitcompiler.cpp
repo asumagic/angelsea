@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include "angelscript.h"
 extern "C"
 {
 #include <c2mir/c2mir.h>
@@ -45,21 +46,21 @@ void JitCompiler::compile_all()
     c2mir_init(mir);
 
     // no include dir
-    std::array<const char*, 1> include_dirs {nullptr};
+    std::array<const char*, 2> include_dirs {nullptr};
 
     std::array<c2mir_macro_command, 1> macros {{
         {.def_p = true, .name = "ANGELSEA_SUPPORT", .def = "1"}
     }};
 
     c2mir_options c_options {
-        .message_file = stderr, // TODO: optional
+        .message_file = nullptr, // TODO: optional
         .debug_p = false,
-        .verbose_p = true,
+        .verbose_p = false,
         .ignore_warnings_p = false,
         .no_prepro_p = false,
         .prepro_only_p = false,
         .syntax_only_p = false,
-        .pedantic_p = false, // seems to be janky...
+        .pedantic_p = false, // seems to break compile..?
         .asm_p = false,
         .object_p = false,
         .module_num = 0, // ?
@@ -70,9 +71,11 @@ void JitCompiler::compile_all()
         .include_dirs = include_dirs.data()
     };
 
+    std::unordered_map<std::string, JitFunction*> c_name_to_func;
+
     BytecodeToC c_generator{*this};
-    c_generator.set_map_function_callback([](JitFunction& function, const std::string& name) {
-        // TODO
+    c_generator.set_map_function_callback([&](JitFunction& function, const std::string& name) {
+        c_name_to_func.emplace(name, &function);
     });
 
     auto modules = compute_module_map();
@@ -88,6 +91,19 @@ void JitCompiler::compile_all()
         return c;
     };
 
+    // NOTE: I don't think there is fundamentally something that makes it
+    // impossible or impractical to generate all modules within the same C
+    // source file other than maybe compile time overhead.
+    // bytecode2c was written explicitly not to care -- simply don't call
+    // `prepare_new_context`, and you should be able to emit multiple modules at
+    // once.
+    // Not sure if MIR maybe does some form of link-time optimization of its own
+    // (see MIR_link lazy generation), but this would be relevant only once we
+    // can natively do calls across JIT script functions anyway...
+
+    // TODO: Investigate if partial recompiles work, and make them more
+    // efficient
+
     for (auto& [script_module, functions] : modules)
     {
         if (script_module == nullptr)
@@ -96,10 +112,10 @@ void JitCompiler::compile_all()
             for (std::size_t i = 0; i < functions.size(); ++i)
             {
                 // convert each function as their own virtual module
-                // (is this useful? should reconsider)
+                // TODO: is this useful? should reconsider
                 c_generator.prepare_new_context();
                 c_generator.translate_module(
-                    "<anon>",
+                    "test",
                     script_module,
                     std::span{functions}.subspan(i, 1)
                 );
@@ -120,19 +136,73 @@ void JitCompiler::compile_all()
             fmt::print("Compiled function:\n{}", c_generator.source());
 
             InputData input_data(c_generator.source());
-            c2mir_compile(mir, &c_options, getc_callback, &input_data, "<anon>", nullptr);
+            c2mir_compile(mir, &c_options, getc_callback, &input_data, script_module->GetName(), nullptr);
         }
     }
 
     MIR_gen_init(mir);
-    // MIR_link(mir, TODO, TODO);
+    // MIR_gen_set_debug_file(mir, stdout);
+    // MIR_gen_set_debug_level(mir, 10);
+
+    // TODO: expose as an option
+    MIR_gen_set_optimize_level(mir, 3);
+
+    c2mir_finish(mir);
+
+    // lookup functions
+    for (
+        MIR_module_t module = DLIST_HEAD(MIR_module_t, *MIR_get_module_list(mir));
+        module != nullptr;
+        module = DLIST_NEXT(MIR_module_t, module)
+    ) {
+        MIR_load_module (mir, module);
+
+        // TODO: investigate lazy gen options, and exposing interpretation instead
+        MIR_link(mir, MIR_set_lazy_gen_interface, nullptr);
+
+        for (
+            MIR_item_t mir_func = DLIST_HEAD (MIR_item_t, module->items);
+            mir_func != nullptr;
+            mir_func = DLIST_NEXT (MIR_item_t, mir_func)
+        ) {
+            if (mir_func->item_type != MIR_func_item)
+            {
+                continue;
+            }
+
+            const auto symbol = std::string_view{mir_func->u.func->name};
+
+            // TODO: pointless string allocation but heterogeneous lookup is
+            // annoying in C++ unordered_map
+            auto it = c_name_to_func.find(mir_func->u.func->name);
+            if (it != c_name_to_func.end())
+            {
+                JitFunction& jit_function = *it->second;
+
+                auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(mir, mir_func));
+
+                log(*this, jit_function.script_function(), LogSeverity::VERBOSE, "Hooking function `{}` as `{}`!", jit_function.script_function().GetDeclaration(true, true, true), fmt::ptr(entry_point));
+
+                if (entry_point == nullptr)
+                {
+                    log(*this, jit_function.script_function(), LogSeverity::ERROR, "Failed to compile function `{}`", jit_function.script_function().GetDeclaration(true, true, true));
+                }
+
+                const auto err = jit_function.script_function().SetJITFunction(entry_point);
+
+                if (err == asNOT_SUPPORTED)
+                {
+                    log(*this, jit_function.script_function(), LogSeverity::ERROR, "Failed to set JIT function (asNOT_SUPPORTED), did you forget to set asEP_JIT_INTERFACE_VERSION to 2?");
+                }
+            }
+        }
+    }
+
+    MIR_output(mir, stderr);
 
     MIR_gen_finish(mir);
 
-    // c
-
-    c2mir_finish(mir);
-    MIR_finish(mir);
+    // FIXME: free MIR context at destruction time
 }
 
 JitFunction* JitCompiler::get_jit_function(asIScriptFunction& function)

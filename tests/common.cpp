@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 #include "common.hpp"
+#include "angelscript.h"
 
 #include <iostream>
 #include <scriptarray/scriptarray.h>
@@ -50,6 +51,7 @@ void print_char(char value) { out << value; }
 EngineContext::EngineContext(const angelsea::JitConfig& config) : engine{asCreateScriptEngine()}, jit{config, *engine}
 {
 	engine->SetEngineProperty(asEP_INCLUDE_JIT_INSTRUCTIONS, true);
+	engine->SetEngineProperty(asEP_JIT_INTERFACE_VERSION, 2);
 	ANGELSEA_TEST_CHECK(engine->SetJITCompiler(&jit) >= 0);
 
 	register_interface();
