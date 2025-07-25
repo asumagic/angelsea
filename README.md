@@ -111,6 +111,11 @@ all you would need to do is to add some glue code by implementing your own
 some changes (such as baking in constants, etc.) -- this is stupid fast to do,
 and surprisingly human-readable even to people with no prior compilation
 experience.
+    - Well, experience is proving this one not so true: AngelScript's VM
+    unfortunately bakes quite a lot of assumptions that break strict aliasing
+    rules. We started hitting this quite hard since the JIT compiler is way more
+    likely to make optimizations that break the program, as it can optimize
+    across instructions.
 4. The fact we can just speak C greatly simplifies interfacing with script
 engine structures. Dealing with the C++ ABI (such as for certain native function
 calls, or to call virtual AS engine functions) would be annoying, but we can
