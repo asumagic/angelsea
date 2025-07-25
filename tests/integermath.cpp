@@ -90,5 +90,9 @@ TEST_CASE("64-bit bitwise logic", "[bitwise64]") {
 	REQUIRE(run_string("int64 a = -4354352, b = 2; print(a >> b)") == "4611686018426299316\n");
 	REQUIRE(run_string("int64 a = 4354352, b = 2; print(a >>> b)") == "1088588\n");
 	REQUIRE(run_string("int64 a = -4354352, b = 2; print(a >>> b)") == "-1088588\n");
+	// 0x00F0F0F0F0F0F0F0
+	REQUIRE(run_string("int64 a = 0xF0F0F0F0F0F0F0F0, b = 8; print(uint64(a >> b))") == "67818912035696880\n");
+	// 0xF0F0F0F0F0F0F0F0
+	REQUIRE(run_string("int64 a = 0xF0F0F0F0F0F0F0F0, b = 8; print(uint64(a >>> b))") == "18442505391707320560\n");
 	REQUIRE(run_string("int64 a = 0xF0F0F0F0F0F0F0F0; print(~a)") == "1085102592571150095\n");
 }
