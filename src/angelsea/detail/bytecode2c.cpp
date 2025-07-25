@@ -249,6 +249,15 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
         break;
     }
 
+    case asBC_CpyRtoV4:
+    {
+        emit(
+            "\t\t*(asDWORD*)(l_fp - {SWORDARG0}) = DEREF_VALUEREG(asDWORD);\n",
+            fmt::arg("SWORDARG0", ins.sword0())
+        );
+        break;
+    }
+
     // case asBC_CALL:
     // {
     //     // TODO: when possible, translate this to a JIT to JIT function call
@@ -384,7 +393,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
     case asBC_CpyVtoV8:
     case asBC_CpyVtoR8:
     case asBC_CpyVtoG4:
-    case asBC_CpyRtoV4:
     case asBC_CpyRtoV8:
     case asBC_CpyGtoV4:
     case asBC_WRTV1:
