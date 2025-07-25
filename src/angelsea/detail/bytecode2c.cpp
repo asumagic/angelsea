@@ -146,6 +146,13 @@ FunctionId BytecodeToC::translate_function(
         // TODO: after a fallback don't bother emitting fallback code at all
         // until the next JitEntry
 
+        // TODO: elide jit entries when we're not dropping down to the VM
+        // between them (assign their jitarg to 0 to be sure)
+        // this does mean having to recompute indices
+
+        // TODO: elide jit entries when they immediately precede an unhandled
+        // instruction
+
         switch(ins.info->bc)
         {
         case asBC_JitEntry:
@@ -161,9 +168,30 @@ FunctionId BytecodeToC::translate_function(
             break;
         }
 
+        case asBC_PshC4:
+        {
+            emit(
+                "\t\t--l_sp;\n"
+                "\t\t*l_sp = {DWORD_ARG};\n"
+                "\t\tl_bc += 2;\n",
+                fmt::arg("DWORD_ARG", ins.arg_dword())
+            );
+            break;
+        }
+
+        case asBC_PshC8:
+        {
+            emit(
+                "\t\tl_sp -= 2;\n"
+                "\t\t*l_sp = {QWORD_ARG};\n"
+                "\t\tl_bc += 3;\n",
+                fmt::arg("QWORD_ARG", ins.arg_qword())
+            );
+            break;
+        }
+
         case asBC_PopPtr:
         case asBC_PshGPtr:
-        case asBC_PshC4:
         case asBC_PshV4:
         case asBC_PSF:
         case asBC_SwapPtr:
@@ -208,7 +236,6 @@ FunctionId BytecodeToC::translate_function(
         case asBC_BSRL:
         case asBC_BSRA:
         case asBC_COPY:
-        case asBC_PshC8:
         case asBC_PshVPtr:
         case asBC_RDSPtr:
         case asBC_CMPd:

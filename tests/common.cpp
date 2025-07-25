@@ -52,6 +52,7 @@ EngineContext::EngineContext(const angelsea::JitConfig& config) : engine{asCreat
 {
 	engine->SetEngineProperty(asEP_INCLUDE_JIT_INSTRUCTIONS, true);
 	engine->SetEngineProperty(asEP_JIT_INTERFACE_VERSION, 2);
+	engine->SetEngineProperty(asEP_BUILD_WITHOUT_LINE_CUES, true);
 	ANGELSEA_TEST_CHECK(engine->SetJITCompiler(&jit) >= 0);
 
 	register_interface();
