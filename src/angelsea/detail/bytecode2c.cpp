@@ -283,7 +283,12 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
         break;
     }
 
+    case asBC_JZ: { emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) == 0"); break; }
+    case asBC_JNZ: { emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) != 0"); break; }
+    case asBC_JS: { emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) < 0"); break; }
     case asBC_JNS: { emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) >= 0"); break; }
+    case asBC_JP: { emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) > 0"); break; }
+    case asBC_JNP: { emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) <= 0"); break; }
 
     case asBC_PopPtr:
     case asBC_PshGPtr:
@@ -295,11 +300,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
     case asBC_LdGRdR4:
     case asBC_RET:
     case asBC_JMP:
-    case asBC_JZ:
-    case asBC_JNZ:
-    case asBC_JS:
-    case asBC_JP:
-    case asBC_JNP:
     case asBC_TZ:
     case asBC_TNZ:
     case asBC_TS:
