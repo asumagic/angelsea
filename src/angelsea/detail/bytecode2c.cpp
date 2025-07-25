@@ -400,6 +400,10 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		emit_arithmetic_simple_stack_stack(ins, "&", "asQWORD");
 		break;
 	}
+	case asBC_BXOR64: {
+		emit_arithmetic_simple_stack_stack(ins, "^", "asQWORD");
+		break;
+	}
 	case asBC_BOR64: {
 		emit_arithmetic_simple_stack_stack(ins, "|", "asQWORD");
 		break;
@@ -414,6 +418,35 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	}
 	case asBC_BSRA64: {
 		emit_arithmetic_simple_stack_stack(ins, ">>", "asINT64");
+		break;
+	}
+
+	case asBC_BNOT: {
+		emit_arithmetic_simple_stack_unary(ins, "~", "asDWORD");
+		break;
+	}
+	case asBC_BAND: {
+		emit_arithmetic_simple_stack_stack(ins, "&", "asDWORD");
+		break;
+	}
+	case asBC_BXOR: {
+		emit_arithmetic_simple_stack_stack(ins, "^", "asDWORD");
+		break;
+	}
+	case asBC_BOR: {
+		emit_arithmetic_simple_stack_stack(ins, "|", "asDWORD");
+		break;
+	}
+	case asBC_BSLL: {
+		emit_arithmetic_simple_stack_stack(ins, "<<", "asDWORD");
+		break;
+	}
+	case asBC_BSRL: {
+		emit_arithmetic_simple_stack_stack(ins, ">>", "asDWORD");
+		break;
+	}
+	case asBC_BSRA: {
+		emit_arithmetic_simple_stack_stack(ins, ">>", "asINT32");
 		break;
 	}
 
@@ -456,13 +489,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_DECd:
 	case asBC_IncVi:
 	case asBC_DecVi:
-	case asBC_BNOT:
-	case asBC_BAND:
-	case asBC_BOR:
-	case asBC_BXOR:
-	case asBC_BSLL:
-	case asBC_BSRL:
-	case asBC_BSRA:
 	case asBC_COPY:
 	case asBC_PshVPtr:
 	case asBC_RDSPtr:
@@ -565,7 +591,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_MULi64:
 	case asBC_DIVi64:
 	case asBC_MODi64:
-	case asBC_BXOR64:
 	case asBC_CMPi64:
 	case asBC_CMPu64:
 	case asBC_ChkNullS:
