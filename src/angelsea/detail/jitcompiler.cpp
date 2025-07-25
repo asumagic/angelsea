@@ -117,7 +117,10 @@ void JitCompiler::compile_all()
             functions
         );
 
-        // fmt::print(stderr, "Translated function:\n{}", c_generator.source());
+        if (config().dump_c_code)
+        {
+            puts(c_generator.source().c_str());
+        }
 
         InputData input_data(c_generator.source());
         if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, internal_module_name, nullptr))
@@ -210,7 +213,10 @@ void JitCompiler::compile_all()
         }
     }
 
-    // MIR_output(mir, stderr);
+    if (config().dump_mir_code)
+    {
+        MIR_output(mir, stderr);
+    }
 
     MIR_gen_finish(mir);
 

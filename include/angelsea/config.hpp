@@ -31,8 +31,11 @@ struct JitConfig
     /// Negative values mean messages will not be printed.
     LogTargets log_targets = {};
 
-    /// Whether to drop
+    /// Whether to dump generated C code to stdout.
     bool dump_c_code = false;
+
+    /// Whether to dump optimized MIR code to stdout.
+    bool dump_mir_code = false;
 };
 
 }
