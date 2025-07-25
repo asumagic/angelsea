@@ -25,7 +25,7 @@ std::string disassemble(
 	case asBC_CALLSYS:
 	case asBC_Thiscall1:
 	{
-        auto* func = static_cast<asIScriptFunction*>(engine.GetFunctionById(instruction.arg_int()));
+        auto* func = static_cast<asIScriptFunction*>(engine.GetFunctionById(instruction.int0()));
 
         angelsea_assert(func != nullptr);
 
@@ -49,30 +49,30 @@ std::string disassemble(
 	case asBCTYPE_wW_ARG:
 	case asBCTYPE_rW_ARG:
 	{
-		return fmt::format("{} {}", instruction.info->name, instruction.arg_sword0());
+		return fmt::format("{} {}", instruction.info->name, instruction.sword0());
 	}
 
 	case asBCTYPE_DW_ARG:
 	{
-		return fmt::format("{} {}", instruction.info->name, instruction.arg_int());
+		return fmt::format("{} {}", instruction.info->name, instruction.int0());
 	}
 
 	case asBCTYPE_rW_DW_ARG:
 	case asBCTYPE_wW_DW_ARG:
 	case asBCTYPE_W_DW_ARG:
 	{
-		return fmt::format("{} {} {}", instruction.info->name, instruction.arg_sword0(), instruction.arg_int());
+		return fmt::format("{} {} {}", instruction.info->name, instruction.sword0(), instruction.int0());
 	}
 
 	case asBCTYPE_QW_ARG:
 	{
-		return fmt::format("{} {}", instruction.info->name, instruction.arg_pword());
+		return fmt::format("{} {}", instruction.info->name, instruction.pword0());
 	}
 
 	case asBCTYPE_DW_DW_ARG:
 	{
 		// TODO: double check this
-		return fmt::format("{} {} {}", instruction.info->name, instruction.arg_int(), instruction.arg_int(1));
+		return fmt::format("{} {} {}", instruction.info->name, instruction.int0(), instruction.int0(1));
 	}
 
 	case asBCTYPE_wW_rW_rW_ARG:
@@ -80,21 +80,21 @@ std::string disassemble(
 		return fmt::format(
 			"{} {} {} {}",
 			instruction.info->name,
-			instruction.arg_sword0(),
-			instruction.arg_sword1(),
-			instruction.arg_sword2());
+			instruction.sword0(),
+			instruction.sword1(),
+			instruction.sword2());
 	}
 
 	case asBCTYPE_wW_QW_ARG:
 	{
-		return fmt::format("{} {} {}", instruction.info->name, instruction.arg_sword0(), instruction.arg_pword(1));
+		return fmt::format("{} {} {}", instruction.info->name, instruction.sword0(), instruction.pword0(1));
 	}
 
 	case asBCTYPE_wW_rW_ARG:
 	case asBCTYPE_rW_rW_ARG:
 	case asBCTYPE_wW_W_ARG:
 	{
-		return fmt::format("{} {} {}", instruction.info->name, instruction.arg_sword0(), instruction.arg_sword1());
+		return fmt::format("{} {} {}", instruction.info->name, instruction.sword0(), instruction.sword1());
 	}
 
 	case asBCTYPE_wW_rW_DW_ARG:
@@ -103,19 +103,19 @@ std::string disassemble(
 		return fmt::format(
 			"{} {} {} {}",
 			instruction.info->name,
-			instruction.arg_sword0(),
-			instruction.arg_sword1(),
-			instruction.arg_int(1));
+			instruction.sword0(),
+			instruction.sword1(),
+			instruction.int0(1));
 	}
 
 	case asBCTYPE_QW_DW_ARG:
 	{
-		return fmt::format("{} {} {}", instruction.info->name, instruction.arg_pword(), instruction.arg_int(2));
+		return fmt::format("{} {} {}", instruction.info->name, instruction.pword0(), instruction.int0(2));
 	}
 
 	case asBCTYPE_rW_QW_ARG:
 	{
-		return fmt::format("{} {} {}", instruction.info->name, instruction.arg_sword0(), instruction.arg_pword(1));
+		return fmt::format("{} {} {}", instruction.info->name, instruction.sword0(), instruction.pword0(1));
 	}
 
 	case asBCTYPE_rW_DW_DW_ARG:
@@ -123,9 +123,9 @@ std::string disassemble(
 		return fmt::format(
 			"{} {} {} {}",
 			instruction.info->name,
-			instruction.arg_sword0(),
-			instruction.arg_int(1),
-			instruction.arg_int(2));
+			instruction.sword0(),
+			instruction.int0(1),
+			instruction.int0(2));
 	}
 
 	default:

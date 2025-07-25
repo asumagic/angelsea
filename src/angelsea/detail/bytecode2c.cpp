@@ -169,7 +169,7 @@ void BytecodeToC::emit_entry_dispatch(JitFunction& function)
         }
 
         // patch the JIT entry with the index we use in the switch
-        ins.arg_pword() = current_entry_id;
+        ins.pword0() = current_entry_id;
 
         emit("\tcase {}: goto bc{};\n", current_entry_id, ins.offset);
 
@@ -222,7 +222,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
             "\t\t--l_sp;\n"
             "\t\t*l_sp = {DWORD_ARG};\n"
             "\t\tl_bc += 2;\n",
-            fmt::arg("DWORD_ARG", ins.arg_dword())
+            fmt::arg("DWORD_ARG", ins.dword0())
         );
         break;
     }
@@ -233,7 +233,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
             "\t\tl_sp -= 2;\n"
             "\t\t*(asQWORD*)l_sp = {QWORD_ARG};\n"
             "\t\tl_bc += 3;\n",
-            fmt::arg("QWORD_ARG", ins.arg_qword())
+            fmt::arg("QWORD_ARG", ins.qword0())
         );
         break;
     }
@@ -265,6 +265,21 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
     case asBC_CALL:
     {
         emit_vm_fallback(function, "instructions that branch to l_bc are not supported yet");
+        break;
+    }
+
+    case asBC_CMPIi:
+    {
+        emit(
+            "\t\tint i1 = *(int*)(l_fp - {SWORDARG0});\n"
+			"\t\tint i2 = {INTARG};\n"
+			"\t\tif( i1 == i2 )     *(int*)(&(*regs).valueRegister) =  0;\n"
+			"\t\telse if( i1 < i2 ) *(int*)(&(*regs).valueRegister) = -1;\n"
+			"\t\telse               *(int*)(&(*regs).valueRegister) =  1;\n"
+			"\t\tl_bc += 2;\n",
+            fmt::arg("SWORDARG0", ins.sword0()),
+            fmt::arg("INTARG", ins.int0())
+        );
         break;
     }
 
@@ -319,7 +334,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
     case asBC_CMPu:
     case asBC_CMPf:
     case asBC_CMPi:
-    case asBC_CMPIi:
     case asBC_CMPIf:
     case asBC_CMPIu:
     case asBC_JMPP:
