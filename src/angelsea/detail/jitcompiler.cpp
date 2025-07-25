@@ -198,7 +198,7 @@ void JitCompiler::compile_all() {
 	}
 
 	if (config().dump_mir_code) {
-		MIR_output(mir, stderr);
+		MIR_output(mir, stdout);
 	}
 
 	MIR_gen_finish(mir);
