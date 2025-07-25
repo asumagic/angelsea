@@ -231,7 +231,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
     {
         emit(
             "\t\tl_sp -= 2;\n"
-            "\t\t*l_sp = {QWORD_ARG};\n"
+            "\t\t*(asQWORD*)l_sp = {QWORD_ARG};\n"
             "\t\tl_bc += 3;\n",
             fmt::arg("QWORD_ARG", ins.arg_qword())
         );
