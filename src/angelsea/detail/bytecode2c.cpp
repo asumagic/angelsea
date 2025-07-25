@@ -24,6 +24,7 @@ BytecodeToC::BytecodeToC(JitCompiler& compiler) :
 void BytecodeToC::prepare_new_context()
 {
     m_buffer.clear();
+    m_fallback_count = 0;
     write_header();
 }
 
@@ -496,6 +497,8 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 void BytecodeToC::emit_vm_fallback(JitFunction& function, std::string_view reason)
 {
+    ++m_fallback_count;
+
     emit_save_vm_registers();
 
     if (is_human_readable())

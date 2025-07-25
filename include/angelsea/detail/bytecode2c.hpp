@@ -54,6 +54,14 @@ class BytecodeToC
         m_on_map_function_callback = callback;
     }
 
+    /// Returns the number of fallbacks to the VM generated since
+    /// `prepare_new_context`.
+    /// If `== 0`, then all translated functions were fully translated.
+    std::size_t get_fallback_count() const
+    {
+        return m_fallback_count;
+    }
+
     private:
     void write_header();
 
@@ -79,6 +87,8 @@ class BytecodeToC
     ModuleId m_current_function_id;
 
     OnMapFunctionCallback m_on_map_function_callback;
+
+    std::size_t m_fallback_count;
 };
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset);

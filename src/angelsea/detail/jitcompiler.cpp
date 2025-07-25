@@ -105,6 +105,31 @@ void JitCompiler::compile_all()
     // TODO: Investigate if partial recompiles work, and make them more
     // efficient
 
+    const auto compile_module = [&](
+        const char* internal_module_name,
+        asIScriptModule* script_module,
+        std::span<JitFunction*> functions
+    ) {
+        c_generator.prepare_new_context();
+        c_generator.translate_module(
+            internal_module_name,
+            script_module,
+            functions
+        );
+
+        // fmt::print(stderr, "Translated function:\n{}", c_generator.source());
+
+        InputData input_data(c_generator.source());
+        if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, internal_module_name, nullptr))
+        {
+            log(*this, LogSeverity::ERROR, "Failed to compile translated C module \"{}\"", script_module->GetName());
+        }
+
+        if (c_generator.get_fallback_count() > 0)
+        {
+            log(*this, LogSeverity::PERF_WARNING, "Number of fallbacks for module \"{}\": {}", script_module->GetName(), c_generator.get_fallback_count());
+        }
+    };
 
     for (auto& [script_module, functions] : modules)
     {
@@ -115,37 +140,12 @@ void JitCompiler::compile_all()
             {
                 // convert each function as their own virtual module
                 // TODO: is this useful? should reconsider
-                c_generator.prepare_new_context();
-                c_generator.translate_module(
-                    "test",
-                    script_module,
-                    std::span{functions}.subspan(i, 1)
-                );
-                // fmt::print(stderr, "Translated function:\n{}", c_generator.source());
-
-                InputData input_data(c_generator.source());
-                if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, "<anon>", nullptr))
-                {
-                    log(*this, functions[i]->script_function(), LogSeverity::ERROR, "Failed to compile translated C function `{}`", functions[i]->script_function().GetDeclaration(true, true, true));
-                }
+                compile_module("<anon>", nullptr, std::span{functions}.subspan(i, 1));
             }
         }
         else
         {
-            c_generator.prepare_new_context();
-            c_generator.translate_module(
-                script_module->GetName(),
-                script_module,
-                std::span{functions}
-            );
-
-            fmt::print(stderr, "Translated function:\n{}", c_generator.source());
-
-            InputData input_data(c_generator.source());
-            if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, script_module->GetName(), nullptr))
-            {
-                log(*this, LogSeverity::ERROR, "Failed to compile translated C module \"{}\"", script_module->GetName());
-            }
+            compile_module(script_module->GetName(), script_module, std::span{functions});
         }
     }
 
