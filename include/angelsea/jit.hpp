@@ -6,25 +6,21 @@
 #include <angelsea/config.hpp>
 #include <angelsea/detail/jitcompiler.hpp>
 
-namespace angelsea
-{
+namespace angelsea {
 
-class Jit final : public asIJITCompilerV2
-{
-    public:
-    Jit(const JitConfig& config, asIScriptEngine& engine) :
-        m_compiler(config, engine)
-    {}
+class Jit final : public asIJITCompilerV2 {
+	public:
+	Jit(const JitConfig& config, asIScriptEngine& engine) : m_compiler(config, engine) {}
 
-    ~Jit();
+	~Jit();
 
 	virtual void NewFunction(asIScriptFunction* scriptFunc) override;
 	virtual void CleanFunction(asIScriptFunction* scriptFunc, asJITFunction jitFunc) override;
 
-    void CompileModules();
+	void CompileModules();
 
-    private:
-    detail::JitCompiler m_compiler;
+	private:
+	detail::JitCompiler m_compiler;
 };
 
-}
+} // namespace angelsea

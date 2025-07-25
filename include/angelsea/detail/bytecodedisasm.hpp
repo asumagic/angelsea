@@ -5,14 +5,10 @@
 #include <angelsea/detail/bytecodeinstruction.hpp>
 #include <string>
 
-namespace angelsea::detail
-{
+namespace angelsea::detail {
 
 class JitCompiler;
 
-std::string disassemble(
-    asIScriptEngine& engine,
-    BytecodeInstruction instruction
-);
+std::string disassemble(asIScriptEngine& engine, BytecodeInstruction instruction);
 
-}
+} // namespace angelsea::detail

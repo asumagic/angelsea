@@ -2,8 +2,7 @@
 
 #include "common.hpp"
 
-TEST_CASE("32-bit float math", "[floatmath32]")
-{
+TEST_CASE("32-bit float math", "[floatmath32]") {
 	REQUIRE(run_string("float a = 3.141f; print(''+a);") == "3.141\n");
 
 	REQUIRE(run_string("float a = 1.0f, b = 2.0f; print(''+(a + b));") == "3\n");
@@ -24,8 +23,7 @@ TEST_CASE("32-bit float math", "[floatmath32]")
 	REQUIRE(run_string("float a = 10.0f; print(''+ --a);") == "9\n");
 }
 
-TEST_CASE("64-bit float math", "[floatmath32]")
-{
+TEST_CASE("64-bit float math", "[floatmath32]") {
 	REQUIRE(run_string("double a = 3.141; print(''+a);") == "3.141\n");
 
 	REQUIRE(run_string("double a = 1.0, b = 2.0; print(''+(a + b));") == "3\n");
@@ -46,14 +44,12 @@ TEST_CASE("64-bit float math", "[floatmath32]")
 	REQUIRE(run_string("double a = 10.0; print(''+ --a);") == "9\n");
 }
 
-TEST_CASE("Floating-point to floating-point conversions", "[castfpfp]")
-{
+TEST_CASE("Floating-point to floating-point conversions", "[castfpfp]") {
 	REQUIRE(run_string("double a = 3.141; print(''+float(a))") == "3.141\n");
 	REQUIRE(run_string("float a = 3.141; print(''+double(a))") == "3.141\n");
 }
 
-TEST_CASE("Floating-point <-> integral conversions", "[castfpint]")
-{
+TEST_CASE("Floating-point <-> integral conversions", "[castfpint]") {
 	REQUIRE(run_string("int a = -123; print(''+float(a))") == "-123\n");
 	REQUIRE(run_string("float a = -123.456; print(''+int(a))") == "-123\n");
 	REQUIRE(run_string("uint a = 123; print(''+float(a))") == "123\n");

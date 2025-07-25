@@ -2,8 +2,7 @@
 
 #include "common.hpp"
 
-TEST_CASE("recursive fibonacci", "[fib]")
-{
+TEST_CASE("recursive fibonacci", "[fib]") {
 	EngineContext context;
 
 	out = {};

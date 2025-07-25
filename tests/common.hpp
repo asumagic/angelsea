@@ -4,8 +4,8 @@
 
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 
-#include <angelsea/jit.hpp>
 #include <angelscript.h>
+#include <angelsea/jit.hpp>
 #include <catch2/catch_all.hpp>
 #include <sstream>
 #include <string>
@@ -13,9 +13,8 @@
 #define TEST_REQUIRE(name, tag, cond)                                                                                  \
 	TEST_CASE(name, tag) { REQUIRE(cond); }
 
-#define ANGELSEA_TEST_CHECK(x)                                                                                           \
-	if (!(x))                                                                                                          \
-	{                                                                                                                  \
+#define ANGELSEA_TEST_CHECK(x)                                                                                         \
+	if (!(x)) {                                                                                                        \
 		throw std::runtime_error{"check failed: " #x};                                                                 \
 	}                                                                                                                  \
 	(void)0
@@ -24,8 +23,7 @@ extern std::stringstream out;
 
 angelsea::JitConfig get_test_jit_config();
 
-struct EngineContext
-{
+struct EngineContext {
 	EngineContext(const angelsea::JitConfig& config = get_test_jit_config());
 
 	~EngineContext();
@@ -33,11 +31,11 @@ struct EngineContext
 	void register_interface();
 
 	asIScriptModule& build(const char* name, const char* script_path);
-	void prepare_execution();
-	void run(asIScriptModule& module, const char* entry_point);
+	void             prepare_execution();
+	void             run(asIScriptModule& module, const char* entry_point);
 
 	asIScriptEngine* engine;
-	angelsea::Jit jit;
+	angelsea::Jit    jit;
 };
 
 std::string run(const char* path, const char* entry = "void main()");

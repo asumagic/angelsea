@@ -4,7 +4,7 @@
 
 #ifndef angelsea_assert
 
-#include <cassert>
-#define angelsea_assert(x) assert(x)
+#	include <cassert>
+#	define angelsea_assert(x) assert(x)
 
 #endif

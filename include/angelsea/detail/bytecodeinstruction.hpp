@@ -5,10 +5,8 @@
 #include <angelscript.h>
 #include <cstddef>
 
-namespace angelsea::detail
-{
-struct BytecodeInstruction
-{
+namespace angelsea::detail {
+struct BytecodeInstruction {
 	asDWORD*         pointer;
 	const asSBCInfo* info;
 	std::size_t      offset;

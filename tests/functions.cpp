@@ -4,13 +4,11 @@
 
 TEST_CASE("simple parameterized function", "[params]") { REQUIRE(run("scripts/functions.as") == "10000\n"); }
 
-TEST_CASE("references to primitives in parameters", "[refparams]")
-{
+TEST_CASE("references to primitives in parameters", "[refparams]") {
 	REQUIRE(run("scripts/refprimitives.as") == "10\n");
 }
 
-TEST_CASE("shared functions", "[shared][sharedfuncs]")
-{
+TEST_CASE("shared functions", "[shared][sharedfuncs]") {
 	EngineContext context;
 
 	out = {};
