@@ -238,26 +238,33 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
         break;
     }
 
+    // case asBC_CALL:
+    // {
+    //     // TODO: when possible, translate this to a JIT to JIT function call
+
+    //     int fn = ins.arg_int();
+    //     emit(
+    //         "\t\tint i = {FN_ID};\n"
+    //         "\t\tl_bc += 2;\n"
+    //         "\t\tasASSERT( i>= 0 );\n"
+    //         // "\t\t asASSERT( (i & FUNC_IMPORTED) == 0 );"
+    //         "",
+    //         fmt::arg("FN_ID", fn)
+    //     );
+    //     emit_save_vm_registers();
+    //     emit(
+    //         "\t\tint r = asea_call_script_function(regs, {FN_ID});\n",
+    //         fmt::arg("FN_ID", fn)
+    //     );
+    //     emit_load_vm_registers();
+    //     emit("\t\tif (r != asEXECUTION_ACTIVE) {{ return; }}\n");
+    //     branch_bc();
+    //     break;
+    // }
+
     case asBC_CALL:
     {
-        // TODO: when possible, translate this to a JIT to JIT function call
-
-        int fn = ins.arg_int();
-        emit(
-            "\t\tint i = {FN_ID};\n"
-            "\t\tl_bc += 2;\n"
-            "\t\tasASSERT( i>= 0 );\n"
-            // "\t\t asASSERT( (i & FUNC_IMPORTED) == 0 );"
-            "",
-            fmt::arg("FN_ID", fn)
-        );
-        emit_save_vm_registers();
-        emit(
-            "\t\tint r = asea_call_script_function(regs, {FN_ID});\n",
-            fmt::arg("FN_ID", fn)
-        );
-        emit_load_vm_registers();
-        emit("\t\tif (r != asEXECUTION_ACTIVE) {{ return; }}\n");
+        emit_vm_fallback(function, "instructions that branch to l_bc are not supported yet");
         break;
     }
 
