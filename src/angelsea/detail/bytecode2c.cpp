@@ -230,6 +230,16 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		break;
 	}
 
+	case asBC_PshV8: {
+		emit(
+		    "\t\tl_sp -= 2;\n"
+		    "\t\t*(asQWORD*)l_sp = *(asQWORD*)(l_fp - {SWORD0});\n"
+		    "\t\t++l_bc;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		break;
+	}
+
 	case asBC_SetV8: {
 		emit(
 		    "\t\t*(asQWORD*)(l_fp - {SWORD0}) = {QWORD0};\n"
@@ -524,7 +534,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_CallPtr:
 	case asBC_FuncPtr:
 	case asBC_LoadThisR:
-	case asBC_PshV8:
 	case asBC_DIVu:
 	case asBC_MODu:
 	case asBC_DIVu64:
