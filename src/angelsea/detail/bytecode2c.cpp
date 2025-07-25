@@ -753,6 +753,7 @@ void BytecodeToC::write_header() {
 typedef __INT8_TYPE__    asINT8;
 typedef __INT16_TYPE__   asINT16;
 typedef __INT32_TYPE__   asINT32;
+typedef __INT64_TYPE__   asINT64;
 typedef __UINT8_TYPE__   asBYTE;
 typedef __UINT16_TYPE__  asWORD;
 typedef __UINT32_TYPE__  asUINT;
