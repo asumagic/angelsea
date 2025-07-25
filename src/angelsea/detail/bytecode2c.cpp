@@ -220,6 +220,16 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		break;
 	}
 
+	case asBC_PshV4: {
+		emit(
+		    "\t\t--l_sp;\n"
+		    "\t\t*l_sp = {SWORDARG0};\n"
+		    "\t\t++l_bc;\n",
+		    fmt::arg("SWORDARG0", ins.sword0())
+		);
+		break;
+	}
+
 	case asBC_CpyVtoR4: {
 		emit(
 		    "\t\tDEREF_VALUEREG(asDWORD) = *(asDWORD*)(l_fp - {SWORDARG0});\n"
@@ -318,7 +328,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 	case asBC_PopPtr:
 	case asBC_PshGPtr:
-	case asBC_PshV4:
 	case asBC_PSF:
 	case asBC_SwapPtr:
 	case asBC_NOT:
