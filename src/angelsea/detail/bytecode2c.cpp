@@ -446,13 +446,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		break;
 	}
 	case asBC_BSRA: {
-		emit(
-		    "\t\t*(l_fp - {SWORD0}) = *(asINT32*)(l_fp - {SWORD1}) >> *(asINT32*)(l_fp - {SWORD2});\n"
-		    "\t\tl_bc += 2;\n",
-		    fmt::arg("SWORD0", ins.sword0()),
-		    fmt::arg("SWORD1", ins.sword1()),
-		    fmt::arg("SWORD2", ins.sword2())
-		);
+		emit_arithmetic_simple_stack_stack(ins, ">>", "asINT32");
 		break;
 	}
 
