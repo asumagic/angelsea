@@ -326,6 +326,11 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		break;
 	}
 
+	case asBC_ADDi: {
+		emit_arithmetic_simple_stack_stack(ins, "+", "int");
+		break;
+	}
+
 	case asBC_PopPtr:
 	case asBC_PshGPtr:
 	case asBC_PSF:
@@ -426,7 +431,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_iTOd:
 	case asBC_uTOd:
 	case asBC_fTOd:
-	case asBC_ADDi:
 	case asBC_SUBi:
 	case asBC_MULi:
 	case asBC_DIVi:
@@ -564,6 +568,22 @@ void BytecodeToC::emit_cond_branch(BytecodeInstruction ins, std::size_t instruct
 	    fmt::arg("INSTRUCTION_LENGTH", instruction_length),
 	    fmt::arg("BRANCH_OFFSET", ins.int0() + instruction_length),
 	    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + instruction_length))
+	);
+}
+
+void BytecodeToC::emit_arithmetic_simple_stack_stack(
+    BytecodeInstruction ins,
+    std::string_view    op,
+    std::string_view    type
+) {
+	emit(
+	    "\t\t*({TYPE}*)(l_fp - {SWORDARG0}) = *({TYPE}*)(l_fp - {SWORDARG1}) {OP} *({TYPE}*)(l_fp - {SWORDARG2});\n"
+	    "\t\tl_bc += 2;\n",
+	    fmt::arg("TYPE", type),
+	    fmt::arg("OP", op),
+	    fmt::arg("SWORDARG0", ins.sword0()),
+	    fmt::arg("SWORDARG1", ins.sword1()),
+	    fmt::arg("SWORDARG2", ins.sword2())
 	);
 }
 
