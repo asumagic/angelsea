@@ -423,12 +423,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	}
 
 	case asBC_i64TOi: {
-		emit(
-		    "\t\t*(l_fp - {SWORD0}) = (int)(*(asINT64*)(l_fp - {SWORD1}));\n"
-		    "\t\tl_bc += 2;\n",
-		    fmt::arg("SWORD0", ins.sword0()),
-		    fmt::arg("SWORD1", ins.sword1())
-		);
+		emit_primitive_cast_stack(ins, "asINT64", "int", false);
 		break;
 	}
 
@@ -637,6 +632,23 @@ void BytecodeToC::emit_load_vm_registers() {
 	    "\t\tl_bc = (*regs).programPointer;\n"
 	    "\t\tl_sp = (*regs).stackPointer;\n"
 	    "\t\tl_fp = (*regs).stackFramePointer;\n"
+	);
+}
+
+void BytecodeToC::emit_primitive_cast_stack(
+    BytecodeInstruction ins,
+    std::string_view    src_type,
+    std::string_view    dst_type,
+    bool                in_place
+) {
+	emit(
+	    "\t\t*({DST_TYPE}*)(l_fp - {DST}) = ({DST_TYPE})(*({SRC_TYPE}*)(l_fp - {SRC}));\n"
+	    "\t\tl_bc += {INSTRUCTION_LENGTH};\n",
+	    fmt::arg("DST_TYPE", dst_type),
+	    fmt::arg("SRC_TYPE", src_type),
+	    fmt::arg("DST", ins.sword0()),
+	    fmt::arg("SRC", in_place ? ins.sword0() : ins.sword1()),
+	    fmt::arg("INSTRUCTION_LENGTH", in_place ? 1 : 2)
 	);
 }
 
