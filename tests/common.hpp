@@ -22,9 +22,11 @@
 
 extern std::stringstream out;
 
+angelsea::JitConfig get_test_jit_config();
+
 struct EngineContext
 {
-	EngineContext(const angelsea::JitConfig& config = {});
+	EngineContext(const angelsea::JitConfig& config = get_test_jit_config());
 
 	~EngineContext();
 

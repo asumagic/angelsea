@@ -48,6 +48,16 @@ void print_uint(unsigned long value) { out << value << '\n'; }
 void print_char(char value) { out << value; }
 } // namespace bindings
 
+angelsea::JitConfig get_test_jit_config()
+{
+	return {
+		.warn_if_never_compiled = false,
+		.log_targets = {},
+		.dump_c_code = (getenv("ASEA_DUMP_C") != nullptr),
+		.dump_mir_code = (getenv("ASEA_DUMP_MIR") != nullptr),
+	};
+}
+
 EngineContext::EngineContext(const angelsea::JitConfig& config) : engine{asCreateScriptEngine()}, jit{config, *engine}
 {
 	engine->SetEngineProperty(asEP_INCLUDE_JIT_INSTRUCTIONS, true);

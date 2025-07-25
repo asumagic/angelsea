@@ -74,6 +74,10 @@ As of writing:
 Those all have very similar permissive terms, but remember to give attribution
 in source **and** binary distributions!
 
+### Documentation
+
+- [Running the test suite](doc/TESTS.md)
+
 ### Q&A
 
 #### What is the best supported calling convention?
