@@ -42,13 +42,30 @@ void print_uint(unsigned long value) { out << value << '\n'; }
 void print_char(char value) { out << value; }
 } // namespace bindings
 
+bool set_env_int_variable(const char* env, int& target) {
+	const char* env_value = getenv(env);
+
+	if (env_value == nullptr) {
+		return false;
+	}
+
+	// will throw an exceptiwith bad args - this is fine for testing
+	target = std::stoi(env_value);
+	return true;
+}
+
 angelsea::JitConfig get_test_jit_config() {
-	return {
+	angelsea::JitConfig config{
 	    .warn_if_never_compiled = false,
 	    .log_targets            = {},
 	    .dump_c_code            = (getenv("ASEA_DUMP_C") != nullptr),
-	    .dump_mir_code          = (getenv("ASEA_DUMP_MIR") != nullptr),
+	    .dump_mir_code          = (getenv("ASEA_DUMP_MIR") != nullptr)
 	};
+
+	set_env_int_variable("ASEA_MIR_DEBUG_LEVEL", config.mir_debug_level);
+	set_env_int_variable("ASEA_MIR_OPT_LEVEL", config.mir_optimization_level);
+
+	return config;
 }
 
 EngineContext::EngineContext(const angelsea::JitConfig& config) : engine{asCreateScriptEngine()}, jit{config, *engine} {
