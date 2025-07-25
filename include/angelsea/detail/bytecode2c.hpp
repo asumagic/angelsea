@@ -79,4 +79,6 @@ class BytecodeToC
     OnMapFunctionCallback m_on_map_function_callback;
 };
 
+std::size_t relative_jump_target(std::size_t base_offset, int relative_offset);
+
 }

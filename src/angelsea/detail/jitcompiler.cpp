@@ -139,7 +139,7 @@ void JitCompiler::compile_all()
                 std::span{functions}
             );
 
-            // fmt::print(stderr, "Translated function:\n{}", c_generator.source());
+            fmt::print(stderr, "Translated function:\n{}", c_generator.source());
 
             InputData input_data(c_generator.source());
             if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, script_module->GetName(), nullptr))
