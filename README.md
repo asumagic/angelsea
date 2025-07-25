@@ -3,8 +3,9 @@
 > [!IMPORTANT]
 > Angelsea is in very early stages of development and is not suitable for use.
 
-Angelsea is a **JIT compiler for AngelScript** which leverages the lightweight
-[MIR](https://github.com/vnmakarov/mir) JIT runtime and its C11 compiler.
+Angelsea is a **JIT compiler for AngelScript** written in C++20 which leverages
+the lightweight [MIR](https://github.com/vnmakarov/mir) JIT runtime and its C11
+compiler.
 
 ### Design
 
@@ -15,6 +16,15 @@ C code generation amounts to pasting simple C that closely matches
 AngelScript behavior.  
 It can fallback to the interpreter at any point, and may be invoked from any JIT
 entry point (e.g. inserted by AS at the start of the function or after calls).
+
+### Supported platforms
+
+Currently, only x86-64 Linux is being developed on and tested. However, MIR
+supports many other platforms and CPU architectures, and Angelsea should be
+generating fairly portable C code, so it shouldn't be hard to port.
+
+(Ideally, we would setup CI to automatically test other platforms; perhaps even
+using qemu integration with containers to test aarch64 etc.)
 
 ### Use
 
@@ -39,6 +49,9 @@ angelsea::JitConfig config;
 angelsea::Jit jit(config, *engine);
 assert(engine->SetJITCompiler(&jit) >= 0);
 ```
+
+**angelsea requires you to explicitly trigger native compilation.**
+This is done by calling `jit.CompileModules();`.
 
 > [!NOTE]
 > The `vendor/angelscript` submodule points to the
