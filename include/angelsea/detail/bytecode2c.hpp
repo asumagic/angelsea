@@ -71,6 +71,8 @@ class BytecodeToC
     void emit_load_vm_registers();
     void emit_save_vm_registers();
 
+    void emit_cond_branch(BytecodeInstruction ins, std::size_t instruction_length, std::string_view test);
+
     JitCompiler* m_compiler;
     std::string m_buffer;
     ModuleId m_current_module_id;

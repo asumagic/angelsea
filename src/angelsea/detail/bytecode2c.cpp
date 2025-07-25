@@ -283,20 +283,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
         break;
     }
 
-    case asBC_JNS:
-    {
-        emit(
-            "\t\tif( DEREF_VALUEREG(int) >= 0 ) {{\n"
-            "\t\t\tl_bc += {BRANCH_OFFSET};\n"
-            "\t\t\tgoto bc{BRANCH_TARGET};\n"
-            "\t\t}} else {{\n"
-            "\t\t\tl_bc += 2;\n"
-            "\t\t}}\n",
-            fmt::arg("BRANCH_OFFSET", ins.int0() + 2),
-            fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + 2))
-        );
-        break;
-    }
+    case asBC_JNS: { emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) >= 0"); break; }
 
     case asBC_PopPtr:
     case asBC_PshGPtr:
@@ -536,6 +523,22 @@ void BytecodeToC::emit_load_vm_registers()
         "\t\tl_bc = (*regs).programPointer;\n"
         "\t\tl_sp = (*regs).stackPointer;\n"
         "\t\tl_fp = (*regs).stackFramePointer;\n"
+    );
+}
+
+void BytecodeToC::emit_cond_branch(BytecodeInstruction ins, std::size_t instruction_length, std::string_view test)
+{
+    emit(
+        "\t\tif( {TEST} ) {{\n"
+        "\t\t\tl_bc += {BRANCH_OFFSET};\n"
+        "\t\t\tgoto bc{BRANCH_TARGET};\n"
+        "\t\t}} else {{\n"
+        "\t\t\tl_bc += {INSTRUCTION_LENGTH};\n"
+        "\t\t}}\n",
+        fmt::arg("TEST", test),
+        fmt::arg("INSTRUCTION_LENGTH", instruction_length),
+        fmt::arg("BRANCH_OFFSET", ins.int0() + instruction_length),
+        fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + instruction_length))
     );
 }
 
