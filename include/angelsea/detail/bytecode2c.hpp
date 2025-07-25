@@ -3,6 +3,7 @@
 #pragma once
 
 #include <angelscript.h>
+#include <angelsea/detail/bytecodeinstruction.hpp>
 #include <angelsea/detail/jitcompiler.hpp>
 #include <string>
 #include <string_view>
@@ -56,6 +57,8 @@ class BytecodeToC
     private:
     void write_header();
 
+    void translate_instruction(JitFunction& function, BytecodeInstruction instruction);
+
     template<class... Ts>
     void emit(fmt::format_string<Ts...> format, Ts&&... format_args)
     {
@@ -64,6 +67,9 @@ class BytecodeToC
 
     void emit_entry_dispatch(JitFunction& function);
     void emit_vm_fallback(JitFunction& function, std::string_view reason);
+
+    void emit_load_vm_registers();
+    void emit_save_vm_registers();
 
     JitCompiler* m_compiler;
     std::string m_buffer;

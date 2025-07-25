@@ -57,10 +57,12 @@ add_library(
     src/angelsea/jit.cpp
     src/angelsea/detail/jitcompiler.cpp
     src/angelsea/detail/jitfunction.cpp
+    src/angelsea/detail/runtime.cpp
     src/angelsea/detail/bytecode2c.cpp
     src/angelsea/detail/bytecodedisasm.cpp
 )
 target_link_libraries(angelsea PRIVATE fmt mir angelscript)
+target_include_directories(angelsea PRIVATE ${ANGELSCRIPT_ROOT}/angelscript/source)  # internal AS headers
 target_include_directories(angelsea PUBLIC include/)
 target_compile_features(angelsea PUBLIC cxx_std_20)
 

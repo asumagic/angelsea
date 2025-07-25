@@ -12,6 +12,7 @@ extern "C"
 #include <angelsea/detail/log.hpp>
 #include <angelsea/detail/debug.hpp>
 #include <angelsea/detail/bytecode2c.hpp>
+#include <angelsea/detail/runtime.hpp>
 #include <string>
 #include <unordered_map>
 
@@ -149,13 +150,16 @@ void JitCompiler::compile_all()
 
     c2mir_finish(mir);
 
+    // TODO: move to its own bind_runtime function, or use the link interface
+    MIR_load_external(mir, "asea_call_script_function", reinterpret_cast<void*>(asea_call_script_function));
+
     // lookup functions
     for (
         MIR_module_t module = DLIST_HEAD(MIR_module_t, *MIR_get_module_list(mir));
         module != nullptr;
         module = DLIST_NEXT(MIR_module_t, module)
     ) {
-        MIR_load_module (mir, module);
+        MIR_load_module(mir, module);
 
         // TODO: investigate lazy gen options, and exposing interpretation instead
         MIR_link(mir, MIR_set_lazy_gen_interface, nullptr);

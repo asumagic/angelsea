@@ -74,13 +74,8 @@ FunctionId BytecodeToC::translate_function(
         fmt::arg("name", func_name)
     );
 
-    // Local VM variables; load them from the registers
-    emit(
-        "\tasDWORD *l_bc = (*regs).programPointer;\n"
-        "\tasDWORD *l_sp = (*regs).stackPointer;\n"
-        "\tasDWORD *l_fp = (*regs).stackFramePointer;\n"
-        "\n"
-    );
+    emit("\tasDWORD *l_bc, *l_sp, *l_fp;\n");
+    emit_load_vm_registers();
 
     // Transpiled functions are compiled to be JIT entry points for the
     // AngelScript VM.
@@ -136,270 +131,7 @@ FunctionId BytecodeToC::translate_function(
     emit_entry_dispatch(function);
 
     walk_bytecode(get_bytecode(function.script_function()), [&](BytecodeInstruction ins) {
-        if (is_human_readable())
-        {
-            emit("\t/* bytecode: {} */\n", disassemble(m_compiler->engine(), ins));
-        }
-
-        emit("\tbc{}: {{\n", ins.offset);
-
-        // TODO: after a fallback don't bother emitting fallback code at all
-        // until the next JitEntry
-
-        // TODO: elide jit entries when we're not dropping down to the VM
-        // between them (assign their jitarg to 0 to be sure)
-        // this does mean having to recompute indices
-
-        // TODO: elide jit entries when they immediately precede an unhandled
-        // instruction
-
-        switch(ins.info->bc)
-        {
-        case asBC_JitEntry:
-        {
-            emit("\t\tl_bc += 1+AS_PTR_SIZE;\n");
-            break;
-        }
-
-        case asBC_SUSPEND:
-        {
-            log(*m_compiler, function.script_function(), LogSeverity::PERF_WARNING, "asBC_SUSPEND found; this will fallback to the VM and be slow!");
-            emit_vm_fallback(function, "SUSPEND is not implemented yet");
-            break;
-        }
-
-        case asBC_PshC4:
-        {
-            emit(
-                "\t\t--l_sp;\n"
-                "\t\t*l_sp = {DWORD_ARG};\n"
-                "\t\tl_bc += 2;\n",
-                fmt::arg("DWORD_ARG", ins.arg_dword())
-            );
-            break;
-        }
-
-        case asBC_PshC8:
-        {
-            emit(
-                "\t\tl_sp -= 2;\n"
-                "\t\t*l_sp = {QWORD_ARG};\n"
-                "\t\tl_bc += 3;\n",
-                fmt::arg("QWORD_ARG", ins.arg_qword())
-            );
-            break;
-        }
-
-        case asBC_PopPtr:
-        case asBC_PshGPtr:
-        case asBC_PshV4:
-        case asBC_PSF:
-        case asBC_SwapPtr:
-        case asBC_NOT:
-        case asBC_PshG4:
-        case asBC_LdGRdR4:
-        case asBC_CALL:
-        case asBC_RET:
-        case asBC_JMP:
-        case asBC_JZ:
-        case asBC_JNZ:
-        case asBC_JS:
-        case asBC_JNS:
-        case asBC_JP:
-        case asBC_JNP:
-        case asBC_TZ:
-        case asBC_TNZ:
-        case asBC_TS:
-        case asBC_TNS:
-        case asBC_TP:
-        case asBC_TNP:
-        case asBC_NEGi:
-        case asBC_NEGf:
-        case asBC_NEGd:
-        case asBC_INCi16:
-        case asBC_INCi8:
-        case asBC_DECi16:
-        case asBC_DECi8:
-        case asBC_INCi:
-        case asBC_DECi:
-        case asBC_INCf:
-        case asBC_DECf:
-        case asBC_INCd:
-        case asBC_DECd:
-        case asBC_IncVi:
-        case asBC_DecVi:
-        case asBC_BNOT:
-        case asBC_BAND:
-        case asBC_BOR:
-        case asBC_BXOR:
-        case asBC_BSLL:
-        case asBC_BSRL:
-        case asBC_BSRA:
-        case asBC_COPY:
-        case asBC_PshVPtr:
-        case asBC_RDSPtr:
-        case asBC_CMPd:
-        case asBC_CMPu:
-        case asBC_CMPf:
-        case asBC_CMPi:
-        case asBC_CMPIi:
-        case asBC_CMPIf:
-        case asBC_CMPIu:
-        case asBC_JMPP:
-        case asBC_PopRPtr:
-        case asBC_PshRPtr:
-        case asBC_STR:
-        case asBC_CALLSYS:
-        case asBC_CALLBND:
-        case asBC_ALLOC:
-        case asBC_FREE:
-        case asBC_LOADOBJ:
-        case asBC_STOREOBJ:
-        case asBC_GETOBJ:
-        case asBC_REFCPY:
-        case asBC_CHKREF:
-        case asBC_GETOBJREF:
-        case asBC_GETREF:
-        case asBC_PshNull:
-        case asBC_ClrVPtr:
-        case asBC_OBJTYPE:
-        case asBC_TYPEID:
-        case asBC_SetV4:
-        case asBC_SetV8:
-        case asBC_ADDSi:
-        case asBC_CpyVtoV4:
-        case asBC_CpyVtoV8:
-        case asBC_CpyVtoR4:
-        case asBC_CpyVtoR8:
-        case asBC_CpyVtoG4:
-        case asBC_CpyRtoV4:
-        case asBC_CpyRtoV8:
-        case asBC_CpyGtoV4:
-        case asBC_WRTV1:
-        case asBC_WRTV2:
-        case asBC_WRTV4:
-        case asBC_WRTV8:
-        case asBC_RDR1:
-        case asBC_RDR2:
-        case asBC_RDR4:
-        case asBC_RDR8:
-        case asBC_LDG:
-        case asBC_LDV:
-        case asBC_PGA:
-        case asBC_CmpPtr:
-        case asBC_VAR:
-        case asBC_iTOf:
-        case asBC_fTOi:
-        case asBC_uTOf:
-        case asBC_fTOu:
-        case asBC_sbTOi:
-        case asBC_swTOi:
-        case asBC_ubTOi:
-        case asBC_uwTOi:
-        case asBC_dTOi:
-        case asBC_dTOu:
-        case asBC_dTOf:
-        case asBC_iTOd:
-        case asBC_uTOd:
-        case asBC_fTOd:
-        case asBC_ADDi:
-        case asBC_SUBi:
-        case asBC_MULi:
-        case asBC_DIVi:
-        case asBC_MODi:
-        case asBC_ADDf:
-        case asBC_SUBf:
-        case asBC_MULf:
-        case asBC_DIVf:
-        case asBC_MODf:
-        case asBC_ADDd:
-        case asBC_SUBd:
-        case asBC_MULd:
-        case asBC_DIVd:
-        case asBC_MODd:
-        case asBC_ADDIi:
-        case asBC_SUBIi:
-        case asBC_MULIi:
-        case asBC_ADDIf:
-        case asBC_SUBIf:
-        case asBC_MULIf:
-        case asBC_SetG4:
-        case asBC_ChkRefS:
-        case asBC_ChkNullV:
-        case asBC_CALLINTF:
-        case asBC_iTOb:
-        case asBC_iTOw:
-        case asBC_SetV1:
-        case asBC_SetV2:
-        case asBC_Cast:
-        case asBC_i64TOi:
-        case asBC_uTOi64:
-        case asBC_iTOi64:
-        case asBC_fTOi64:
-        case asBC_dTOi64:
-        case asBC_fTOu64:
-        case asBC_dTOu64:
-        case asBC_i64TOf:
-        case asBC_u64TOf:
-        case asBC_i64TOd:
-        case asBC_u64TOd:
-        case asBC_NEGi64:
-        case asBC_INCi64:
-        case asBC_DECi64:
-        case asBC_BNOT64:
-        case asBC_ADDi64:
-        case asBC_SUBi64:
-        case asBC_MULi64:
-        case asBC_DIVi64:
-        case asBC_MODi64:
-        case asBC_BAND64:
-        case asBC_BOR64:
-        case asBC_BXOR64:
-        case asBC_BSLL64:
-        case asBC_BSRL64:
-        case asBC_BSRA64:
-        case asBC_CMPi64:
-        case asBC_CMPu64:
-        case asBC_ChkNullS:
-        case asBC_ClrHi:
-        case asBC_CallPtr:
-        case asBC_FuncPtr:
-        case asBC_LoadThisR:
-        case asBC_PshV8:
-        case asBC_DIVu:
-        case asBC_MODu:
-        case asBC_DIVu64:
-        case asBC_MODu64:
-        case asBC_LoadRObjR:
-        case asBC_LoadVObjR:
-        case asBC_RefCpyV:
-        case asBC_JLowZ:
-        case asBC_JLowNZ:
-        case asBC_AllocMem:
-        case asBC_SetListSize:
-        case asBC_PshListElmnt:
-        case asBC_SetListType:
-        case asBC_POWi:
-        case asBC_POWu:
-        case asBC_POWf:
-        case asBC_POWd:
-        case asBC_POWdi:
-        case asBC_POWi64:
-        case asBC_POWu64:
-        case asBC_Thiscall1:
-        {
-            emit_vm_fallback(function, "unsupported instruction");
-            break;
-        }
-
-        default:
-        {
-            emit_vm_fallback(function, "unknown instruction");
-            break;
-        }
-        }
-
-        emit("\t}}\n");
+        translate_instruction(function, ins);
     });
 
     emit("}}\n");
@@ -441,14 +173,297 @@ void BytecodeToC::emit_entry_dispatch(JitFunction& function)
     emit("\t}}\n\n");
 }
 
+void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstruction ins)
+{
+    if (is_human_readable())
+    {
+        emit("\t/* bytecode: {} */\n", disassemble(m_compiler->engine(), ins));
+    }
+
+    emit("\tbc{}: {{\n", ins.offset);
+
+    // TODO: after a fallback don't bother emitting fallback code at all
+    // until the next JitEntry
+
+    // TODO: elide jit entries when we're not dropping down to the VM
+    // between them (assign their jitarg to 0 to be sure)
+    // this does mean having to recompute indices
+
+    // TODO: elide jit entries when they immediately precede an unhandled
+    // instruction
+
+    switch(ins.info->bc)
+    {
+    case asBC_JitEntry:
+    {
+        emit("\t\tl_bc += 1+AS_PTR_SIZE;\n");
+        break;
+    }
+
+    case asBC_SUSPEND:
+    {
+        log(*m_compiler, function.script_function(), LogSeverity::PERF_WARNING, "asBC_SUSPEND found; this will fallback to the VM and be slow!");
+        emit_vm_fallback(function, "SUSPEND is not implemented yet");
+        break;
+    }
+
+    case asBC_PshC4:
+    {
+        emit(
+            "\t\t--l_sp;\n"
+            "\t\t*l_sp = {DWORD_ARG};\n"
+            "\t\tl_bc += 2;\n",
+            fmt::arg("DWORD_ARG", ins.arg_dword())
+        );
+        break;
+    }
+
+    case asBC_PshC8:
+    {
+        emit(
+            "\t\tl_sp -= 2;\n"
+            "\t\t*l_sp = {QWORD_ARG};\n"
+            "\t\tl_bc += 3;\n",
+            fmt::arg("QWORD_ARG", ins.arg_qword())
+        );
+        break;
+    }
+
+    case asBC_CALL:
+    {
+        int fn = ins.arg_int();
+        emit(
+            "\t\tint i = {FN_ID};\n"
+            "\t\tl_bc += 2;\n"
+            "\t\tasASSERT( i>= 0 );\n"
+            // "\t\t asASSERT( (i & FUNC_IMPORTED) == 0 );"
+            "",
+            fmt::arg("FN_ID", fn)
+        );
+        emit_save_vm_registers();
+        emit(
+            "\t\tint r = asea_call_script_function(regs, {FN_ID});\n",
+            fmt::arg("FN_ID", fn)
+        );
+        emit_load_vm_registers();
+        emit("\t\tif (r != asEXECUTION_ACTIVE) {{ return; }}\n");
+        break;
+    }
+
+    case asBC_PopPtr:
+    case asBC_PshGPtr:
+    case asBC_PshV4:
+    case asBC_PSF:
+    case asBC_SwapPtr:
+    case asBC_NOT:
+    case asBC_PshG4:
+    case asBC_LdGRdR4:
+    case asBC_RET:
+    case asBC_JMP:
+    case asBC_JZ:
+    case asBC_JNZ:
+    case asBC_JS:
+    case asBC_JNS:
+    case asBC_JP:
+    case asBC_JNP:
+    case asBC_TZ:
+    case asBC_TNZ:
+    case asBC_TS:
+    case asBC_TNS:
+    case asBC_TP:
+    case asBC_TNP:
+    case asBC_NEGi:
+    case asBC_NEGf:
+    case asBC_NEGd:
+    case asBC_INCi16:
+    case asBC_INCi8:
+    case asBC_DECi16:
+    case asBC_DECi8:
+    case asBC_INCi:
+    case asBC_DECi:
+    case asBC_INCf:
+    case asBC_DECf:
+    case asBC_INCd:
+    case asBC_DECd:
+    case asBC_IncVi:
+    case asBC_DecVi:
+    case asBC_BNOT:
+    case asBC_BAND:
+    case asBC_BOR:
+    case asBC_BXOR:
+    case asBC_BSLL:
+    case asBC_BSRL:
+    case asBC_BSRA:
+    case asBC_COPY:
+    case asBC_PshVPtr:
+    case asBC_RDSPtr:
+    case asBC_CMPd:
+    case asBC_CMPu:
+    case asBC_CMPf:
+    case asBC_CMPi:
+    case asBC_CMPIi:
+    case asBC_CMPIf:
+    case asBC_CMPIu:
+    case asBC_JMPP:
+    case asBC_PopRPtr:
+    case asBC_PshRPtr:
+    case asBC_STR:
+    case asBC_CALLSYS:
+    case asBC_CALLBND:
+    case asBC_ALLOC:
+    case asBC_FREE:
+    case asBC_LOADOBJ:
+    case asBC_STOREOBJ:
+    case asBC_GETOBJ:
+    case asBC_REFCPY:
+    case asBC_CHKREF:
+    case asBC_GETOBJREF:
+    case asBC_GETREF:
+    case asBC_PshNull:
+    case asBC_ClrVPtr:
+    case asBC_OBJTYPE:
+    case asBC_TYPEID:
+    case asBC_SetV4:
+    case asBC_SetV8:
+    case asBC_ADDSi:
+    case asBC_CpyVtoV4:
+    case asBC_CpyVtoV8:
+    case asBC_CpyVtoR4:
+    case asBC_CpyVtoR8:
+    case asBC_CpyVtoG4:
+    case asBC_CpyRtoV4:
+    case asBC_CpyRtoV8:
+    case asBC_CpyGtoV4:
+    case asBC_WRTV1:
+    case asBC_WRTV2:
+    case asBC_WRTV4:
+    case asBC_WRTV8:
+    case asBC_RDR1:
+    case asBC_RDR2:
+    case asBC_RDR4:
+    case asBC_RDR8:
+    case asBC_LDG:
+    case asBC_LDV:
+    case asBC_PGA:
+    case asBC_CmpPtr:
+    case asBC_VAR:
+    case asBC_iTOf:
+    case asBC_fTOi:
+    case asBC_uTOf:
+    case asBC_fTOu:
+    case asBC_sbTOi:
+    case asBC_swTOi:
+    case asBC_ubTOi:
+    case asBC_uwTOi:
+    case asBC_dTOi:
+    case asBC_dTOu:
+    case asBC_dTOf:
+    case asBC_iTOd:
+    case asBC_uTOd:
+    case asBC_fTOd:
+    case asBC_ADDi:
+    case asBC_SUBi:
+    case asBC_MULi:
+    case asBC_DIVi:
+    case asBC_MODi:
+    case asBC_ADDf:
+    case asBC_SUBf:
+    case asBC_MULf:
+    case asBC_DIVf:
+    case asBC_MODf:
+    case asBC_ADDd:
+    case asBC_SUBd:
+    case asBC_MULd:
+    case asBC_DIVd:
+    case asBC_MODd:
+    case asBC_ADDIi:
+    case asBC_SUBIi:
+    case asBC_MULIi:
+    case asBC_ADDIf:
+    case asBC_SUBIf:
+    case asBC_MULIf:
+    case asBC_SetG4:
+    case asBC_ChkRefS:
+    case asBC_ChkNullV:
+    case asBC_CALLINTF:
+    case asBC_iTOb:
+    case asBC_iTOw:
+    case asBC_SetV1:
+    case asBC_SetV2:
+    case asBC_Cast:
+    case asBC_i64TOi:
+    case asBC_uTOi64:
+    case asBC_iTOi64:
+    case asBC_fTOi64:
+    case asBC_dTOi64:
+    case asBC_fTOu64:
+    case asBC_dTOu64:
+    case asBC_i64TOf:
+    case asBC_u64TOf:
+    case asBC_i64TOd:
+    case asBC_u64TOd:
+    case asBC_NEGi64:
+    case asBC_INCi64:
+    case asBC_DECi64:
+    case asBC_BNOT64:
+    case asBC_ADDi64:
+    case asBC_SUBi64:
+    case asBC_MULi64:
+    case asBC_DIVi64:
+    case asBC_MODi64:
+    case asBC_BAND64:
+    case asBC_BOR64:
+    case asBC_BXOR64:
+    case asBC_BSLL64:
+    case asBC_BSRL64:
+    case asBC_BSRA64:
+    case asBC_CMPi64:
+    case asBC_CMPu64:
+    case asBC_ChkNullS:
+    case asBC_ClrHi:
+    case asBC_CallPtr:
+    case asBC_FuncPtr:
+    case asBC_LoadThisR:
+    case asBC_PshV8:
+    case asBC_DIVu:
+    case asBC_MODu:
+    case asBC_DIVu64:
+    case asBC_MODu64:
+    case asBC_LoadRObjR:
+    case asBC_LoadVObjR:
+    case asBC_RefCpyV:
+    case asBC_JLowZ:
+    case asBC_JLowNZ:
+    case asBC_AllocMem:
+    case asBC_SetListSize:
+    case asBC_PshListElmnt:
+    case asBC_SetListType:
+    case asBC_POWi:
+    case asBC_POWu:
+    case asBC_POWf:
+    case asBC_POWd:
+    case asBC_POWdi:
+    case asBC_POWi64:
+    case asBC_POWu64:
+    case asBC_Thiscall1:
+    {
+        emit_vm_fallback(function, "unsupported instruction");
+        break;
+    }
+
+    default:
+    {
+        emit_vm_fallback(function, "unknown instruction");
+        break;
+    }
+    }
+
+    emit("\t}}\n");
+}
+
 void BytecodeToC::emit_vm_fallback(JitFunction& function, std::string_view reason)
 {
-    // update VM registers
-    emit(
-        "\t\t(*regs).programPointer = l_bc;\n"
-        "\t\t(*regs).stackPointer = l_sp;\n"
-        "\t\t(*regs).stackFramePointer = l_fp;\n"
-    );
+    emit_save_vm_registers();
 
     if (is_human_readable())
     {
@@ -458,6 +473,24 @@ void BytecodeToC::emit_vm_fallback(JitFunction& function, std::string_view reaso
     {
         emit("\t\treturn;\n");
     }
+}
+
+void BytecodeToC::emit_save_vm_registers()
+{
+    emit(
+        "\t\t(*regs).programPointer = l_bc;\n"
+        "\t\t(*regs).stackPointer = l_sp;\n"
+        "\t\t(*regs).stackFramePointer = l_fp;\n"
+    );
+}
+
+void BytecodeToC::emit_load_vm_registers()
+{
+    emit(
+        "\t\tl_bc = (*regs).programPointer;\n"
+        "\t\tl_sp = (*regs).stackPointer;\n"
+        "\t\tl_fp = (*regs).stackFramePointer;\n"
+    );
 }
 
 bool BytecodeToC::is_human_readable() const
@@ -542,6 +575,8 @@ typedef __UINTPTR_TYPE__ asPWORD;
 #define asBC_SWORDARG1(x) (*(((short*)x)+2))
 #define asBC_SWORDARG2(x) (*(((short*)x)+3))
 
+#define asASSERT
+
 /* TODO: is this ever used in the VM other than AS_PTR_SIZE? */
 #if __SIZEOF_POINTER__ == 4
 	#define asBCTYPE_PTR_ARG    asBCTYPE_DW_ARG
@@ -571,6 +606,26 @@ typedef struct
 	int              doProcessSuspend;    /* whether or not the JIT should break out when it encounters a suspend instruction */
 	asIScriptContext *ctx;                /* the active context */
 } asSVMRegisters;
+
+typedef enum
+{
+	asEXECUTION_FINISHED        = 0,
+	asEXECUTION_SUSPENDED       = 1,
+	asEXECUTION_ABORTED         = 2,
+	asEXECUTION_EXCEPTION       = 3,
+	asEXECUTION_PREPARED        = 4,
+	asEXECUTION_UNINITIALIZED   = 5,
+	asEXECUTION_ACTIVE          = 6,
+	asEXECUTION_ERROR           = 7,
+	asEXECUTION_DESERIALIZATION = 8
+} asEContextState;
+
+/*
+    The following definitions are part of the angelsea runtime.hpp
+*/
+
+int asea_call_script_function(void* vm_registers, int function_idx);
+
 #endif
 
 /* end of angelsea static header */
