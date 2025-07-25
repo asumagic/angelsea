@@ -30,31 +30,25 @@ void log_at(
     fmt::format_string<Ts...> format_string,
     Ts&&... fmt_args
 ) {
-    asEMsgType type;
+    int type;
 
-    // TODO: toggling severity
+    const auto& targets = jit.config().log_targets;
     switch (severity)
     {
-    case LogSeverity::VERBOSE:
-        type = asMSGTYPE_INFORMATION;
-        break;
+    case LogSeverity::VERBOSE: { type = targets.verbose; break; }
+    case LogSeverity::INFO: { type = targets.info; break; }
+    case LogSeverity::PERF_WARNING: { type = targets.performance_warning; break; }
+    case LogSeverity::WARNING: { type = targets.warning; break; }
+    case LogSeverity::ERROR: { type = targets.error; break; }
+    }
 
-    case LogSeverity::INFO:
-        type = asMSGTYPE_INFORMATION;
-        break;
-
-    case LogSeverity::PERF_WARNING:
-    case LogSeverity::WARNING:
-        type = asMSGTYPE_WARNING;
-        break;
-
-    case LogSeverity::ERROR:
-        type = asMSGTYPE_ERROR;
-        break;
+    if (type < 0)
+    {
+        return;
     }
 
     jit.engine().WriteMessage(
-        section, row, col, type,
+        section, row, col, asEMsgType(type),
         fmt::format(format_string, std::forward<Ts>(fmt_args)...).c_str()
     );
 }
