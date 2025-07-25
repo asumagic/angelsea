@@ -346,6 +346,10 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		break;
 	}
 
+	case asBC_BNOT64: {
+		emit_arithmetic_simple_stack_unary(ins, "~", "asQWORD");
+		break;
+	}
 	case asBC_ADDi: {
 		emit_arithmetic_simple_stack_stack(ins, "+", "int");
 		break;
@@ -502,7 +506,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_NEGi64:
 	case asBC_INCi64:
 	case asBC_DECi64:
-	case asBC_BNOT64:
 	case asBC_ADDi64:
 	case asBC_SUBi64:
 	case asBC_MULi64:
@@ -596,6 +599,20 @@ void BytecodeToC::emit_cond_branch(BytecodeInstruction ins, std::size_t instruct
 	    fmt::arg("INSTRUCTION_LENGTH", instruction_length),
 	    fmt::arg("BRANCH_OFFSET", ins.int0() + instruction_length),
 	    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + instruction_length))
+	);
+}
+
+void BytecodeToC::emit_arithmetic_simple_stack_unary(
+    BytecodeInstruction ins,
+    std::string_view    op,
+    std::string_view    type
+) {
+	emit(
+	    "\t\t*({TYPE}*)(l_fp - {SWORD0}) = {OP}*({TYPE}*)(l_fp - {SWORD0});\n"
+	    "\t\t++l_bc;\n",
+	    fmt::arg("TYPE", type),
+	    fmt::arg("OP", op),
+	    fmt::arg("SWORD0", ins.sword0())
 	);
 }
 
