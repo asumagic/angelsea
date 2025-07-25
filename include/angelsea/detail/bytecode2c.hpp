@@ -16,6 +16,8 @@ namespace angelsea::detail {
 using ModuleId   = std::size_t;
 using FunctionId = std::size_t;
 
+enum class AccessGranularity { DWORD, QWORD };
+
 class BytecodeToC {
 	public:
 	using OnMapFunctionCallback = std::function<void(JitFunction&, const std::string& name)>;
@@ -71,7 +73,12 @@ class BytecodeToC {
 	    bool                in_place
 	);
 	void emit_arithmetic_simple_stack_unary(BytecodeInstruction ins, std::string_view op, std::string_view type);
-	void emit_arithmetic_simple_stack_stack(BytecodeInstruction ins, std::string_view op, std::string_view type);
+	void emit_arithmetic_simple_stack_stack(
+	    BytecodeInstruction ins,
+	    std::string_view    op,
+	    std::string_view    type,
+	    AccessGranularity   granularity
+	);
 	void emit_arithmetic_simple_stack_imm(
 	    BytecodeInstruction ins,
 	    std::string_view    op,

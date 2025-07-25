@@ -182,6 +182,10 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 	emit("\tbc{}: {{\n", ins.offset);
 
+	// FIXME: currently we are (probably) being strongly bit by the AS VM being
+	// rather carefree about strict aliasing. We need to rewrite all reads and
+	// writes that do that kind of casting to l_sp/l_fp to be safe...
+
 	// TODO: after a fallback don't bother emitting fallback code at all
 	// until the next JitEntry
 
@@ -390,15 +394,15 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	}
 
 	case asBC_ADDi: {
-		emit_arithmetic_simple_stack_stack(ins, "+", "int");
+		emit_arithmetic_simple_stack_stack(ins, "+", "int", AccessGranularity::DWORD);
 		break;
 	}
 	case asBC_SUBi: {
-		emit_arithmetic_simple_stack_stack(ins, "-", "int");
+		emit_arithmetic_simple_stack_stack(ins, "-", "int", AccessGranularity::DWORD);
 		break;
 	}
 	case asBC_MULi: {
-		emit_arithmetic_simple_stack_stack(ins, "*", "int");
+		emit_arithmetic_simple_stack_stack(ins, "*", "int", AccessGranularity::DWORD);
 		break;
 	}
 
@@ -407,27 +411,27 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		break;
 	}
 	case asBC_BAND64: {
-		emit_arithmetic_simple_stack_stack(ins, "&", "asQWORD");
+		emit_arithmetic_simple_stack_stack(ins, "&", "asQWORD", AccessGranularity::QWORD);
 		break;
 	}
 	case asBC_BXOR64: {
-		emit_arithmetic_simple_stack_stack(ins, "^", "asQWORD");
+		emit_arithmetic_simple_stack_stack(ins, "^", "asQWORD", AccessGranularity::QWORD);
 		break;
 	}
 	case asBC_BOR64: {
-		emit_arithmetic_simple_stack_stack(ins, "|", "asQWORD");
+		emit_arithmetic_simple_stack_stack(ins, "|", "asQWORD", AccessGranularity::QWORD);
 		break;
 	}
 	case asBC_BSLL64: {
-		emit_arithmetic_simple_stack_stack(ins, "<<", "asQWORD");
+		emit_arithmetic_simple_stack_stack(ins, "<<", "asQWORD", AccessGranularity::QWORD);
 		break;
 	}
 	case asBC_BSRL64: {
-		emit_arithmetic_simple_stack_stack(ins, ">>", "asQWORD");
+		emit_arithmetic_simple_stack_stack(ins, ">>", "asQWORD", AccessGranularity::QWORD);
 		break;
 	}
 	case asBC_BSRA64: {
-		emit_arithmetic_simple_stack_stack(ins, ">>", "asINT64");
+		emit_arithmetic_simple_stack_stack(ins, ">>", "asINT64", AccessGranularity::QWORD);
 		break;
 	}
 
@@ -436,27 +440,27 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		break;
 	}
 	case asBC_BAND: {
-		emit_arithmetic_simple_stack_stack(ins, "&", "asDWORD");
+		emit_arithmetic_simple_stack_stack(ins, "&", "asDWORD", AccessGranularity::DWORD);
 		break;
 	}
 	case asBC_BXOR: {
-		emit_arithmetic_simple_stack_stack(ins, "^", "asDWORD");
+		emit_arithmetic_simple_stack_stack(ins, "^", "asDWORD", AccessGranularity::DWORD);
 		break;
 	}
 	case asBC_BOR: {
-		emit_arithmetic_simple_stack_stack(ins, "|", "asDWORD");
+		emit_arithmetic_simple_stack_stack(ins, "|", "asDWORD", AccessGranularity::DWORD);
 		break;
 	}
 	case asBC_BSLL: {
-		emit_arithmetic_simple_stack_stack(ins, "<<", "asDWORD");
+		emit_arithmetic_simple_stack_stack(ins, "<<", "asDWORD", AccessGranularity::DWORD);
 		break;
 	}
 	case asBC_BSRL: {
-		emit_arithmetic_simple_stack_stack(ins, ">>", "asDWORD");
+		emit_arithmetic_simple_stack_stack(ins, ">>", "asDWORD", AccessGranularity::DWORD);
 		break;
 	}
 	case asBC_BSRA: {
-		emit_arithmetic_simple_stack_stack(ins, ">>", "asINT32");
+		emit_arithmetic_simple_stack_stack(ins, ">>", "asINT32", AccessGranularity::DWORD);
 		break;
 	}
 
@@ -725,16 +729,23 @@ void BytecodeToC::emit_arithmetic_simple_stack_unary(
 void BytecodeToC::emit_arithmetic_simple_stack_stack(
     BytecodeInstruction ins,
     std::string_view    op,
-    std::string_view    type
+    std::string_view    type,
+    AccessGranularity   granularity
 ) {
 	emit(
-	    "\t\t*({TYPE}*)(l_fp - {SWORD0}) = *({TYPE}*)(l_fp - {SWORD1}) {OP} *({TYPE}*)(l_fp - {SWORD2});\n"
+	    "\t\tasDWORD* target = l_fp - {SWORD0};\n"
+	    "\t\t{TYPE} lhs = ({TYPE}){FP_LOAD}(l_fp - {SWORD1});\n"
+	    "\t\t{TYPE} rhs = ({TYPE}){FP_LOAD}(l_fp - {SWORD2});\n"
+	    "\t\t{TYPE} result = lhs {OP} rhs;\n"
+	    "\t\t{FP_STORE}(target, (asPWORD)result);\n"
 	    "\t\tl_bc += 2;\n",
 	    fmt::arg("TYPE", type),
 	    fmt::arg("OP", op),
 	    fmt::arg("SWORD0", ins.sword0()),
 	    fmt::arg("SWORD1", ins.sword1()),
-	    fmt::arg("SWORD2", ins.sword2())
+	    fmt::arg("SWORD2", ins.sword2()),
+	    fmt::arg("FP_LOAD", granularity == AccessGranularity::QWORD ? "FP_LOAD64" : "FP_LOAD32"),
+	    fmt::arg("FP_STORE", granularity == AccessGranularity::QWORD ? "FP_STORE64" : "FP_STORE32")
 	);
 }
 
@@ -889,6 +900,13 @@ int asea_call_script_function(void* vm_registers, int function_idx);
     The following definitions are additional angelsea helpers
 */
 #define DEREF_VALUEREG(VALUE_TYPE) *(VALUE_TYPE*)(&(*regs).valueRegister)
+
+/* FIXME: endianness - we assume LE */
+
+#define FP_LOAD32(ptr)       *(ptr)
+#define FP_LOAD64(ptr)       asQWORD((ptr)[0]) | (asQWORD((ptr)[1]) << 32)
+#define FP_STORE32(ptr, val) { *(ptr) = (val); }
+#define FP_STORE64(ptr, val) { (ptr)[0] = (asDWORD)(val); (ptr)[1] = (asDWORD)((asQWORD)(val) >> 32); }
 
 #endif
 
