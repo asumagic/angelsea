@@ -131,3 +131,8 @@ no other (public...) project of that kind.
 
 Not yet, but it seems like this is something MIR lets you do pretty easily at a
 module level.
+
+#### Why this name?
+
+I was looking for puns with "mir" or "mimir" and miserably failed, so all you
+get is Angel→C, which seems memorable enough.
