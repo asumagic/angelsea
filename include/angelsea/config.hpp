@@ -53,6 +53,9 @@ struct JitConfig {
 	/// -1 disables them. As of writing this, meaningful values are -1, 0, 2, 4.
 	int mir_debug_level = -1;
 
+	/// What file to dump MIR debug logging into, if mir_debug_level >= 0.
+	FILE* mir_diagnostic_file = stderr;
+
 	/// MIR optimization level, as passed to `MIR_gen_set_optimize_level`, to
 	/// balance between runtime speed and compile times (higher improves
 	/// codegen).

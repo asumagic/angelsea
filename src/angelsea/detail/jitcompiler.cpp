@@ -136,7 +136,7 @@ void JitCompiler::compile_all() {
 
 	MIR_gen_init(mir);
 
-	MIR_gen_set_debug_file(mir, stdout);
+	MIR_gen_set_debug_file(mir, config().mir_diagnostic_file);
 	MIR_gen_set_debug_level(mir, config().mir_debug_level);
 
 	MIR_gen_set_optimize_level(mir, config().mir_optimization_level);
