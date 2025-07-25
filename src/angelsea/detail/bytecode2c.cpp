@@ -459,6 +459,10 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		emit_primitive_cast_stack(ins, "asINT64", "int", false);
 		break;
 	}
+	case asBC_uTOi64: {
+		emit_primitive_cast_stack(ins, "asUINT", "asINT64", false);
+		break;
+	}
 
 	case asBC_PopPtr:
 	case asBC_PshGPtr:
@@ -573,7 +577,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_iTOb:
 	case asBC_iTOw:
 	case asBC_Cast:
-	case asBC_uTOi64:
 	case asBC_iTOi64:
 	case asBC_fTOi64:
 	case asBC_dTOi64:
