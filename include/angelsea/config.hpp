@@ -4,6 +4,8 @@
 
 #include <angelscript.h>
 
+#include <cstdio>
+
 namespace angelsea {
 
 struct JitConfig {
@@ -32,8 +34,19 @@ struct JitConfig {
 	/// Whether to dump generated C code to stdout.
 	bool dump_c_code = false;
 
+	/// What file to dump the C file into, if dump_c_code is set.
+	/// This is more intended for debugging than for processing the output.
+	FILE* dump_c_code_file = stdout;
+
 	/// Whether to dump optimized MIR code to stdout.
 	bool dump_mir_code = false;
+
+	/// What file to dump the MIR output into, if dump_mir_code is set.
+	/// This is more intended for debugging than for processing the output.
+	FILE* dump_mir_code_file = stdout;
+
+	/// What file to dump C compile errors into.
+	FILE* c2mir_diagnostic_file = stderr;
 
 	/// MIR debugging level, as passed to `MIR_gen_set_debug_level`, to dump
 	/// verbose information on the commandline.

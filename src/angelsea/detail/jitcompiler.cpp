@@ -46,7 +46,7 @@ void JitCompiler::compile_all() {
 	std::array<c2mir_macro_command, 1> macros{{{.def_p = true, .name = "ANGELSEA_SUPPORT", .def = "1"}}};
 
 	c2mir_options c_options{
-	    .message_file       = stderr, // TODO: optional
+	    .message_file       = config().c2mir_diagnostic_file, // TODO: optional
 	    .debug_p            = false,
 	    .verbose_p          = false,
 	    .ignore_warnings_p  = false,
@@ -103,7 +103,8 @@ void JitCompiler::compile_all() {
 		c_generator.translate_module(internal_module_name, script_module, functions);
 
 		if (config().dump_c_code) {
-			puts(c_generator.source().c_str());
+			angelsea_assert(config().dump_c_code_file != nullptr);
+			fputs(c_generator.source().c_str(), config().dump_c_code_file);
 		}
 
 		InputData input_data(c_generator.source());
@@ -198,7 +199,8 @@ void JitCompiler::compile_all() {
 	}
 
 	if (config().dump_mir_code) {
-		MIR_output(mir, stdout);
+		angelsea_assert(config().dump_mir_code_file != nullptr);
+		MIR_output(mir, config().dump_mir_code_file);
 	}
 
 	MIR_gen_finish(mir);
