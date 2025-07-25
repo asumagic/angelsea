@@ -16,7 +16,36 @@ namespace angelsea::detail {
 using ModuleId   = std::size_t;
 using FunctionId = std::size_t;
 
+/// Access granularity of a stack frame access, required to do aliasing-safe
+/// loads and stores. This means zero-extension as required.
 enum class AccessGranularity { DWORD, QWORD };
+
+/// Describes the type of a value on the stack, which is useful to abstract its
+/// loading and storing.
+/// This is used both for operands and the destination.
+struct VarType {
+	/// C type name
+	std::string_view type;
+	/// Access granularity for stack load/store
+	AccessGranularity granularity;
+
+	bool operator==(const VarType& other) const = default;
+
+	std::string_view load_op_name() const {
+		return granularity == AccessGranularity::QWORD ? "ASEA_LOAD64" : "ASEA_LOAD32";
+	}
+
+	std::string_view store_op_name() const {
+		return granularity == AccessGranularity::QWORD ? "ASEA_STORE64" : "ASEA_STORE32";
+	}
+};
+
+namespace var_types {
+static constexpr VarType s8{"asINT8", AccessGranularity::DWORD}, s16{"asINT16", AccessGranularity::DWORD},
+    s32{"asINT32", AccessGranularity::DWORD}, s64{"asINT64", AccessGranularity::QWORD},
+    u8{"asBYTE", AccessGranularity::DWORD}, u16{"asWORD", AccessGranularity::DWORD},
+    u32{"asDWORD", AccessGranularity::DWORD}, u64{"asQWORD", AccessGranularity::QWORD};
+} // namespace var_types
 
 class BytecodeToC {
 	public:
@@ -66,24 +95,21 @@ class BytecodeToC {
 	void emit_save_vm_registers();
 
 	void emit_cond_branch(BytecodeInstruction ins, std::size_t instruction_length, std::string_view test);
-	void emit_primitive_cast_stack(
-	    BytecodeInstruction ins,
-	    std::string_view    src_type,
-	    std::string_view    dst_type,
-	    bool                in_place
-	);
-	void emit_arithmetic_simple_stack_unary(BytecodeInstruction ins, std::string_view op, std::string_view type);
+	void emit_primitive_cast_stack(BytecodeInstruction ins, VarType src, VarType dst);
+	void emit_arithmetic_simple_stack_unary_inplace(BytecodeInstruction ins, std::string_view op, VarType var);
 	void emit_arithmetic_simple_stack_stack(
 	    BytecodeInstruction ins,
 	    std::string_view    op,
-	    std::string_view    type,
-	    AccessGranularity   granularity
+	    VarType             lhs,
+	    VarType             rhs,
+	    VarType             dst
 	);
 	void emit_arithmetic_simple_stack_imm(
 	    BytecodeInstruction ins,
 	    std::string_view    op,
-	    std::string_view    type,
-	    std::string_view    rhs_expr
+	    VarType             lhs,
+	    std::string_view    rhs_expr,
+	    VarType             dst
 	);
 
 	JitCompiler* m_compiler;

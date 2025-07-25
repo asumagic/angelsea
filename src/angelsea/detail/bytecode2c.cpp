@@ -182,10 +182,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 	emit("\tbc{}: {{\n", ins.offset);
 
-	// FIXME: currently we are (probably) being strongly bit by the AS VM being
-	// rather carefree about strict aliasing. We need to rewrite all reads and
-	// writes that do that kind of casting to l_sp/l_fp to be safe...
-
 	// TODO: after a fallback don't bother emitting fallback code at all
 	// until the next JitEntry
 
@@ -217,7 +213,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_PshC4: {
 		emit(
 		    "\t\t--l_sp;\n"
-		    "\t\t*l_sp = {DWORD0};\n"
+		    "\t\tASEA_STORE32(l_sp, {DWORD0});\n"
 		    "\t\tl_bc += 2;\n",
 		    fmt::arg("DWORD0", ins.dword0())
 		);
@@ -227,7 +223,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_PshC8: {
 		emit(
 		    "\t\tl_sp -= 2;\n"
-		    "\t\t*(asQWORD*)l_sp = {QWORD0};\n"
+		    "\t\tASEA_STORE64(l_sp, {QWORD0});\n"
 		    "\t\tl_bc += 3;\n",
 		    fmt::arg("QWORD0", ins.qword0())
 		);
@@ -237,7 +233,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_PshV4: {
 		emit(
 		    "\t\t--l_sp;\n"
-		    "\t\t*l_sp = *(l_fp - {SWORD0});\n"
+		    "\t\tASEA_STORE32(l_sp, ASEA_LOAD32(asDWORD, l_fp - {SWORD0}));\n"
 		    "\t\t++l_bc;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -247,7 +243,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_PshV8: {
 		emit(
 		    "\t\tl_sp -= 2;\n"
-		    "\t\t*(asQWORD*)l_sp = *(asQWORD*)(l_fp - {SWORD0});\n"
+		    "\t\tASEA_STORE64(l_sp, ASEA_LOAD64(asQWORD, l_fp - {SWORD0}));\n"
 		    "\t\t++l_bc;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -259,7 +255,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_SetV2:
 	case asBC_SetV4: {
 		emit(
-		    "\t\t*(l_fp - {SWORD0}) = {DWORD0};\n"
+		    "\t\tASEA_STORE32(l_fp - {SWORD0}, {DWORD0});\n"
 		    "\t\tl_bc += 2;\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("DWORD0", ins.dword0())
@@ -269,7 +265,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 	case asBC_SetV8: {
 		emit(
-		    "\t\t*(asQWORD*)(l_fp - {SWORD0}) = {QWORD0};\n"
+		    "\t\tASEA_STORE64(l_fp - {SWORD0}, {QWORD0});\n"
 		    "\t\tl_bc += 3;\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("QWORD0", ins.qword0())
@@ -279,7 +275,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 	case asBC_CpyVtoR4: {
 		emit(
-		    "\t\tDEREF_VALUEREG(asDWORD) = *(asDWORD*)(l_fp - {SWORD0});\n"
+		    "\t\t(*regs).valueRegister = ASEA_LOAD32(asDWORD, l_fp - {SWORD0});\n"
 		    "\t\tl_bc++;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -288,7 +284,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 	case asBC_CpyRtoV4: {
 		emit(
-		    "\t\t*(asDWORD*)(l_fp - {SWORD0}) = DEREF_VALUEREG(asDWORD);\n"
+		    "\t\tASEA_STORE32(l_fp - {SWORD0}, (*regs).valueRegister);\n"
 		    "\t\tl_bc++;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -297,7 +293,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 	case asBC_CpyVtoV4: {
 		emit(
-		    "\t\t*(l_fp - {SWORD0}) = *(l_fp - {SWORD1});\n"
+		    "\t\tASEA_STORE32(l_fp - {SWORD0}, ASEA_LOAD32(asDWORD, l_fp - {SWORD1}));\n"
 		    "\t\tl_bc += 2;\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("SWORD1", ins.sword1())
@@ -307,7 +303,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 	case asBC_CpyVtoV8: {
 		emit(
-		    "\t\t*(asQWORD*)(l_fp - {SWORD0}) = *(asQWORD*)(l_fp - {SWORD1});\n"
+		    "\t\tASEA_STORE64(l_fp - {SWORD0}, ASEA_LOAD64(asQWORD, l_fp - {SWORD1}));\n"
 		    "\t\tl_bc += 2;\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("SWORD1", ins.sword1())
@@ -346,11 +342,11 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 	case asBC_CMPIi: {
 		emit(
-		    "\t\tint i1 = *(int*)(l_fp - {SWORD0});\n"
+		    "\t\tint i1 = ASEA_LOAD32(asINT32, l_fp - {SWORD0});\n"
 		    "\t\tint i2 = {INT0};\n"
-		    "\t\tif( i1 == i2 )     DEREF_VALUEREG(int) =  0;\n"
-		    "\t\telse if( i1 < i2 ) DEREF_VALUEREG(int) = -1;\n"
-		    "\t\telse               DEREF_VALUEREG(int) =  1;\n"
+		    "\t\tif( i1 == i2 )     (*regs).valueRegister =  0;\n"
+		    "\t\telse if( i1 < i2 ) (*regs).valueRegister = -1;\n"
+		    "\t\telse               (*regs).valueRegister =  1;\n"
 		    "\t\tl_bc += 2;\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("INT0", ins.int0())
@@ -369,116 +365,116 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	}
 
 	case asBC_JZ: {
-		emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) == 0");
+		emit_cond_branch(ins, 2, "(asINT64)(*regs).valueRegister == 0");
 		break;
 	}
 	case asBC_JNZ: {
-		emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) != 0");
+		emit_cond_branch(ins, 2, "(asINT64)(*regs).valueRegister != 0");
 		break;
 	}
 	case asBC_JS: {
-		emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) < 0");
+		emit_cond_branch(ins, 2, "(asINT64)(*regs).valueRegister < 0");
 		break;
 	}
 	case asBC_JNS: {
-		emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) >= 0");
+		emit_cond_branch(ins, 2, "(asINT64)(*regs).valueRegister >= 0");
 		break;
 	}
 	case asBC_JP: {
-		emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) > 0");
+		emit_cond_branch(ins, 2, "(asINT64)(*regs).valueRegister > 0");
 		break;
 	}
 	case asBC_JNP: {
-		emit_cond_branch(ins, 2, "DEREF_VALUEREG(int) <= 0");
+		emit_cond_branch(ins, 2, "(asINT64)(*regs).valueRegister <= 0");
 		break;
 	}
 
 	case asBC_ADDi: {
-		emit_arithmetic_simple_stack_stack(ins, "+", "int", AccessGranularity::DWORD);
+		emit_arithmetic_simple_stack_stack(ins, "+", var_types::s32, var_types::s32, var_types::s32);
 		break;
 	}
 	case asBC_SUBi: {
-		emit_arithmetic_simple_stack_stack(ins, "-", "int", AccessGranularity::DWORD);
+		emit_arithmetic_simple_stack_stack(ins, "-", var_types::s32, var_types::s32, var_types::s32);
 		break;
 	}
 	case asBC_MULi: {
-		emit_arithmetic_simple_stack_stack(ins, "*", "int", AccessGranularity::DWORD);
+		emit_arithmetic_simple_stack_stack(ins, "*", var_types::s32, var_types::s32, var_types::s32);
 		break;
 	}
 
 	case asBC_BNOT64: {
-		emit_arithmetic_simple_stack_unary(ins, "~", "asQWORD");
+		emit_arithmetic_simple_stack_unary_inplace(ins, "~", var_types::u64);
 		break;
 	}
 	case asBC_BAND64: {
-		emit_arithmetic_simple_stack_stack(ins, "&", "asQWORD", AccessGranularity::QWORD);
+		emit_arithmetic_simple_stack_stack(ins, "&", var_types::u64, var_types::u64, var_types::u64);
 		break;
 	}
 	case asBC_BXOR64: {
-		emit_arithmetic_simple_stack_stack(ins, "^", "asQWORD", AccessGranularity::QWORD);
+		emit_arithmetic_simple_stack_stack(ins, "^", var_types::u64, var_types::u64, var_types::u64);
 		break;
 	}
 	case asBC_BOR64: {
-		emit_arithmetic_simple_stack_stack(ins, "|", "asQWORD", AccessGranularity::QWORD);
+		emit_arithmetic_simple_stack_stack(ins, "|", var_types::u64, var_types::u64, var_types::u64);
 		break;
 	}
 	case asBC_BSLL64: {
-		emit_arithmetic_simple_stack_stack(ins, "<<", "asQWORD", AccessGranularity::QWORD);
+		emit_arithmetic_simple_stack_stack(ins, "<<", var_types::u64, var_types::u32, var_types::u64);
 		break;
 	}
 	case asBC_BSRL64: {
-		emit_arithmetic_simple_stack_stack(ins, ">>", "asQWORD", AccessGranularity::QWORD);
+		emit_arithmetic_simple_stack_stack(ins, ">>", var_types::u64, var_types::u32, var_types::u64);
 		break;
 	}
 	case asBC_BSRA64: {
-		emit_arithmetic_simple_stack_stack(ins, ">>", "asINT64", AccessGranularity::QWORD);
+		emit_arithmetic_simple_stack_stack(ins, ">>", var_types::s64, var_types::u32, var_types::s64);
 		break;
 	}
 
 	case asBC_BNOT: {
-		emit_arithmetic_simple_stack_unary(ins, "~", "asDWORD");
+		emit_arithmetic_simple_stack_unary_inplace(ins, "~", var_types::u32);
 		break;
 	}
 	case asBC_BAND: {
-		emit_arithmetic_simple_stack_stack(ins, "&", "asDWORD", AccessGranularity::DWORD);
+		emit_arithmetic_simple_stack_stack(ins, "&", var_types::u32, var_types::u32, var_types::u32);
 		break;
 	}
 	case asBC_BXOR: {
-		emit_arithmetic_simple_stack_stack(ins, "^", "asDWORD", AccessGranularity::DWORD);
+		emit_arithmetic_simple_stack_stack(ins, "^", var_types::u32, var_types::u32, var_types::u32);
 		break;
 	}
 	case asBC_BOR: {
-		emit_arithmetic_simple_stack_stack(ins, "|", "asDWORD", AccessGranularity::DWORD);
+		emit_arithmetic_simple_stack_stack(ins, "|", var_types::u32, var_types::u32, var_types::u32);
 		break;
 	}
 	case asBC_BSLL: {
-		emit_arithmetic_simple_stack_stack(ins, "<<", "asDWORD", AccessGranularity::DWORD);
+		emit_arithmetic_simple_stack_stack(ins, "<<", var_types::u32, var_types::u32, var_types::u32);
 		break;
 	}
 	case asBC_BSRL: {
-		emit_arithmetic_simple_stack_stack(ins, ">>", "asDWORD", AccessGranularity::DWORD);
+		emit_arithmetic_simple_stack_stack(ins, ">>", var_types::u32, var_types::u32, var_types::u32);
 		break;
 	}
 	case asBC_BSRA: {
-		emit_arithmetic_simple_stack_stack(ins, ">>", "asINT32", AccessGranularity::DWORD);
+		emit_arithmetic_simple_stack_stack(ins, ">>", var_types::s32, var_types::u32, var_types::s32);
 		break;
 	}
 
 	case asBC_SUBIi: {
-		emit_arithmetic_simple_stack_imm(ins, "-", "int", fmt::to_string(ins.int0(1)));
+		emit_arithmetic_simple_stack_imm(ins, "-", var_types::s32, fmt::to_string(ins.int0(1)), var_types::s32);
 		break;
 	}
 
 	case asBC_i64TOi: {
-		emit_primitive_cast_stack(ins, "asINT64", "int", false);
+		emit_primitive_cast_stack(ins, var_types::s64, var_types::s32);
 		break;
 	}
 	case asBC_uTOi64: {
-		emit_primitive_cast_stack(ins, "asUINT", "asINT64", false);
+		emit_primitive_cast_stack(ins, var_types::u32, var_types::s64);
 		break;
 	}
 	case asBC_iTOi64: {
-		emit_primitive_cast_stack(ins, "int", "asINT64", false);
+		emit_primitive_cast_stack(ins, var_types::s32, var_types::s64);
 		break;
 	}
 
@@ -680,19 +676,17 @@ void BytecodeToC::emit_load_vm_registers() {
 	);
 }
 
-void BytecodeToC::emit_primitive_cast_stack(
-    BytecodeInstruction ins,
-    std::string_view    src_type,
-    std::string_view    dst_type,
-    bool                in_place
-) {
+void BytecodeToC::emit_primitive_cast_stack(BytecodeInstruction ins, VarType src, VarType dst) {
+	const bool in_place = src == dst;
 	emit(
-	    "\t\t*({DST_TYPE}*)(l_fp - {DST}) = ({DST_TYPE})(*({SRC_TYPE}*)(l_fp - {SRC}));\n"
+	    "\t\t{STORE_OP}(l_fp - {DST}, ({DST_TYPE}){LOAD_OP}({SRC_TYPE}, l_fp - {SRC}));\n"
 	    "\t\tl_bc += {INSTRUCTION_LENGTH};\n",
-	    fmt::arg("DST_TYPE", dst_type),
-	    fmt::arg("SRC_TYPE", src_type),
+	    fmt::arg("DST_TYPE", dst.type),
+	    fmt::arg("SRC_TYPE", src.type),
 	    fmt::arg("DST", ins.sword0()),
 	    fmt::arg("SRC", in_place ? ins.sword0() : ins.sword1()),
+	    fmt::arg("LOAD_OP", src.load_op_name()),
+	    fmt::arg("STORE_OP", dst.store_op_name()),
 	    fmt::arg("INSTRUCTION_LENGTH", in_place ? 1 : 2)
 	);
 }
@@ -712,57 +706,68 @@ void BytecodeToC::emit_cond_branch(BytecodeInstruction ins, std::size_t instruct
 	);
 }
 
-void BytecodeToC::emit_arithmetic_simple_stack_unary(
+void BytecodeToC::emit_arithmetic_simple_stack_unary_inplace(
     BytecodeInstruction ins,
     std::string_view    op,
-    std::string_view    type
+    VarType             var
 ) {
 	emit(
-	    "\t\t*({TYPE}*)(l_fp - {SWORD0}) = {OP}*({TYPE}*)(l_fp - {SWORD0});\n"
+	    "\t\tasDWORD* target = l_fp - {SWORD0};\n"
+	    "\t\t{TYPE} value = {OP}{LOAD_OP}({TYPE}, l_fp - {SWORD0});\n"
+	    "\t\t{STORE_OP}(target, value);\n"
 	    "\t\t++l_bc;\n",
-	    fmt::arg("TYPE", type),
+	    fmt::arg("TYPE", var.type),
 	    fmt::arg("OP", op),
-	    fmt::arg("SWORD0", ins.sword0())
+	    fmt::arg("SWORD0", ins.sword0()),
+	    fmt::arg("LOAD_OP", var.load_op_name()),
+	    fmt::arg("STORE_OP", var.store_op_name())
 	);
 }
 
 void BytecodeToC::emit_arithmetic_simple_stack_stack(
     BytecodeInstruction ins,
     std::string_view    op,
-    std::string_view    type,
-    AccessGranularity   granularity
+    VarType             lhs,
+    VarType             rhs,
+    VarType             dst
 ) {
 	emit(
 	    "\t\tasDWORD* target = l_fp - {SWORD0};\n"
-	    "\t\t{TYPE} lhs = ({TYPE}){FP_LOAD}(l_fp - {SWORD1});\n"
-	    "\t\t{TYPE} rhs = ({TYPE}){FP_LOAD}(l_fp - {SWORD2});\n"
-	    "\t\t{TYPE} result = lhs {OP} rhs;\n"
-	    "\t\t{FP_STORE}(target, (asPWORD)result);\n"
+	    "\t\t{LHS_TYPE} lhs = {LHS_LOAD_OP}({LHS_TYPE}, l_fp - {SWORD1});\n"
+	    "\t\t{RHS_TYPE} rhs = {RHS_LOAD_OP}({RHS_TYPE}, l_fp - {SWORD2});\n"
+	    "\t\t{RET_TYPE} result = lhs {OP} rhs;\n"
+	    "\t\t{STORE_OP}(target, result);\n"
 	    "\t\tl_bc += 2;\n",
-	    fmt::arg("TYPE", type),
+	    fmt::arg("LHS_TYPE", lhs.type),
+	    fmt::arg("RHS_TYPE", rhs.type),
+	    fmt::arg("LHS_LOAD_OP", lhs.load_op_name()),
+	    fmt::arg("RHS_LOAD_OP", rhs.load_op_name()),
+	    fmt::arg("RET_TYPE", dst.type),
+	    fmt::arg("STORE_OP", dst.store_op_name()),
 	    fmt::arg("OP", op),
 	    fmt::arg("SWORD0", ins.sword0()),
 	    fmt::arg("SWORD1", ins.sword1()),
-	    fmt::arg("SWORD2", ins.sword2()),
-	    fmt::arg("FP_LOAD", granularity == AccessGranularity::QWORD ? "FP_LOAD64" : "FP_LOAD32"),
-	    fmt::arg("FP_STORE", granularity == AccessGranularity::QWORD ? "FP_STORE64" : "FP_STORE32")
+	    fmt::arg("SWORD2", ins.sword2())
 	);
 }
 
 void BytecodeToC::emit_arithmetic_simple_stack_imm(
     BytecodeInstruction ins,
     std::string_view    op,
-    std::string_view    type,
-    std::string_view    rhs_expr
+    VarType             lhs,
+    std::string_view    rhs_expr,
+    VarType             dst
 ) {
 	emit(
-	    "\t\t*({TYPE}*)(l_fp - {SWORD0}) = *({TYPE}*)(l_fp - {SWORD1}) {OP} ({TYPE})({RHSEXPR});\n"
+	    "\t\t{STORE_OP}(l_fp - {SWORD0}, {LHS_LOAD_OP}({LHS_TYPE}, l_fp - {SWORD1}) {OP} ({RHS_EXPR}));\n"
 	    "\t\tl_bc += 3;\n",
-	    fmt::arg("TYPE", type),
+	    fmt::arg("LHS_TYPE", lhs.type),
+	    fmt::arg("LHS_LOAD_OP", lhs.load_op_name()),
+	    fmt::arg("STORE_OP", dst.store_op_name()),
 	    fmt::arg("OP", op),
 	    fmt::arg("SWORD0", ins.sword0()),
 	    fmt::arg("SWORD1", ins.sword1()),
-	    fmt::arg("RHSEXPR", rhs_expr)
+	    fmt::arg("RHS_EXPR", rhs_expr)
 	);
 }
 
@@ -834,17 +839,6 @@ typedef __UINT32_TYPE__  asDWORD;
 typedef __UINT64_TYPE__  asQWORD;
 typedef __UINTPTR_TYPE__ asPWORD;
 
-#define asBC_DWORDARG(x)  (*(((asDWORD*)x)+1))
-#define asBC_INTARG(x)    (*(int*)(((asDWORD*)x)+1))
-#define asBC_QWORDARG(x)  (*(asQWORD*)(((asDWORD*)x)+1))
-#define asBC_FLOATARG(x)  (*(float*)(((asDWORD*)x)+1))
-#define asBC_PTRARG(x)    (*(asPWORD*)(((asDWORD*)x)+1))
-#define asBC_WORDARG0(x)  (*(((asWORD*)x)+1))
-#define asBC_WORDARG1(x)  (*(((asWORD*)x)+2))
-#define asBC_SWORDARG0(x) (*(((short*)x)+1))
-#define asBC_SWORDARG1(x) (*(((short*)x)+2))
-#define asBC_SWORDARG2(x) (*(((short*)x)+3))
-
 #define asASSERT
 
 /* TODO: is this ever used in the VM other than AS_PTR_SIZE? */
@@ -890,6 +884,8 @@ typedef enum
 	asEXECUTION_DESERIALIZATION = 8
 } asEContextState;
 
+#endif
+
 /*
     The following definitions are part of the angelsea runtime.hpp
 */
@@ -899,16 +895,13 @@ int asea_call_script_function(void* vm_registers, int function_idx);
 /*
     The following definitions are additional angelsea helpers
 */
-#define DEREF_VALUEREG(VALUE_TYPE) *(VALUE_TYPE*)(&(*regs).valueRegister)
 
 /* FIXME: endianness - we assume LE */
 
-#define FP_LOAD32(ptr)       *(ptr)
-#define FP_LOAD64(ptr)       asQWORD((ptr)[0]) | (asQWORD((ptr)[1]) << 32)
-#define FP_STORE32(ptr, val) { *(ptr) = (val); }
-#define FP_STORE64(ptr, val) { (ptr)[0] = (asDWORD)(val); (ptr)[1] = (asDWORD)((asQWORD)(val) >> 32); }
-
-#endif
+#define ASEA_LOAD32(type, ptr) (type)(*(ptr))
+#define ASEA_LOAD64(type, ptr) (type)((asQWORD)((ptr)[0]) | ((asQWORD)((ptr)[1]) << 32))
+#define ASEA_STORE32(ptr, val) { *(ptr) = (val); }
+#define ASEA_STORE64(ptr, val) { (ptr)[0] = (asDWORD)(val); (ptr)[1] = (asDWORD)((asQWORD)(val) >> 32); }
 
 /* end of angelsea static header */
 
