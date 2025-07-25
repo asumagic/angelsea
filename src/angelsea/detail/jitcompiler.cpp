@@ -96,30 +96,29 @@ void JitCompiler::compile_all() {
 	// TODO: Investigate if partial recompiles work, and make them more
 	// efficient
 
-	const auto compile_module = [&](const char*             internal_module_name,
-	                                asIScriptModule*        script_module,
-	                                std::span<JitFunction*> functions) {
-		c_generator.prepare_new_context();
-		c_generator.translate_module(internal_module_name, script_module, functions);
+	const auto compile_module
+	    = [&](const char* internal_module_name, asIScriptModule* script_module, std::span<JitFunction*> functions) {
+		      c_generator.prepare_new_context();
+		      c_generator.translate_module(internal_module_name, script_module, functions);
 
-		if (config().dump_c_code) {
-			angelsea_assert(config().dump_c_code_file != nullptr);
-			fputs(c_generator.source().c_str(), config().dump_c_code_file);
-		}
+		      if (config().dump_c_code) {
+			      angelsea_assert(config().dump_c_code_file != nullptr);
+			      fputs(c_generator.source().c_str(), config().dump_c_code_file);
+		      }
 
-		InputData input_data(c_generator.source());
-		if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, internal_module_name, nullptr)) {
-			log(*this, LogSeverity::ERROR, "Failed to compile translated C module \"{}\"", script_module->GetName());
-		}
+		      InputData input_data(c_generator.source());
+		      if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, internal_module_name, nullptr)) {
+			      log(*this, LogSeverity::ERROR, "Failed to compile translated C module \"{}\"", internal_module_name);
+		      }
 
-		if (c_generator.get_fallback_count() > 0) {
-			log(*this,
-			    LogSeverity::PERF_WARNING,
-			    "Number of fallbacks for module \"{}\": {}",
-			    internal_module_name,
-			    c_generator.get_fallback_count());
-		}
-	};
+		      if (c_generator.get_fallback_count() > 0) {
+			      log(*this,
+			          LogSeverity::PERF_WARNING,
+			          "Number of fallbacks for module \"{}\": {}",
+			          internal_module_name,
+			          c_generator.get_fallback_count());
+		      }
+	      };
 
 	for (auto& [script_module, functions] : modules) {
 		if (script_module == nullptr) {
