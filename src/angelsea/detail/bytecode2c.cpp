@@ -192,6 +192,9 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
     // TODO: elide jit entries when they immediately precede an unhandled
     // instruction
 
+    // TODO: if all jit entries were elided from the first jit entry, entirely
+    // optimize away the dispatch
+
     switch(ins.info->bc)
     {
     case asBC_JitEntry:
