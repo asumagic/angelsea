@@ -344,9 +344,9 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		emit(
 		    "\t\tint i1 = ASEA_LOAD32(asINT32, l_fp - {SWORD0});\n"
 		    "\t\tint i2 = {INT0};\n"
-		    "\t\tif( i1 == i2 )     (*regs).valueRegister =  0;\n"
-		    "\t\telse if( i1 < i2 ) (*regs).valueRegister = -1;\n"
-		    "\t\telse               (*regs).valueRegister =  1;\n"
+		    "\t\tif( i1 == i2 )     (*regs).valueRegister = (asINT64)0;\n"
+		    "\t\telse if( i1 < i2 ) (*regs).valueRegister = (asINT64)-1;\n"
+		    "\t\telse               (*regs).valueRegister = (asINT64)1;\n"
 		    "\t\tl_bc += 2;\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("INT0", ins.int0())
