@@ -203,9 +203,9 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_PshC4: {
 		emit(
 		    "\t\t--l_sp;\n"
-		    "\t\t*l_sp = {DWORD_ARG};\n"
+		    "\t\t*l_sp = {DWORD0};\n"
 		    "\t\tl_bc += 2;\n",
-		    fmt::arg("DWORD_ARG", ins.dword0())
+		    fmt::arg("DWORD0", ins.dword0())
 		);
 		break;
 	}
@@ -213,9 +213,9 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_PshC8: {
 		emit(
 		    "\t\tl_sp -= 2;\n"
-		    "\t\t*(asQWORD*)l_sp = {QWORD_ARG};\n"
+		    "\t\t*(asQWORD*)l_sp = {QWORD0};\n"
 		    "\t\tl_bc += 3;\n",
-		    fmt::arg("QWORD_ARG", ins.qword0())
+		    fmt::arg("QWORD0", ins.qword0())
 		);
 		break;
 	}
@@ -223,27 +223,27 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_PshV4: {
 		emit(
 		    "\t\t--l_sp;\n"
-		    "\t\t*l_sp = {SWORDARG0};\n"
+		    "\t\t*l_sp = *(l_fp - {SWORD0});\n"
 		    "\t\t++l_bc;\n",
-		    fmt::arg("SWORDARG0", ins.sword0())
+		    fmt::arg("SWORD0", ins.sword0())
 		);
 		break;
 	}
 
 	case asBC_CpyVtoR4: {
 		emit(
-		    "\t\tDEREF_VALUEREG(asDWORD) = *(asDWORD*)(l_fp - {SWORDARG0});\n"
+		    "\t\tDEREF_VALUEREG(asDWORD) = *(asDWORD*)(l_fp - {SWORD0});\n"
 		    "\t\tl_bc++;\n",
-		    fmt::arg("SWORDARG0", ins.sword0())
+		    fmt::arg("SWORD0", ins.sword0())
 		);
 		break;
 	}
 
 	case asBC_CpyRtoV4: {
 		emit(
-		    "\t\t*(asDWORD*)(l_fp - {SWORDARG0}) = DEREF_VALUEREG(asDWORD);\n"
+		    "\t\t*(asDWORD*)(l_fp - {SWORD0}) = DEREF_VALUEREG(asDWORD);\n"
 		    "\t\tl_bc++;\n",
-		    fmt::arg("SWORDARG0", ins.sword0())
+		    fmt::arg("SWORD0", ins.sword0())
 		);
 		break;
 	}
@@ -279,14 +279,14 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 	case asBC_CMPIi: {
 		emit(
-		    "\t\tint i1 = *(int*)(l_fp - {SWORDARG0});\n"
-		    "\t\tint i2 = {INTARG};\n"
+		    "\t\tint i1 = *(int*)(l_fp - {SWORD0});\n"
+		    "\t\tint i2 = {INT0};\n"
 		    "\t\tif( i1 == i2 )     DEREF_VALUEREG(int) =  0;\n"
 		    "\t\telse if( i1 < i2 ) DEREF_VALUEREG(int) = -1;\n"
 		    "\t\telse               DEREF_VALUEREG(int) =  1;\n"
 		    "\t\tl_bc += 2;\n",
-		    fmt::arg("SWORDARG0", ins.sword0()),
-		    fmt::arg("INTARG", ins.int0())
+		    fmt::arg("SWORD0", ins.sword0()),
+		    fmt::arg("INT0", ins.int0())
 		);
 		break;
 	}
@@ -328,6 +328,11 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 	case asBC_ADDi: {
 		emit_arithmetic_simple_stack_stack(ins, "+", "int");
+		break;
+	}
+
+	case asBC_SUBIi: {
+		emit_arithmetic_simple_stack_imm(ins, "-", "int", fmt::to_string(ins.int0(1)));
 		break;
 	}
 
@@ -446,7 +451,6 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_DIVd:
 	case asBC_MODd:
 	case asBC_ADDIi:
-	case asBC_SUBIi:
 	case asBC_MULIi:
 	case asBC_ADDIf:
 	case asBC_SUBIf:
@@ -577,13 +581,30 @@ void BytecodeToC::emit_arithmetic_simple_stack_stack(
     std::string_view    type
 ) {
 	emit(
-	    "\t\t*({TYPE}*)(l_fp - {SWORDARG0}) = *({TYPE}*)(l_fp - {SWORDARG1}) {OP} *({TYPE}*)(l_fp - {SWORDARG2});\n"
+	    "\t\t*({TYPE}*)(l_fp - {SWORD0}) = *({TYPE}*)(l_fp - {SWORD1}) {OP} *({TYPE}*)(l_fp - {SWORD2});\n"
 	    "\t\tl_bc += 2;\n",
 	    fmt::arg("TYPE", type),
 	    fmt::arg("OP", op),
-	    fmt::arg("SWORDARG0", ins.sword0()),
-	    fmt::arg("SWORDARG1", ins.sword1()),
-	    fmt::arg("SWORDARG2", ins.sword2())
+	    fmt::arg("SWORD0", ins.sword0()),
+	    fmt::arg("SWORD1", ins.sword1()),
+	    fmt::arg("SWORD2", ins.sword2())
+	);
+}
+
+void BytecodeToC::emit_arithmetic_simple_stack_imm(
+    BytecodeInstruction ins,
+    std::string_view    op,
+    std::string_view    type,
+    std::string_view    rhs_expr
+) {
+	emit(
+	    "\t\t*({TYPE}*)(l_fp - {SWORD0}) = *({TYPE}*)(l_fp - {SWORD1}) {OP} ({TYPE})({RHSEXPR});\n"
+	    "\t\tl_bc += 3;\n",
+	    fmt::arg("TYPE", type),
+	    fmt::arg("OP", op),
+	    fmt::arg("SWORD0", ins.sword0()),
+	    fmt::arg("SWORD1", ins.sword1()),
+	    fmt::arg("RHSEXPR", rhs_expr)
 	);
 }
 

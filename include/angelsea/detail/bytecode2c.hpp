@@ -65,6 +65,12 @@ class BytecodeToC {
 
 	void emit_cond_branch(BytecodeInstruction ins, std::size_t instruction_length, std::string_view test);
 	void emit_arithmetic_simple_stack_stack(BytecodeInstruction ins, std::string_view op, std::string_view type);
+	void emit_arithmetic_simple_stack_imm(
+	    BytecodeInstruction ins,
+	    std::string_view    op,
+	    std::string_view    type,
+	    std::string_view    rhs_expr
+	);
 
 	JitCompiler* m_compiler;
 	std::string  m_buffer;
