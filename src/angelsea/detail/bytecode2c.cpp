@@ -809,7 +809,9 @@ void BytecodeToC::write_header() {
 
     Very minor modifications may have been applied to formatting or to allow
     compilation via a C compiler.
-    This should still be possible to compile as plain C++; report bugs if not!
+
+    This file should NOT be compiled by a C++ compiler, as it relies on type
+    punning thru unions in a way that is not legal in C++.
 
     Generated function definitions are the result of stitching of code stencils
     which are closely based on the definition and internal structure of the
@@ -924,10 +926,24 @@ int asea_call_script_function(void* vm_registers, int function_idx);
 
 /* FIXME: endianness - we assume LE */
 
+typedef union {
+	asINT8 as_asINT8;
+	asINT16 as_asINT16;
+	asINT32 as_asINT32;
+	asINT64 as_asINT64;
+	asBYTE as_asBYTE;
+	asWORD as_asWORD;
+	asDWORD as_asDWORD;
+	asQWORD as_asQWORD;
+	asPWORD as_asPWORD;
+	float as_float;
+	double as_double;
+} asea_stack_var;
+
 #define ASEA_LOAD32(type, ptr) (type)(*(ptr))
-#define ASEA_LOAD64(type, ptr) (type)((asQWORD)((ptr)[0]) | ((asQWORD)((ptr)[1]) << 32))
+#define ASEA_LOAD64(type, ptr) (type)((*(asea_stack_var*)(ptr)).as_asQWORD)
 #define ASEA_STORE32(ptr, val) { *(ptr) = (val); }
-#define ASEA_STORE64(ptr, val) { (ptr)[0] = (asDWORD)(val); (ptr)[1] = (asDWORD)((asQWORD)(val) >> 32); }
+#define ASEA_STORE64(ptr, val) { (*(asea_stack_var*)(ptr)).as_asQWORD = (asQWORD)(val); }
 
 /* end of angelsea static header */
 
