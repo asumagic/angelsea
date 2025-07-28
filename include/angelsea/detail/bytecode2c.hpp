@@ -80,6 +80,7 @@ class BytecodeToC {
 	void emit_save_vm_registers();
 
 	void emit_cond_branch(BytecodeInstruction ins, std::size_t instruction_length, std::string_view test);
+	void emit_test(BytecodeInstruction ins, std::string_view op_with_rhs_0);
 	void emit_primitive_cast_stack(BytecodeInstruction ins, VarType src, VarType dst, bool in_place);
 	void emit_arithmetic_simple_stack_unary_inplace(BytecodeInstruction ins, std::string_view op, VarType var);
 	void emit_arithmetic_simple_stack_stack(

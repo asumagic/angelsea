@@ -402,6 +402,31 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 		break;
 	}
 
+	case asBC_TZ: {
+		emit_test(ins, "==");
+		break;
+	}
+	case asBC_TNZ: {
+		emit_test(ins, "!=");
+		break;
+	}
+	case asBC_TS: {
+		emit_test(ins, "<");
+		break;
+	}
+	case asBC_TNS: {
+		emit_test(ins, ">=");
+		break;
+	}
+	case asBC_TP: {
+		emit_test(ins, ">");
+		break;
+	}
+	case asBC_TNP: {
+		emit_test(ins, "<");
+		break;
+	}
+
 	case asBC_ADDi: {
 		emit_arithmetic_simple_stack_stack(ins, "+", var_types::s32, var_types::s32, var_types::s32);
 		break;
@@ -531,12 +556,6 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 	case asBC_PshG4:
 	case asBC_LdGRdR4:
 	case asBC_RET:
-	case asBC_TZ:
-	case asBC_TNZ:
-	case asBC_TS:
-	case asBC_TNS:
-	case asBC_TP:
-	case asBC_TNP:
 	case asBC_NEGi:
 	case asBC_NEGf:
 	case asBC_NEGd:
@@ -740,6 +759,15 @@ void BytecodeToC::emit_cond_branch(BytecodeInstruction ins, std::size_t instruct
 	);
 }
 
+void BytecodeToC::emit_test(BytecodeInstruction ins, std::string_view op_with_rhs_0) {
+	emit(
+	    "\t\tasINT32 value = regs->valueRegister.as_asINT32;\n"
+	    "\t\tregs->valueRegister.as_asQWORD = 0;\n"
+	    "\t\tregs->valueRegister.as_asBYTE = (value {OP} 0) ? VALUE_OF_BOOLEAN_TRUE : 0;\n",
+	    fmt::arg("OP", op_with_rhs_0)
+	);
+}
+
 void BytecodeToC::emit_arithmetic_simple_stack_unary_inplace(
     BytecodeInstruction ins,
     std::string_view    op,
@@ -882,6 +910,8 @@ typedef __UINTPTR_TYPE__ asPWORD;
 	#define asBCTYPE_rW_PTR_ARG asBCTYPE_rW_QW_ARG
 	#define AS_PTR_SIZE 2
 #endif
+
+#define VALUE_OF_BOOLEAN_TRUE 1
 
 typedef enum
 {
