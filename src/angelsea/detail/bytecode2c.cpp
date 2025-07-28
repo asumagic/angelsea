@@ -277,7 +277,7 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 
 	case asBC_CpyVtoR4: {
 		emit(
-		    "\t\t(*regs).valueRegister = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n"
+		    "\t\tregs->valueRegister.as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n"
 		    "\t\tl_bc++;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -286,7 +286,7 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 
 	case asBC_CpyRtoV4: {
 		emit(
-		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asDWORD = (*regs).valueRegister;\n"
+		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asDWORD = regs->valueRegister.as_asDWORD;\n"
 		    "\t\tl_bc++;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -346,9 +346,9 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 		emit(
 		    "\t\tint i1 = ASEA_FRAME_VAR({SWORD0}).as_asINT32;\n"
 		    "\t\tint i2 = {INT0};\n"
-		    "\t\tif( i1 == i2 )     (*regs).valueRegister = (asINT64)0;\n"
-		    "\t\telse if( i1 < i2 ) (*regs).valueRegister = (asINT64)-1;\n"
-		    "\t\telse               (*regs).valueRegister = (asINT64)1;\n"
+		    "\t\tif( i1 == i2 )     regs->valueRegister.as_asINT64 = 0;\n"
+		    "\t\telse if( i1 < i2 ) regs->valueRegister.as_asINT64 = -1;\n"
+		    "\t\telse               regs->valueRegister.as_asINT64 = 1;\n"
 		    "\t\tl_bc += 2;\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("INT0", ins.int0())
@@ -367,27 +367,27 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 	}
 
 	case asBC_JZ: {
-		emit_cond_branch(ins, 2, "(asINT64)(*regs).valueRegister == 0");
+		emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 == 0");
 		break;
 	}
 	case asBC_JNZ: {
-		emit_cond_branch(ins, 2, "(asINT64)(*regs).valueRegister != 0");
+		emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 != 0");
 		break;
 	}
 	case asBC_JS: {
-		emit_cond_branch(ins, 2, "(asINT64)(*regs).valueRegister < 0");
+		emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 < 0");
 		break;
 	}
 	case asBC_JNS: {
-		emit_cond_branch(ins, 2, "(asINT64)(*regs).valueRegister >= 0");
+		emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 >= 0");
 		break;
 	}
 	case asBC_JP: {
-		emit_cond_branch(ins, 2, "(asINT64)(*regs).valueRegister > 0");
+		emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 > 0");
 		break;
 	}
 	case asBC_JNP: {
-		emit_cond_branch(ins, 2, "(asINT64)(*regs).valueRegister <= 0");
+		emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 <= 0");
 		break;
 	}
 
@@ -872,25 +872,6 @@ typedef __UINTPTR_TYPE__ asPWORD;
 	#define AS_PTR_SIZE 2
 #endif
 
-typedef void asIScriptContext;
-typedef void asITypeInfo;
-typedef struct
-{
-	/*
-		We rewrite some of the asDWORD* pointers to be void* instead; this is
-		across the compile boundary in the case of JIT.
-	*/
-	asDWORD          *programPointer;     /* points to current bytecode instruction */
-	void             *stackFramePointer;  /* function stack frame */
-	void             *stackPointer;       /* top of stack (grows downward) */
-	asQWORD           valueRegister;      /* temp register for primitives */
-	void             *objectRegister;     /* temp register for objects and handles */
-	asITypeInfo      *objectType;         /* type of object held in object register */
-	/* HACK: doProcessSuspend is normally defined as bool in C++; assume int equivalent */
-	int              doProcessSuspend;    /* whether or not the JIT should break out when it encounters a suspend instruction */
-	asIScriptContext *ctx;                /* the active context */
-} asSVMRegisters;
-
 typedef enum
 {
 	asEXECUTION_FINISHED        = 0,
@@ -904,18 +885,13 @@ typedef enum
 	asEXECUTION_DESERIALIZATION = 8
 } asEContextState;
 
-#endif
-
 /*
-    The following definitions are part of the angelsea runtime.hpp
+	Union to provide safe type punning with various AngelScript variables (as
+	far as C aliasing rules allow, but not C++'s)
+	This is only _fully_ legal and could theoretically break if the compiler can
+	see beyond its compile unit (e.g. with LTO) but it should be otherwise
+	unproblematic (and AS itself does worse, anyway).
 */
-
-int asea_call_script_function(void* vm_registers, int function_idx);
-
-/*
-    The following definitions are additional angelsea helpers
-*/
-
 typedef union {
 	asINT8 as_asINT8;
 	asINT16 as_asINT16;
@@ -928,11 +904,46 @@ typedef union {
 	asPWORD as_asPWORD;
 	float as_float;
 	double as_double;
-} asea_stack_var;
+} asea_var;
+
+/* TODO: figure out how to implement these abstractions without having to know
+   about the C++ ABI (for the vtable, etc.) -- otherwise we have to always
+   interact via the runtime.hpp wrappers */
+typedef void asIScriptContext;
+typedef void asITypeInfo;
+
+typedef struct
+{
+	/*
+		We rewrite some of the asDWORD* pointers to be void* instead; this is
+		across the compile boundary in the case of JIT.
+	*/
+	asDWORD          *programPointer;     /* points to current bytecode instruction */
+	void             *stackFramePointer;  /* function stack frame */
+	void             *stackPointer;       /* top of stack (grows downward) */
+	asea_var          valueRegister;      /* temp register for primitives */
+	void             *objectRegister;     /* temp register for objects and handles */
+	asITypeInfo      *objectType;         /* type of object held in object register */
+	/* HACK: doProcessSuspend is normally defined as bool in C++; assume int equivalent */
+	int              doProcessSuspend;    /* whether or not the JIT should break out when it encounters a suspend instruction */
+	asIScriptContext *ctx;                /* the active context */
+} asSVMRegisters;
+
+#endif
+
+/*
+    The following definitions are part of the angelsea runtime.hpp
+*/
+
+int asea_call_script_function(void* vm_registers, int function_idx);
+
+/*
+    The following definitions are additional angelsea helpers
+*/
 
 #define ASEA_STACK_DWORD_OFFSET(base, dword_offset) (void*)((char*)(base) + ((dword_offset) * 4))
-#define ASEA_FRAME_VAR(dword_offset) (*(asea_stack_var*)(ASEA_STACK_DWORD_OFFSET(l_fp, -(dword_offset))))
-#define ASEA_STACK_VAR(dword_offset) (*(asea_stack_var*)(ASEA_STACK_DWORD_OFFSET(l_sp, (dword_offset))))
+#define ASEA_FRAME_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(l_fp, -(dword_offset))))
+#define ASEA_STACK_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(l_sp, (dword_offset))))
 
 /* end of angelsea static header */
 
