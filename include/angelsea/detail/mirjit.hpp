@@ -4,8 +4,10 @@
 
 #include <angelscript.h>
 #include <angelsea/config.hpp>
+#include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/debug.hpp>
 #include <optional>
+#include <span>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -55,13 +57,20 @@ class MirJit {
 	void register_function(asIScriptFunction& script_function);
 	void unregister_function(asIScriptFunction& script_function);
 
-	void bind_runtime();
-
-	bool compile_all();
+	[[nodiscard]] bool compile_all();
 
 	std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> compute_module_map();
 
 	private:
+	void               bind_runtime();
+	[[nodiscard]] bool compile_module(
+	    BytecodeToC&                  c_generator,
+	    c2mir_options&                c_options,
+	    const char*                   internal_module_name,
+	    asIScriptModule*              script_module,
+	    std::span<asIScriptFunction*> functions
+	);
+
 	JitConfig        m_config;
 	asIScriptEngine* m_engine;
 

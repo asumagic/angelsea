@@ -50,7 +50,7 @@ bool MirJit::compile_all() {
 	std::array<c2mir_macro_command, 1> macros{{{.def_p = true, .name = "ANGELSEA_SUPPORT", .def = "1"}}};
 
 	c2mir_options c_options{
-	    .message_file       = config().c2mir_diagnostic_file, // TODO: optional
+	    .message_file       = config().c2mir_diagnostic_file,
 	    .debug_p            = false,
 	    .verbose_p          = false,
 	    .ignore_warnings_p  = false,
@@ -77,16 +77,6 @@ bool MirJit::compile_all() {
 
 	auto modules = compute_module_map();
 
-	const auto getc_callback = +[](void* user_data) -> int {
-		InputData& info = *static_cast<InputData*>(user_data);
-		if (info.current_offset >= info.c_source->size()) {
-			return EOF;
-		}
-		char c = (*info.c_source)[info.current_offset];
-		++info.current_offset;
-		return c;
-	};
-
 	bool success = true;
 
 	// NOTE: I don't think there is fundamentally something that makes it
@@ -102,35 +92,7 @@ bool MirJit::compile_all() {
 	// TODO: Investigate if partial recompiles work, and make them more
 	// efficient
 
-	const auto compile_module =
-	    [&](const char* internal_module_name, asIScriptModule* script_module, std::span<asIScriptFunction*> functions) {
-		    c_generator.prepare_new_context();
-		    c_generator.translate_module(internal_module_name, script_module, functions);
-
-		    if (config().dump_c_code) {
-			    angelsea_assert(config().dump_c_code_file != nullptr);
-			    fputs(c_generator.source().c_str(), config().dump_c_code_file);
-		    }
-
-		    InputData input_data(c_generator.source());
-		    if (!c2mir_compile(*m_mir, &c_options, getc_callback, &input_data, internal_module_name, nullptr)) {
-			    log(config(),
-			        engine(),
-			        LogSeverity::ERROR,
-			        "Failed to compile translated C module \"{}\"",
-			        internal_module_name);
-			    success = false;
-		    }
-
-		    if (c_generator.get_fallback_count() > 0) {
-			    log(config(),
-			        engine(),
-			        LogSeverity::PERF_WARNING,
-			        "Number of fallbacks for module \"{}\": {}",
-			        internal_module_name,
-			        c_generator.get_fallback_count());
-		    }
-	    };
+	// TODO: Freeing functions
 
 	for (auto& [script_module, functions] : modules) {
 		if (script_module == nullptr) {
@@ -138,10 +100,17 @@ bool MirJit::compile_all() {
 			for (std::size_t i = 0; i < functions.size(); ++i) {
 				// convert each function as their own virtual module
 				// TODO: is this useful? should reconsider
-				compile_module("<anon>", nullptr, std::span{functions}.subspan(i, 1));
+				success
+				    &= compile_module(c_generator, c_options, "<anon>", nullptr, std::span{functions}.subspan(i, 1));
 			}
 		} else {
-			compile_module(script_module->GetName(), script_module, std::span{functions});
+			success &= compile_module(
+			    c_generator,
+			    c_options,
+			    script_module->GetName(),
+			    script_module,
+			    std::span{functions}
+			);
 		}
 	}
 
@@ -215,6 +184,54 @@ bool MirJit::compile_all() {
 
 void MirJit::bind_runtime() {
 	MIR_load_external(*m_mir, "asea_call_script_function", reinterpret_cast<void*>(asea_call_script_function));
+}
+
+static int c2mir_getc_callback(void* user_data) {
+	InputData& info = *static_cast<InputData*>(user_data);
+	if (info.current_offset >= info.c_source->size()) {
+		return EOF;
+	}
+	char c = (*info.c_source)[info.current_offset];
+	++info.current_offset;
+	return c;
+}
+
+bool MirJit::compile_module(
+    BytecodeToC&                  c_generator,
+    c2mir_options&                c_options,
+    const char*                   internal_module_name,
+    asIScriptModule*              script_module,
+    std::span<asIScriptFunction*> functions
+) {
+
+	c_generator.prepare_new_context();
+	c_generator.translate_module(internal_module_name, script_module, functions);
+
+	if (config().dump_c_code) {
+		angelsea_assert(config().dump_c_code_file != nullptr);
+		fputs(c_generator.source().c_str(), config().dump_c_code_file);
+	}
+
+	InputData input_data(c_generator.source());
+	if (!c2mir_compile(*m_mir, &c_options, c2mir_getc_callback, &input_data, internal_module_name, nullptr)) {
+		log(config(),
+		    engine(),
+		    LogSeverity::ERROR,
+		    "Failed to compile translated C module \"{}\"",
+		    internal_module_name);
+		return false;
+	}
+
+	if (c_generator.get_fallback_count() > 0) {
+		log(config(),
+		    engine(),
+		    LogSeverity::PERF_WARNING,
+		    "Number of fallbacks for module \"{}\": {}",
+		    internal_module_name,
+		    c_generator.get_fallback_count());
+	}
+
+	return true;
 }
 
 std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> MirJit::compute_module_map() {
