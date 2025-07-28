@@ -13,9 +13,6 @@
 
 namespace angelsea::detail {
 
-using ModuleId   = std::size_t;
-using FunctionId = std::size_t;
-
 /// Access granularity of a stack frame access, required to do aliasing-safe
 /// loads and stores. This means zero-extension as required.
 enum class AccessGranularity { DWORD, QWORD };
@@ -43,15 +40,15 @@ class BytecodeToC {
 
 	void prepare_new_context();
 
-	ModuleId translate_module(
+	void translate_module(
 	    std::string_view              internal_module_name,
 	    asIScriptModule*              script_module,
 	    std::span<asIScriptFunction*> functions
 	);
 
-	FunctionId translate_function(std::string_view internal_module_name, asIScriptFunction& function);
+	void translate_function(std::string_view internal_module_name, asIScriptFunction& function);
 
-	std::string entry_point_name(ModuleId module_id, FunctionId function_id) const;
+	std::string entry_point_name(asIScriptFunction& fn) const;
 
 	std::string& source() { return m_buffer; }
 
@@ -103,8 +100,6 @@ class BytecodeToC {
 	const JitConfig& m_config;
 	asIScriptEngine& m_script_engine;
 	std::string      m_buffer;
-	ModuleId         m_current_module_id;
-	ModuleId         m_current_function_id;
 
 	OnMapFunctionCallback m_on_map_function_callback;
 

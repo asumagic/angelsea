@@ -14,8 +14,6 @@ namespace angelsea::detail {
 
 BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine) : m_config(config), m_script_engine(engine) {
 	m_buffer.reserve(1024 * 64);
-	m_current_module_id   = 0;
-	m_current_function_id = 0;
 }
 
 void BytecodeToC::prepare_new_context() {
@@ -24,13 +22,11 @@ void BytecodeToC::prepare_new_context() {
 	write_header();
 }
 
-ModuleId BytecodeToC::translate_module(
+void BytecodeToC::translate_module(
     std::string_view              internal_module_name,
     asIScriptModule*              script_module,
     std::span<asIScriptFunction*> functions
 ) {
-	++m_current_module_id;
-
 	// NOTE: module name and section names are separate concepts, and there may
 	// be several script sections in a module
 	emit(
@@ -43,14 +39,10 @@ ModuleId BytecodeToC::translate_module(
 	for (asIScriptFunction* fn : functions) {
 		translate_function(internal_module_name, *fn);
 	}
-
-	return m_current_module_id;
 }
 
-FunctionId BytecodeToC::translate_function(std::string_view internal_module_name, asIScriptFunction& fn) {
-	++m_current_function_id;
-
-	const auto func_name = entry_point_name(m_current_module_id, m_current_function_id);
+void BytecodeToC::translate_function(std::string_view internal_module_name, asIScriptFunction& fn) {
+	const auto func_name = entry_point_name(fn);
 	if (m_on_map_function_callback) {
 		m_on_map_function_callback(fn, func_name);
 	}
@@ -146,12 +138,25 @@ FunctionId BytecodeToC::translate_function(std::string_view internal_module_name
 	walk_bytecode(get_bytecode(fn), [&](BytecodeInstruction ins) { translate_instruction(fn, ins); });
 
 	emit("}}\n");
-
-	return m_current_function_id;
 }
 
-std::string BytecodeToC::entry_point_name(ModuleId module_id, FunctionId function_id) const {
-	return fmt::format("asea_jit_mod{}_fn{}", module_id, function_id);
+std::string BytecodeToC::entry_point_name(asIScriptFunction& fn) const {
+	angelsea_assert(fn.GetId() != 0 && "Did not expect a delegate function");
+
+	std::string mangled_module = "anon";
+
+	if (const char* module_name = fn.GetModuleName(); module_name != nullptr) {
+		mangled_module = "module_";
+		for (char c : std::string_view{module_name}) {
+			if (std::isalnum(c)) {
+				mangled_module += c;
+			} else {
+				mangled_module += fmt::format("_{:02X}_", c);
+			}
+		}
+	}
+
+	return fmt::format("asea_jit{}_{}", fn.GetId(), mangled_module);
 }
 
 void BytecodeToC::emit_entry_dispatch(asIScriptFunction& fn) {

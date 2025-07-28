@@ -139,7 +139,7 @@ std::string run(const char* path, const char* entry) {
 
 std::string run(EngineContext& context, const char* path, const char* entry) {
 	out                     = {};
-	asIScriptModule& module = context.build("build", path);
+	asIScriptModule& module = context.build(path, path);
 	context.run(module, entry);
 	return out.str();
 }
