@@ -4,14 +4,17 @@
 
 #include <angelscript.h>
 #include <angelsea/config.hpp>
-#include <angelsea/detail/jitcompiler.hpp>
+#include <memory>
 
 namespace angelsea {
 
+namespace detail {
+class MirJit;
+}
+
 class Jit final : public asIJITCompilerV2 {
 	public:
-	Jit(const JitConfig& config, asIScriptEngine& engine) : m_compiler(config, engine) {}
-
+	Jit(const JitConfig& config, asIScriptEngine& engine);
 	~Jit();
 
 	virtual void NewFunction(asIScriptFunction* scriptFunc) override;
@@ -20,7 +23,7 @@ class Jit final : public asIJITCompilerV2 {
 	bool CompileModules();
 
 	private:
-	detail::JitCompiler m_compiler;
+	std::unique_ptr<detail::MirJit> m_compiler;
 };
 
 } // namespace angelsea

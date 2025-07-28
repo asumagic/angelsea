@@ -7,7 +7,7 @@
 
 namespace angelsea::detail {
 
-class JitCompiler;
+class MirJit;
 
 std::string disassemble(asIScriptEngine& engine, BytecodeInstruction instruction);
 

@@ -12,7 +12,7 @@
 
 namespace angelsea::detail {
 
-BytecodeToC::BytecodeToC(JitCompiler& compiler) : m_compiler(&compiler) {
+BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine) : m_config(config), m_script_engine(engine) {
 	m_buffer.reserve(1024 * 64);
 	m_current_module_id   = 0;
 	m_current_function_id = 0;
@@ -181,7 +181,7 @@ void BytecodeToC::emit_entry_dispatch(asIScriptFunction& fn) {
 
 void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstruction ins) {
 	if (is_human_readable()) {
-		emit("\t/* bytecode: {} */\n", disassemble(m_compiler->engine(), ins));
+		emit("\t/* bytecode: {} */\n", disassemble(m_script_engine, ins));
 	}
 
 	emit("\tbc{}: {{\n", ins.offset);
@@ -206,7 +206,8 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 	}
 
 	case asBC_SUSPEND: {
-		log(*m_compiler,
+		log(m_config,
+		    m_script_engine,
 		    fn,
 		    LogSeverity::PERF_WARNING,
 		    "asBC_SUSPEND found; this will fallback to the VM and be slow!");

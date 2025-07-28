@@ -3,8 +3,8 @@
 #pragma once
 
 #include <angelscript.h>
+#include <angelsea/config.hpp>
 #include <angelsea/detail/bytecodeinstruction.hpp>
-#include <angelsea/detail/jitcompiler.hpp>
 #include <fmt/format.h>
 #include <functional>
 #include <span>
@@ -39,7 +39,7 @@ class BytecodeToC {
 	public:
 	using OnMapFunctionCallback = std::function<void(asIScriptFunction&, const std::string& name)>;
 
-	BytecodeToC(JitCompiler& compiler);
+	BytecodeToC(const JitConfig& config, asIScriptEngine& engine);
 
 	void prepare_new_context();
 
@@ -100,10 +100,11 @@ class BytecodeToC {
 	    VarType             dst
 	);
 
-	JitCompiler* m_compiler;
-	std::string  m_buffer;
-	ModuleId     m_current_module_id;
-	ModuleId     m_current_function_id;
+	const JitConfig& m_config;
+	asIScriptEngine& m_script_engine;
+	std::string      m_buffer;
+	ModuleId         m_current_module_id;
+	ModuleId         m_current_function_id;
 
 	OnMapFunctionCallback m_on_map_function_callback;
 

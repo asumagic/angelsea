@@ -2,7 +2,6 @@
 
 #include <angelsea/detail/bytecodedisasm.hpp>
 #include <angelsea/detail/debug.hpp>
-#include <angelsea/detail/jitcompiler.hpp>
 #include <fmt/format.h>
 
 namespace angelsea::detail {

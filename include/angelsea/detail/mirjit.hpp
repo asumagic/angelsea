@@ -10,9 +10,9 @@
 
 namespace angelsea::detail {
 
-class JitCompiler {
+class MirJit {
 	public:
-	JitCompiler(const JitConfig& config, asIScriptEngine& engine) : m_config(config), m_engine(&engine) {}
+	MirJit(const JitConfig& config, asIScriptEngine& engine) : m_config(config), m_engine(&engine) {}
 
 	const JitConfig& config() const { return m_config; }
 	asIScriptEngine& engine() { return *m_engine; }

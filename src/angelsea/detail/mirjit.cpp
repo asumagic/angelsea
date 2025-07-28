@@ -9,21 +9,17 @@ extern "C" {
 
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/debug.hpp>
-#include <angelsea/detail/jitcompiler.hpp>
 #include <angelsea/detail/log.hpp>
+#include <angelsea/detail/mirjit.hpp>
 #include <angelsea/detail/runtime.hpp>
 #include <string>
 #include <unordered_map>
 
-// TODO: abstract the whole MIR usage in a different file so this is, in theory,
-// kind of MIR-agnostic -- can we easily make it so that you can use an AOT
-// backend?
-
 namespace angelsea::detail {
 
-void JitCompiler::register_function(asIScriptFunction& script_function) { m_functions.emplace(&script_function); }
+void MirJit::register_function(asIScriptFunction& script_function) { m_functions.emplace(&script_function); }
 
-void JitCompiler::unregister_function(asIScriptFunction& script_function) {
+void MirJit::unregister_function(asIScriptFunction& script_function) {
 	const auto it = m_functions.find(&script_function);
 	angelsea_assert(it != m_functions.end());
 	m_functions.erase(it);
@@ -36,8 +32,14 @@ struct InputData {
 	InputData(std::string& source) : c_source{&source}, current_offset{0} {}
 };
 
-bool JitCompiler::compile_all() {
-	detail::log(*this, LogSeverity::VERBOSE, "Requesting compilation for {} functions", m_functions.size());
+bool MirJit::compile_all() {
+	detail::log(
+	    config(),
+	    engine(),
+	    LogSeverity::VERBOSE,
+	    "Requesting compilation for {} functions",
+	    m_functions.size()
+	);
 
 	MIR_context_t mir = MIR_init();
 	c2mir_init(mir);
@@ -68,7 +70,7 @@ bool JitCompiler::compile_all() {
 
 	std::unordered_map<std::string, asIScriptFunction*> c_name_to_func;
 
-	BytecodeToC c_generator{*this};
+	BytecodeToC c_generator{config(), engine()};
 	c_generator.set_map_function_callback([&](asIScriptFunction& fn, const std::string& name) {
 		c_name_to_func.emplace(name, &fn);
 	});
@@ -112,12 +114,17 @@ bool JitCompiler::compile_all() {
 
 		    InputData input_data(c_generator.source());
 		    if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, internal_module_name, nullptr)) {
-			    log(*this, LogSeverity::ERROR, "Failed to compile translated C module \"{}\"", internal_module_name);
+			    log(config(),
+			        engine(),
+			        LogSeverity::ERROR,
+			        "Failed to compile translated C module \"{}\"",
+			        internal_module_name);
 			    success = false;
 		    }
 
 		    if (c_generator.get_fallback_count() > 0) {
-			    log(*this,
+			    log(config(),
+			        engine(),
 			        LogSeverity::PERF_WARNING,
 			        "Number of fallbacks for module \"{}\": {}",
 			        internal_module_name,
@@ -174,7 +181,8 @@ bool JitCompiler::compile_all() {
 
 				auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(mir, mir_func));
 
-				log(*this,
+				log(config(),
+				    engine(),
 				    fn,
 				    LogSeverity::VERBOSE,
 				    "Hooking function `{}` as `{}`!",
@@ -182,7 +190,8 @@ bool JitCompiler::compile_all() {
 				    fmt::ptr(entry_point));
 
 				if (entry_point == nullptr) {
-					log(*this,
+					log(config(),
+					    engine(),
 					    fn,
 					    LogSeverity::ERROR,
 					    "Failed to compile function `{}`",
@@ -194,7 +203,8 @@ bool JitCompiler::compile_all() {
 				const auto err = fn.SetJITFunction(entry_point);
 
 				if (err == asNOT_SUPPORTED) {
-					log(*this,
+					log(config(),
+					    engine(),
 					    fn,
 					    LogSeverity::ERROR,
 					    "Failed to set JIT function (asNOT_SUPPORTED), did you forget to set "
@@ -218,7 +228,7 @@ bool JitCompiler::compile_all() {
 	return success;
 }
 
-std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> JitCompiler::compute_module_map() {
+std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> MirJit::compute_module_map() {
 	std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> ret;
 
 	for (auto& fn : m_functions) {
