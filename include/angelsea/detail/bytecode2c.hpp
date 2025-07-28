@@ -70,14 +70,14 @@ class BytecodeToC {
 	private:
 	void write_header();
 
-	void translate_instruction(asIScriptFunction& function, BytecodeInstruction instruction);
+	void translate_instruction(asIScriptFunction& fn, BytecodeInstruction instruction);
 
 	template<class... Ts> void emit(fmt::format_string<Ts...> format, Ts&&... format_args) {
 		fmt::format_to(std::back_inserter(m_buffer), format, std::forward<Ts>(format_args)...);
 	}
 
-	void emit_entry_dispatch(asIScriptFunction& function);
-	void emit_vm_fallback(asIScriptFunction& function, std::string_view reason);
+	void emit_entry_dispatch(asIScriptFunction& fn);
+	void emit_vm_fallback(asIScriptFunction& fn, std::string_view reason);
 
 	void emit_load_vm_registers();
 	void emit_save_vm_registers();

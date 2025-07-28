@@ -467,23 +467,22 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 		break;
 	}
 
-	// float cases need reinterpreting, this is broken
-	// case asBC_iTOf: {
-	// 	emit_primitive_cast_stack(ins, var_types::s32, var_types::f32, true);
-	// 	break;
-	// }
-	// case asBC_fTOi: {
-	// 	emit_primitive_cast_stack(ins, var_types::f32, var_types::s32, true);
-	// 	break;
-	// }
-	// case asBC_uTOf: {
-	// 	emit_primitive_cast_stack(ins, var_types::u32, var_types::f32, true);
-	// 	break;
-	// }
-	// case asBC_fTOu: {
-	// 	emit_primitive_cast_stack(ins, var_types::f32, var_types::u32, true);
-	// 	break;
-	// }
+	case asBC_iTOf: {
+		emit_primitive_cast_stack(ins, var_types::s32, var_types::f32, true);
+		break;
+	}
+	case asBC_fTOi: {
+		emit_primitive_cast_stack(ins, var_types::f32, var_types::s32, true);
+		break;
+	}
+	case asBC_uTOf: {
+		emit_primitive_cast_stack(ins, var_types::u32, var_types::f32, true);
+		break;
+	}
+	case asBC_fTOu: {
+		emit_primitive_cast_stack(ins, var_types::f32, var_types::u32, true);
+		break;
+	}
 	case asBC_sbTOi: {
 		emit_primitive_cast_stack(ins, var_types::s8, var_types::s32, true);
 		break;

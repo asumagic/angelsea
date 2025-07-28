@@ -27,9 +27,9 @@ void walk_bytecode(std::span<asDWORD> bytecode, std::invocable<BytecodeInstructi
 	}
 }
 
-inline std::span<asDWORD> get_bytecode(asIScriptFunction& function) {
+inline std::span<asDWORD> get_bytecode(asIScriptFunction& fn) {
 	asUINT   length;
-	asDWORD* bytecode = function.GetByteCode(&length);
+	asDWORD* bytecode = fn.GetByteCode(&length);
 	return {bytecode, length};
 }
 
