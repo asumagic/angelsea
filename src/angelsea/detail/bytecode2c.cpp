@@ -771,7 +771,8 @@ void BytecodeToC::emit_test(BytecodeInstruction ins, std::string_view op_with_rh
 	emit(
 	    "\t\tasINT32 value = regs->valueRegister.as_asINT32;\n"
 	    "\t\tregs->valueRegister.as_asQWORD = 0;\n"
-	    "\t\tregs->valueRegister.as_asBYTE = (value {OP} 0) ? VALUE_OF_BOOLEAN_TRUE : 0;\n",
+	    "\t\tregs->valueRegister.as_asBYTE = (value {OP} 0) ? VALUE_OF_BOOLEAN_TRUE : 0;\n"
+	    "\t\tl_bc++;\n",
 	    fmt::arg("OP", op_with_rhs_0)
 	);
 }
