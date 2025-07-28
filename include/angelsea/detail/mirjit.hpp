@@ -70,6 +70,8 @@ class MirJit {
 	    asIScriptModule*              script_module,
 	    std::span<asIScriptFunction*> functions
 	);
+	[[nodiscard]] bool
+	link_compiled_functions(const std::unordered_map<std::string, asIScriptFunction*>& c_name_to_func);
 
 	JitConfig        m_config;
 	asIScriptEngine* m_engine;

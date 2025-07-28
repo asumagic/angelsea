@@ -122,55 +122,7 @@ bool MirJit::compile_all() {
 	MIR_gen_set_optimize_level(*m_mir, config().mir_optimization_level);
 
 	bind_runtime();
-
-	// lookup functions
-	for (MIR_module_t module = DLIST_HEAD(MIR_module_t, *MIR_get_module_list(*m_mir)); module != nullptr;
-	     module              = DLIST_NEXT(MIR_module_t, module)) {
-		MIR_load_module(*m_mir, module);
-
-		// TODO: investigate lazy gen options, and exposing interpretation instead
-		MIR_link(*m_mir, MIR_set_lazy_gen_interface, nullptr);
-
-		for (MIR_item_t mir_func = DLIST_HEAD(MIR_item_t, module->items); mir_func != nullptr;
-		     mir_func            = DLIST_NEXT(MIR_item_t, mir_func)) {
-			if (mir_func->item_type != MIR_func_item) {
-				continue;
-			}
-
-			const auto symbol = std::string_view{mir_func->u.func->name};
-
-			// TODO: pointless string allocation but heterogeneous lookup is
-			// annoying in C++ unordered_map
-			auto it = c_name_to_func.find(mir_func->u.func->name);
-			if (it != c_name_to_func.end()) {
-				asIScriptFunction& fn = *it->second;
-
-				auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(*m_mir, mir_func));
-
-				log(config(),
-				    engine(),
-				    fn,
-				    LogSeverity::VERBOSE,
-				    "Hooking function `{}` as `{}`!",
-				    fn.GetDeclaration(true, true, true),
-				    fmt::ptr(entry_point));
-
-				if (entry_point == nullptr) {
-					log(config(),
-					    engine(),
-					    fn,
-					    LogSeverity::ERROR,
-					    "Failed to compile function `{}`",
-					    fn.GetDeclaration(true, true, true));
-
-					success = false;
-				}
-
-				const auto err = fn.SetJITFunction(entry_point);
-				angelsea_assert(err == asSUCCESS);
-			}
-		}
-	}
+	success &= link_compiled_functions(c_name_to_func);
 
 	if (config().dump_mir_code) {
 		angelsea_assert(config().dump_mir_code_file != nullptr);
@@ -232,6 +184,60 @@ bool MirJit::compile_module(
 	}
 
 	return true;
+}
+
+bool MirJit::link_compiled_functions(const std::unordered_map<std::string, asIScriptFunction*>& c_name_to_func) {
+	bool success = true;
+
+	for (MIR_module_t module = DLIST_HEAD(MIR_module_t, *MIR_get_module_list(*m_mir)); module != nullptr;
+	     module              = DLIST_NEXT(MIR_module_t, module)) {
+		MIR_load_module(*m_mir, module);
+
+		// TODO: investigate the difference gen interfaces
+		MIR_link(*m_mir, MIR_set_lazy_gen_interface, nullptr);
+
+		for (MIR_item_t mir_func = DLIST_HEAD(MIR_item_t, module->items); mir_func != nullptr;
+		     mir_func            = DLIST_NEXT(MIR_item_t, mir_func)) {
+			if (mir_func->item_type != MIR_func_item) {
+				continue;
+			}
+
+			const auto symbol = std::string_view{mir_func->u.func->name};
+
+			// TODO: pointless string allocation but heterogeneous lookup is
+			// annoying in C++ unordered_map
+			auto it = c_name_to_func.find(mir_func->u.func->name);
+			if (it != c_name_to_func.end()) {
+				asIScriptFunction& fn = *it->second;
+
+				auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(*m_mir, mir_func));
+
+				log(config(),
+				    engine(),
+				    fn,
+				    LogSeverity::VERBOSE,
+				    "Hooking function `{}` as `{}`!",
+				    fn.GetDeclaration(true, true, true),
+				    fmt::ptr(entry_point));
+
+				if (entry_point == nullptr) {
+					log(config(),
+					    engine(),
+					    fn,
+					    LogSeverity::ERROR,
+					    "Failed to compile function `{}`",
+					    fn.GetDeclaration(true, true, true));
+
+					success = false;
+				}
+
+				const auto err = fn.SetJITFunction(entry_point);
+				angelsea_assert(err == asSUCCESS);
+			}
+		}
+	}
+
+	return success;
 }
 
 std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> MirJit::compute_module_map() {
