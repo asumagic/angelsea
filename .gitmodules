@@ -1,6 +1,6 @@
 [submodule "vendor/mir"]
 	path = vendor/mir
-	url = https://github.com/vnmakarov/mir.git
+	url = ../mir.git
 [submodule "vendor/angelscript"]
 	path = vendor/angelscript
 	url = https://github.com/codecat/angelscript-mirror.git
