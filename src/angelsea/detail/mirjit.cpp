@@ -1,12 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-#include "angelscript.h"
-extern "C" {
-#include <c2mir/c2mir.h>
-#include <mir-gen.h>
-#include <mir.h>
-}
-
+#include <angelscript.h>
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/debug.hpp>
 #include <angelsea/detail/log.hpp>
@@ -16,6 +10,12 @@ extern "C" {
 #include <unordered_map>
 
 namespace angelsea::detail {
+
+Mir::Mir() { m_ctx = MIR_init(); }
+Mir::~Mir() { MIR_finish(m_ctx); }
+
+C2Mir::C2Mir(Mir& mir) : m_ctx(mir) { c2mir_init(m_ctx); }
+C2Mir::~C2Mir() { c2mir_finish(m_ctx); }
 
 void MirJit::register_function(asIScriptFunction& script_function) { m_functions.emplace(&script_function); }
 
@@ -41,8 +41,8 @@ bool MirJit::compile_all() {
 	    m_functions.size()
 	);
 
-	MIR_context_t mir = MIR_init();
-	c2mir_init(mir);
+	m_mir.emplace(); // init
+	C2Mir c2mir{*m_mir};
 
 	// no include dir
 	std::array<const char*, 1> include_dirs{nullptr};
@@ -113,7 +113,7 @@ bool MirJit::compile_all() {
 		    }
 
 		    InputData input_data(c_generator.source());
-		    if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, internal_module_name, nullptr)) {
+		    if (!c2mir_compile(*m_mir, &c_options, getc_callback, &input_data, internal_module_name, nullptr)) {
 			    log(config(),
 			        engine(),
 			        LogSeverity::ERROR,
@@ -145,25 +145,22 @@ bool MirJit::compile_all() {
 		}
 	}
 
-	MIR_gen_init(mir);
+	MIR_gen_init(*m_mir);
 
-	MIR_gen_set_debug_file(mir, config().mir_diagnostic_file);
-	MIR_gen_set_debug_level(mir, config().mir_debug_level);
+	MIR_gen_set_debug_file(*m_mir, config().mir_diagnostic_file);
+	MIR_gen_set_debug_level(*m_mir, config().mir_debug_level);
 
-	MIR_gen_set_optimize_level(mir, config().mir_optimization_level);
+	MIR_gen_set_optimize_level(*m_mir, config().mir_optimization_level);
 
-	c2mir_finish(mir);
-
-	// TODO: move to its own bind_runtime function, or use the link interface
-	MIR_load_external(mir, "asea_call_script_function", reinterpret_cast<void*>(asea_call_script_function));
+	bind_runtime();
 
 	// lookup functions
-	for (MIR_module_t module = DLIST_HEAD(MIR_module_t, *MIR_get_module_list(mir)); module != nullptr;
+	for (MIR_module_t module = DLIST_HEAD(MIR_module_t, *MIR_get_module_list(*m_mir)); module != nullptr;
 	     module              = DLIST_NEXT(MIR_module_t, module)) {
-		MIR_load_module(mir, module);
+		MIR_load_module(*m_mir, module);
 
 		// TODO: investigate lazy gen options, and exposing interpretation instead
-		MIR_link(mir, MIR_set_lazy_gen_interface, nullptr);
+		MIR_link(*m_mir, MIR_set_lazy_gen_interface, nullptr);
 
 		for (MIR_item_t mir_func = DLIST_HEAD(MIR_item_t, module->items); mir_func != nullptr;
 		     mir_func            = DLIST_NEXT(MIR_item_t, mir_func)) {
@@ -179,7 +176,7 @@ bool MirJit::compile_all() {
 			if (it != c_name_to_func.end()) {
 				asIScriptFunction& fn = *it->second;
 
-				auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(mir, mir_func));
+				auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(*m_mir, mir_func));
 
 				log(config(),
 				    engine(),
@@ -201,31 +198,23 @@ bool MirJit::compile_all() {
 				}
 
 				const auto err = fn.SetJITFunction(entry_point);
-
-				if (err == asNOT_SUPPORTED) {
-					log(config(),
-					    engine(),
-					    fn,
-					    LogSeverity::ERROR,
-					    "Failed to set JIT function (asNOT_SUPPORTED), did you forget to set "
-					    "asEP_JIT_INTERFACE_VERSION to 2?");
-
-					success = false;
-				}
+				angelsea_assert(err == asSUCCESS);
 			}
 		}
 	}
 
 	if (config().dump_mir_code) {
 		angelsea_assert(config().dump_mir_code_file != nullptr);
-		MIR_output(mir, config().dump_mir_code_file);
+		MIR_output(*m_mir, config().dump_mir_code_file);
 	}
 
-	MIR_gen_finish(mir);
-
-	// FIXME: free MIR context at destruction time
+	MIR_gen_finish(*m_mir);
 
 	return success;
+}
+
+void MirJit::bind_runtime() {
+	MIR_load_external(*m_mir, "asea_call_script_function", reinterpret_cast<void*>(asea_call_script_function));
 }
 
 std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> MirJit::compute_module_map() {
