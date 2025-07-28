@@ -4,8 +4,8 @@
 
 #include <angelscript.h>
 #include <angelsea/config.hpp>
-#include <angelsea/detail/jitfunction.hpp>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace angelsea::detail {
@@ -22,16 +22,13 @@ class JitCompiler {
 
 	bool compile_all();
 
-	JitFunction* get_jit_function(asIScriptFunction& module);
-	JitFunction& get_or_create_jit_function(asIScriptFunction& module);
-
-	std::unordered_map<asIScriptModule*, std::vector<JitFunction*>> compute_module_map();
+	std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> compute_module_map();
 
 	private:
 	JitConfig        m_config;
 	asIScriptEngine* m_engine;
 
-	std::unordered_map<asIScriptFunction*, JitFunction> m_functions;
+	std::unordered_set<asIScriptFunction*> m_functions;
 };
 
 } // namespace angelsea::detail

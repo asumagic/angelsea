@@ -21,9 +21,7 @@ extern "C" {
 
 namespace angelsea::detail {
 
-void JitCompiler::register_function(asIScriptFunction& script_function) {
-	JitFunction& jit_function = get_or_create_jit_function(script_function);
-}
+void JitCompiler::register_function(asIScriptFunction& script_function) { m_functions.emplace(&script_function); }
 
 void JitCompiler::unregister_function(asIScriptFunction& script_function) {
 	const auto it = m_functions.find(&script_function);
@@ -68,11 +66,11 @@ bool JitCompiler::compile_all() {
 	    .include_dirs       = include_dirs.data()
 	};
 
-	std::unordered_map<std::string, JitFunction*> c_name_to_func;
+	std::unordered_map<std::string, asIScriptFunction*> c_name_to_func;
 
 	BytecodeToC c_generator{*this};
-	c_generator.set_map_function_callback([&](JitFunction& function, const std::string& name) {
-		c_name_to_func.emplace(name, &function);
+	c_generator.set_map_function_callback([&](asIScriptFunction& fn, const std::string& name) {
+		c_name_to_func.emplace(name, &fn);
 	});
 
 	auto modules = compute_module_map();
@@ -102,30 +100,30 @@ bool JitCompiler::compile_all() {
 	// TODO: Investigate if partial recompiles work, and make them more
 	// efficient
 
-	const auto compile_module
-	    = [&](const char* internal_module_name, asIScriptModule* script_module, std::span<JitFunction*> functions) {
-		      c_generator.prepare_new_context();
-		      c_generator.translate_module(internal_module_name, script_module, functions);
+	const auto compile_module =
+	    [&](const char* internal_module_name, asIScriptModule* script_module, std::span<asIScriptFunction*> functions) {
+		    c_generator.prepare_new_context();
+		    c_generator.translate_module(internal_module_name, script_module, functions);
 
-		      if (config().dump_c_code) {
-			      angelsea_assert(config().dump_c_code_file != nullptr);
-			      fputs(c_generator.source().c_str(), config().dump_c_code_file);
-		      }
+		    if (config().dump_c_code) {
+			    angelsea_assert(config().dump_c_code_file != nullptr);
+			    fputs(c_generator.source().c_str(), config().dump_c_code_file);
+		    }
 
-		      InputData input_data(c_generator.source());
-		      if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, internal_module_name, nullptr)) {
-			      log(*this, LogSeverity::ERROR, "Failed to compile translated C module \"{}\"", internal_module_name);
-			      success = false;
-		      }
+		    InputData input_data(c_generator.source());
+		    if (!c2mir_compile(mir, &c_options, getc_callback, &input_data, internal_module_name, nullptr)) {
+			    log(*this, LogSeverity::ERROR, "Failed to compile translated C module \"{}\"", internal_module_name);
+			    success = false;
+		    }
 
-		      if (c_generator.get_fallback_count() > 0) {
-			      log(*this,
-			          LogSeverity::PERF_WARNING,
-			          "Number of fallbacks for module \"{}\": {}",
-			          internal_module_name,
-			          c_generator.get_fallback_count());
-		      }
-	      };
+		    if (c_generator.get_fallback_count() > 0) {
+			    log(*this,
+			        LogSeverity::PERF_WARNING,
+			        "Number of fallbacks for module \"{}\": {}",
+			        internal_module_name,
+			        c_generator.get_fallback_count());
+		    }
+	    };
 
 	for (auto& [script_module, functions] : modules) {
 		if (script_module == nullptr) {
@@ -172,32 +170,32 @@ bool JitCompiler::compile_all() {
 			// annoying in C++ unordered_map
 			auto it = c_name_to_func.find(mir_func->u.func->name);
 			if (it != c_name_to_func.end()) {
-				JitFunction& jit_function = *it->second;
+				asIScriptFunction& fn = *it->second;
 
 				auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(mir, mir_func));
 
 				log(*this,
-				    jit_function.script_function(),
+				    fn,
 				    LogSeverity::VERBOSE,
 				    "Hooking function `{}` as `{}`!",
-				    jit_function.script_function().GetDeclaration(true, true, true),
+				    fn.GetDeclaration(true, true, true),
 				    fmt::ptr(entry_point));
 
 				if (entry_point == nullptr) {
 					log(*this,
-					    jit_function.script_function(),
+					    fn,
 					    LogSeverity::ERROR,
 					    "Failed to compile function `{}`",
-					    jit_function.script_function().GetDeclaration(true, true, true));
+					    fn.GetDeclaration(true, true, true));
 
 					success = false;
 				}
 
-				const auto err = jit_function.script_function().SetJITFunction(entry_point);
+				const auto err = fn.SetJITFunction(entry_point);
 
 				if (err == asNOT_SUPPORTED) {
 					log(*this,
-					    jit_function.script_function(),
+					    fn,
 					    LogSeverity::ERROR,
 					    "Failed to set JIT function (asNOT_SUPPORTED), did you forget to set "
 					    "asEP_JIT_INTERFACE_VERSION to 2?");
@@ -220,32 +218,11 @@ bool JitCompiler::compile_all() {
 	return success;
 }
 
-JitFunction* JitCompiler::get_jit_function(asIScriptFunction& function) {
-	const auto it = m_functions.find(&function);
-	return (it != m_functions.end()) ? &it->second : nullptr;
-}
+std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> JitCompiler::compute_module_map() {
+	std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> ret;
 
-JitFunction& JitCompiler::get_or_create_jit_function(asIScriptFunction& function) {
-	const auto it = m_functions.find(&function);
-
-	if (it != m_functions.end()) {
-		return it->second;
-	}
-
-	// insert key &func, value JITFunction(*this, function))
-	const auto [ins_it, success] = m_functions.emplace(
-	    std::piecewise_construct,
-	    std::forward_as_tuple(&function),
-	    std::forward_as_tuple(*this, function)
-	);
-	return ins_it->second;
-}
-
-std::unordered_map<asIScriptModule*, std::vector<JitFunction*>> JitCompiler::compute_module_map() {
-	std::unordered_map<asIScriptModule*, std::vector<JitFunction*>> ret;
-
-	for (auto& [script_function, function] : m_functions) {
-		ret[script_function->GetModule()].push_back(&function);
+	for (auto& fn : m_functions) {
+		ret[fn->GetModule()].push_back(fn);
 	}
 
 	return ret;

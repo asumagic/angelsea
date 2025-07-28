@@ -25,9 +25,9 @@ void BytecodeToC::prepare_new_context() {
 }
 
 ModuleId BytecodeToC::translate_module(
-    std::string_view        internal_module_name,
-    asIScriptModule*        script_module,
-    std::span<JitFunction*> functions
+    std::string_view              internal_module_name,
+    asIScriptModule*              script_module,
+    std::span<asIScriptFunction*> functions
 ) {
 	++m_current_module_id;
 
@@ -40,31 +40,31 @@ ModuleId BytecodeToC::translate_module(
 	    fmt::arg("module_name", internal_module_name)
 	);
 
-	for (JitFunction* function : functions) {
-		translate_function(internal_module_name, *function);
+	for (asIScriptFunction* fn : functions) {
+		translate_function(internal_module_name, *fn);
 	}
 
 	return m_current_module_id;
 }
 
-FunctionId BytecodeToC::translate_function(std::string_view internal_module_name, JitFunction& function) {
+FunctionId BytecodeToC::translate_function(std::string_view internal_module_name, asIScriptFunction& fn) {
 	++m_current_function_id;
 
 	const auto func_name = entry_point_name(m_current_module_id, m_current_function_id);
 	if (m_on_map_function_callback) {
-		m_on_map_function_callback(function, func_name);
+		m_on_map_function_callback(fn, func_name);
 	}
 
 	if (is_human_readable()) {
 		const char* section_name;
 		int         row, col;
-		function.script_function().GetDeclaredAt(&section_name, &row, &col);
+		fn.GetDeclaredAt(&section_name, &row, &col);
 		emit(
 		    "/* {}:{}:{}: {} */\n",
 		    section_name != nullptr ? section_name : "<anon>",
 		    row,
 		    col,
-		    function.script_function().GetDeclaration(true, true, true)
+		    fn.GetDeclaration(true, true, true)
 		);
 	}
 
@@ -137,11 +137,9 @@ FunctionId BytecodeToC::translate_function(std::string_view internal_module_name
 	//     etc.
 	// }
 
-	emit_entry_dispatch(function);
+	emit_entry_dispatch(fn);
 
-	walk_bytecode(get_bytecode(function.script_function()), [&](BytecodeInstruction ins) {
-		translate_instruction(function, ins);
-	});
+	walk_bytecode(get_bytecode(fn), [&](BytecodeInstruction ins) { translate_instruction(fn, ins); });
 
 	emit("}}\n");
 
@@ -152,7 +150,7 @@ std::string BytecodeToC::entry_point_name(ModuleId module_id, FunctionId functio
 	return fmt::format("asea_jit_mod{}_fn{}", module_id, function_id);
 }
 
-void BytecodeToC::emit_entry_dispatch(JitFunction& function) {
+void BytecodeToC::emit_entry_dispatch(asIScriptFunction& fn) {
 	// TODO: (optionally) generate a goto dispatch table, which should be
 	// supported by c2mir and probably would at least elide a branch
 
@@ -161,7 +159,7 @@ void BytecodeToC::emit_entry_dispatch(JitFunction& function) {
 
 	emit("\tswitch(entryLabel) {{\n");
 
-	walk_bytecode(get_bytecode(function.script_function()), [&](BytecodeInstruction ins) {
+	walk_bytecode(get_bytecode(fn), [&](BytecodeInstruction ins) {
 		if (ins.info->bc != asBC_JitEntry) {
 			return; // skip to the next
 		}
@@ -177,7 +175,7 @@ void BytecodeToC::emit_entry_dispatch(JitFunction& function) {
 	emit("\t}}\n\n");
 }
 
-void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstruction ins) {
+void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstruction ins) {
 	if (is_human_readable()) {
 		emit("\t/* bytecode: {} */\n", disassemble(m_compiler->engine(), ins));
 	}
@@ -205,10 +203,10 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 
 	case asBC_SUSPEND: {
 		log(*m_compiler,
-		    function.script_function(),
+		    fn,
 		    LogSeverity::PERF_WARNING,
 		    "asBC_SUSPEND found; this will fallback to the VM and be slow!");
-		emit_vm_fallback(function, "SUSPEND is not implemented yet");
+		emit_vm_fallback(fn, "SUSPEND is not implemented yet");
 		break;
 	}
 
@@ -340,7 +338,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 		// }
 
 	case asBC_CALL: {
-		emit_vm_fallback(function, "instructions that branch to l_bc are not supported yet");
+		emit_vm_fallback(fn, "instructions that branch to l_bc are not supported yet");
 		break;
 	}
 
@@ -664,12 +662,12 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	case asBC_POWi64:
 	case asBC_POWu64:
 	case asBC_Thiscall1: {
-		emit_vm_fallback(function, "unsupported instruction");
+		emit_vm_fallback(fn, "unsupported instruction");
 		break;
 	}
 
 	default: {
-		emit_vm_fallback(function, "unknown instruction");
+		emit_vm_fallback(fn, "unknown instruction");
 		break;
 	}
 	}
@@ -677,7 +675,7 @@ void BytecodeToC::translate_instruction(JitFunction& function, BytecodeInstructi
 	emit("\t}}\n");
 }
 
-void BytecodeToC::emit_vm_fallback(JitFunction& function, std::string_view reason) {
+void BytecodeToC::emit_vm_fallback(asIScriptFunction& fn, std::string_view reason) {
 	++m_fallback_count;
 
 	emit_save_vm_registers();

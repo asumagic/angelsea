@@ -56,7 +56,6 @@ add_library(
     STATIC
     src/angelsea/jit.cpp
     src/angelsea/detail/jitcompiler.cpp
-    src/angelsea/detail/jitfunction.cpp
     src/angelsea/detail/runtime.cpp
     src/angelsea/detail/bytecode2c.cpp
     src/angelsea/detail/bytecodedisasm.cpp

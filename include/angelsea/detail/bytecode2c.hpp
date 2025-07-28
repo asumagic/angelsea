@@ -37,19 +37,19 @@ static constexpr VarType s8{"asINT8"}, s16{"asINT16"}, s32{"asINT32"}, s64{"asIN
 
 class BytecodeToC {
 	public:
-	using OnMapFunctionCallback = std::function<void(JitFunction&, const std::string& name)>;
+	using OnMapFunctionCallback = std::function<void(asIScriptFunction&, const std::string& name)>;
 
 	BytecodeToC(JitCompiler& compiler);
 
 	void prepare_new_context();
 
 	ModuleId translate_module(
-	    std::string_view        internal_module_name,
-	    asIScriptModule*        script_module,
-	    std::span<JitFunction*> functions
+	    std::string_view              internal_module_name,
+	    asIScriptModule*              script_module,
+	    std::span<asIScriptFunction*> functions
 	);
 
-	FunctionId translate_function(std::string_view internal_module_name, JitFunction& function);
+	FunctionId translate_function(std::string_view internal_module_name, asIScriptFunction& function);
 
 	std::string entry_point_name(ModuleId module_id, FunctionId function_id) const;
 
@@ -70,14 +70,14 @@ class BytecodeToC {
 	private:
 	void write_header();
 
-	void translate_instruction(JitFunction& function, BytecodeInstruction instruction);
+	void translate_instruction(asIScriptFunction& function, BytecodeInstruction instruction);
 
 	template<class... Ts> void emit(fmt::format_string<Ts...> format, Ts&&... format_args) {
 		fmt::format_to(std::back_inserter(m_buffer), format, std::forward<Ts>(format_args)...);
 	}
 
-	void emit_entry_dispatch(JitFunction& function);
-	void emit_vm_fallback(JitFunction& function, std::string_view reason);
+	void emit_entry_dispatch(asIScriptFunction& function);
+	void emit_vm_fallback(asIScriptFunction& function, std::string_view reason);
 
 	void emit_load_vm_registers();
 	void emit_save_vm_registers();
