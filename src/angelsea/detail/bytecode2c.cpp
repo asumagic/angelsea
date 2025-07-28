@@ -324,6 +324,15 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 		break;
 	}
 
+	case asBC_LDV: {
+		emit(
+		    "\t\tregs->valueRegister.as_asPWORD = (asPWORD)&ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n"
+		    "\t\tl_bc++;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		break;
+	}
+
 		// case asBC_CALL:
 		// {
 		//     // TODO: when possible, translate this to a JIT to JIT function call
@@ -613,7 +622,6 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 	case asBC_RDR4:
 	case asBC_RDR8:
 	case asBC_LDG:
-	case asBC_LDV:
 	case asBC_PGA:
 	case asBC_CmpPtr:
 	case asBC_VAR:
