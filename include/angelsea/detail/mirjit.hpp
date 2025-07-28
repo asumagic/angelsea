@@ -6,7 +6,6 @@
 #include <angelsea/config.hpp>
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/debug.hpp>
-#include <optional>
 #include <span>
 #include <unordered_map>
 #include <unordered_set>

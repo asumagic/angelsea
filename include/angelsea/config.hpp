@@ -9,12 +9,6 @@
 namespace angelsea {
 
 struct JitConfig {
-	// TODO: implement
-
-	/// If the compiler is destroyed without ever having compiled a function,
-	/// emit a warning
-	bool warn_if_never_compiled = true;
-
 	struct LogTargets {
 		asEMsgType verbose             = asEMsgType(-1);
 		asEMsgType info                = asMSGTYPE_INFORMATION;
