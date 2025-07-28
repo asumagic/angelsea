@@ -62,6 +62,12 @@ This is done by calling `jit.CompileModules();`.
 > [unofficial AngelScript](https://github.com/codecat/angelscript-mirror) git repository
 > mirror by codecat.
 
+##### Caveats
+
+- Our downstream MIR git repository must be used (which is the case with a
+  default install), due to the following issues being resolved:
+    - [Integer sign-extension miscompile](https://github.com/vnmakarov/mir/issues/423) (or use `-O1` at the maximum)
+
 #### License notice
 
 As of writing:
@@ -107,15 +113,9 @@ certain platforms (e.g. iOS) which notoriously ban JITs. You still would need
 the interpreter (if only because Angelsea will fallback to it), but in theory,
 all you would need to do is to add some glue code by implementing your own
 `asIJITCompiler` that map JIT entry points to C++.
-3. JIT compilation mostly amounts to copy-pasting bits of the interpreter with
-some changes (such as baking in constants, etc.) -- this is stupid fast to do,
-and surprisingly human-readable even to people with no prior compilation
-experience.
-    - Well, experience is proving this one not so true: AngelScript's VM
-    unfortunately bakes quite a lot of assumptions that break strict aliasing
-    rules. We started hitting this quite hard since the JIT compiler is way more
-    likely to make optimizations that break the program, as it can optimize
-    across instructions.
+3. Generated C code is a lot like the VM code. This is fairly quick to do and is
+surprisingly human-readable even to people with no prior compilation experience.
+    - We do take more care with strict aliasing rules than AS does, though.
 4. The fact we can just speak C greatly simplifies interfacing with script
 engine structures. Dealing with the C++ ABI (such as for certain native function
 calls, or to call virtual AS engine functions) would be annoying, but we can
@@ -136,9 +136,11 @@ to take over the entire interpreter, which meant total coverage of *all* of AS'
 low-level semantics before it was any useful. Besides, LLVM is _huge_, breaks on
 almost every major update, and is rather unreasonable for an embeddable
 language.
+- There is an [AOT compiler](https://github.com/quarnster/asaot), but it is
+unmaintained and I don't know what it is worth nowadays. Due to its approach, if
+AOT is fine for you, it might actually make sense to use.
 
-To my knowledge, other than some simple C++ AOT compilation wrappers, there is
-no other (public...) project of that kind.
+To my knowledge, there is no other (public...) project of that kind.
 
 #### Do you support multi-threaded code generation?
 

@@ -15,6 +15,10 @@ extern "C" {
 #include <string>
 #include <unordered_map>
 
+// TODO: abstract the whole MIR usage in a different file so this is, in theory,
+// kind of MIR-agnostic -- can we easily make it so that you can use an AOT
+// backend?
+
 namespace angelsea::detail {
 
 void JitCompiler::register_function(asIScriptFunction& script_function) {

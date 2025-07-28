@@ -26,23 +26,13 @@ enum class AccessGranularity { DWORD, QWORD };
 struct VarType {
 	/// C type name
 	std::string_view type;
-	/// Access granularity for stack load/store
-	AccessGranularity granularity;
-	bool              is_fp = false;
 
 	bool operator==(const VarType& other) const { return type == other.type; };
-	bool is_trivial_cast_to(const VarType& target) const { return is_fp == target.is_fp; }
-
-	std::string_view load_op_name() const;
-	std::string_view store_op_name() const;
 };
 
 namespace var_types {
-static constexpr VarType s8{"asINT8", AccessGranularity::DWORD}, s16{"asINT16", AccessGranularity::DWORD},
-    s32{"asINT32", AccessGranularity::DWORD}, s64{"asINT64", AccessGranularity::QWORD},
-    u8{"asBYTE", AccessGranularity::DWORD}, u16{"asWORD", AccessGranularity::DWORD},
-    u32{"asDWORD", AccessGranularity::DWORD}, u64{"asQWORD", AccessGranularity::QWORD},
-    f32{"float", AccessGranularity::DWORD, true}, f64{"double", AccessGranularity::QWORD, true};
+static constexpr VarType s8{"asINT8"}, s16{"asINT16"}, s32{"asINT32"}, s64{"asINT64"}, u8{"asBYTE"}, u16{"asWORD"},
+    u32{"asDWORD"}, u64{"asQWORD"}, f32{"float"}, f64{"double"};
 } // namespace var_types
 
 class BytecodeToC {
