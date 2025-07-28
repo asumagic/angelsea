@@ -81,7 +81,10 @@ bool MirJit::compile_c_to_mir(BytecodeToC& c_generator) {
 	// no include dir
 	std::array<const char*, 1> include_dirs{nullptr};
 
-	std::array<c2mir_macro_command, 1> macros{{{.def_p = true, .name = "ANGELSEA_SUPPORT", .def = "1"}}};
+	// TODO: what the hell is clang-format doing to this
+	std::array<c2mir_macro_command, 1> macros{{// Trigger the various definitions and macros of the generated header
+	                                           {.def_p = true, .name = "ANGELSEA_SUPPORT", .def = "1"}
+	}};
 
 	c2mir_options c_options{
 	    .message_file       = config().c2mir_diagnostic_file,
