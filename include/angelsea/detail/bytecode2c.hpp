@@ -50,7 +50,7 @@ class BytecodeToC {
 
 	std::string entry_point_name(asIScriptFunction& fn) const;
 
-	std::string& source() { return m_buffer; }
+	std::string& source() { return m_state.buffer; }
 
 	bool is_human_readable() const;
 
@@ -62,7 +62,7 @@ class BytecodeToC {
 	/// Returns the number of fallbacks to the VM generated since
 	/// `prepare_new_context`.
 	/// If `== 0`, then all translated functions were fully translated.
-	std::size_t get_fallback_count() const { return m_fallback_count; }
+	std::size_t get_fallback_count() const { return m_state.fallback_count; }
 
 	private:
 	void write_header();
@@ -70,7 +70,7 @@ class BytecodeToC {
 	void translate_instruction(asIScriptFunction& fn, BytecodeInstruction instruction);
 
 	template<class... Ts> void emit(fmt::format_string<Ts...> format, Ts&&... format_args) {
-		fmt::format_to(std::back_inserter(m_buffer), format, std::forward<Ts>(format_args)...);
+		fmt::format_to(std::back_inserter(m_state.buffer), format, std::forward<Ts>(format_args)...);
 	}
 
 	void emit_entry_dispatch(asIScriptFunction& fn);
@@ -100,12 +100,16 @@ class BytecodeToC {
 
 	const JitConfig& m_config;
 	asIScriptEngine& m_script_engine;
-	std::string      m_buffer;
 	std::string      m_jit_fn_prefix;
 
 	OnMapFunctionCallback m_on_map_function_callback;
 
-	std::size_t m_fallback_count;
+	/// State for the current `prepare_new_context` context.
+	struct ContextState {
+		std::string buffer;
+		std::size_t fallback_count;
+	};
+	ContextState m_state;
 };
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset);

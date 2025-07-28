@@ -14,12 +14,12 @@ namespace angelsea::detail {
 
 BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string jit_fn_prefix) :
     m_config(config), m_script_engine(engine), m_jit_fn_prefix(std::move(jit_fn_prefix)) {
-	m_buffer.reserve(1024 * 64);
+	m_state.buffer.reserve(1024 * 64);
 }
 
 void BytecodeToC::prepare_new_context() {
-	m_buffer.clear();
-	m_fallback_count = 0;
+	m_state.buffer.clear();
+	m_state.fallback_count = 0;
 	write_header();
 }
 
@@ -705,7 +705,7 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 }
 
 void BytecodeToC::emit_vm_fallback(asIScriptFunction& fn, std::string_view reason) {
-	++m_fallback_count;
+	++m_state.fallback_count;
 
 	emit_save_vm_registers();
 
@@ -827,7 +827,7 @@ void BytecodeToC::emit_arithmetic_simple_stack_imm(
 bool BytecodeToC::is_human_readable() const { return true; }
 
 void BytecodeToC::write_header() {
-	m_buffer += R"___(/* start of angelsea static header */
+	m_state.buffer += R"___(/* start of angelsea static header */
 
 /*
     This generated source file contains macro definitions and references to
