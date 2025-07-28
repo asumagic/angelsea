@@ -36,6 +36,10 @@ bool MirJit::compile_all() {
 
 	bool success = true;
 
+	// TODO: do away with the unordered_map for this lookup; we could get
+	// sufficiently deterministic names by querying the module and function IDs
+	// from AngelScript
+
 	std::unordered_map<std::string, asIScriptFunction*> c_name_to_func;
 
 	BytecodeToC c_generator{config(), engine()};
