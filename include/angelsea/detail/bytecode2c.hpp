@@ -36,7 +36,7 @@ class BytecodeToC {
 	public:
 	using OnMapFunctionCallback = std::function<void(asIScriptFunction&, const std::string& name)>;
 
-	BytecodeToC(const JitConfig& config, asIScriptEngine& engine);
+	BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string jit_fn_prefix = "asea_jit");
 
 	void prepare_new_context();
 
@@ -100,6 +100,7 @@ class BytecodeToC {
 	const JitConfig& m_config;
 	asIScriptEngine& m_script_engine;
 	std::string      m_buffer;
+	std::string      m_jit_fn_prefix;
 
 	OnMapFunctionCallback m_on_map_function_callback;
 

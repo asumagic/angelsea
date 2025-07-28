@@ -12,7 +12,8 @@
 
 namespace angelsea::detail {
 
-BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine) : m_config(config), m_script_engine(engine) {
+BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string jit_fn_prefix) :
+    m_config(config), m_script_engine(engine), m_jit_fn_prefix(std::move(jit_fn_prefix)) {
 	m_buffer.reserve(1024 * 64);
 }
 
@@ -156,7 +157,7 @@ std::string BytecodeToC::entry_point_name(asIScriptFunction& fn) const {
 		}
 	}
 
-	return fmt::format("asea_jit{}_{}", fn.GetId(), mangled_module);
+	return fmt::format("{}{}_{}", m_jit_fn_prefix, fn.GetId(), mangled_module);
 }
 
 void BytecodeToC::emit_entry_dispatch(asIScriptFunction& fn) {
