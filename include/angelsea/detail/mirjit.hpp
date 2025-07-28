@@ -49,7 +49,7 @@ class C2Mir {
 
 class MirJit {
 	public:
-	MirJit(const JitConfig& config, asIScriptEngine& engine) : m_config(config), m_engine(&engine) {}
+	MirJit(const JitConfig& config, asIScriptEngine& engine) : m_config(config), m_engine(&engine), m_mir{} {}
 
 	const JitConfig& config() const { return m_config; }
 	asIScriptEngine& engine() { return *m_engine; }
@@ -63,7 +63,8 @@ class MirJit {
 
 	private:
 	void               bind_runtime();
-	[[nodiscard]] bool compile_module(
+	[[nodiscard]] bool compile_c_to_mir(BytecodeToC& c_generator);
+	[[nodiscard]] bool compile_c_module(
 	    BytecodeToC&                  c_generator,
 	    c2mir_options&                c_options,
 	    const char*                   internal_module_name,
@@ -76,7 +77,7 @@ class MirJit {
 	JitConfig        m_config;
 	asIScriptEngine* m_engine;
 
-	std::optional<Mir> m_mir;
+	Mir m_mir;
 
 	std::unordered_set<asIScriptFunction*> m_functions;
 };

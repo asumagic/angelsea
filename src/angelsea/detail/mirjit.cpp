@@ -25,13 +25,6 @@ void MirJit::unregister_function(asIScriptFunction& script_function) {
 	m_functions.erase(it);
 }
 
-struct InputData {
-	std::string* c_source;
-	std::size_t  current_offset;
-
-	InputData(std::string& source) : c_source{&source}, current_offset{0} {}
-};
-
 bool MirJit::compile_all() {
 	detail::log(
 	    config(),
@@ -41,8 +34,45 @@ bool MirJit::compile_all() {
 	    m_functions.size()
 	);
 
-	m_mir.emplace(); // init
-	C2Mir c2mir{*m_mir};
+	bool success = true;
+
+	std::unordered_map<std::string, asIScriptFunction*> c_name_to_func;
+
+	BytecodeToC c_generator{config(), engine()};
+	c_generator.set_map_function_callback([&](asIScriptFunction& fn, const std::string& name) {
+		c_name_to_func.emplace(name, &fn);
+	});
+
+	success &= compile_c_to_mir(c_generator);
+
+	MIR_gen_init(m_mir);
+
+	MIR_gen_set_debug_file(m_mir, config().mir_diagnostic_file);
+	MIR_gen_set_debug_level(m_mir, config().mir_debug_level);
+
+	MIR_gen_set_optimize_level(m_mir, config().mir_optimization_level);
+
+	bind_runtime();
+	success &= link_compiled_functions(c_name_to_func);
+
+	if (config().dump_mir_code) {
+		angelsea_assert(config().dump_mir_code_file != nullptr);
+		MIR_output(m_mir, config().dump_mir_code_file);
+	}
+
+	MIR_gen_finish(m_mir);
+
+	return success;
+}
+
+void MirJit::bind_runtime() {
+	MIR_load_external(m_mir, "asea_call_script_function", reinterpret_cast<void*>(asea_call_script_function));
+}
+
+bool MirJit::compile_c_to_mir(BytecodeToC& c_generator) {
+	bool success = true;
+
+	C2Mir c2mir{m_mir};
 
 	// no include dir
 	std::array<const char*, 1> include_dirs{nullptr};
@@ -68,16 +98,7 @@ bool MirJit::compile_all() {
 	    .include_dirs       = include_dirs.data()
 	};
 
-	std::unordered_map<std::string, asIScriptFunction*> c_name_to_func;
-
-	BytecodeToC c_generator{config(), engine()};
-	c_generator.set_map_function_callback([&](asIScriptFunction& fn, const std::string& name) {
-		c_name_to_func.emplace(name, &fn);
-	});
-
 	auto modules = compute_module_map();
-
-	bool success = true;
 
 	// NOTE: I don't think there is fundamentally something that makes it
 	// impossible or impractical to generate all modules within the same C
@@ -101,10 +122,10 @@ bool MirJit::compile_all() {
 				// convert each function as their own virtual module
 				// TODO: is this useful? should reconsider
 				success
-				    &= compile_module(c_generator, c_options, "<anon>", nullptr, std::span{functions}.subspan(i, 1));
+				    &= compile_c_module(c_generator, c_options, "<anon>", nullptr, std::span{functions}.subspan(i, 1));
 			}
 		} else {
-			success &= compile_module(
+			success &= compile_c_module(
 			    c_generator,
 			    c_options,
 			    script_module->GetName(),
@@ -114,29 +135,15 @@ bool MirJit::compile_all() {
 		}
 	}
 
-	MIR_gen_init(*m_mir);
-
-	MIR_gen_set_debug_file(*m_mir, config().mir_diagnostic_file);
-	MIR_gen_set_debug_level(*m_mir, config().mir_debug_level);
-
-	MIR_gen_set_optimize_level(*m_mir, config().mir_optimization_level);
-
-	bind_runtime();
-	success &= link_compiled_functions(c_name_to_func);
-
-	if (config().dump_mir_code) {
-		angelsea_assert(config().dump_mir_code_file != nullptr);
-		MIR_output(*m_mir, config().dump_mir_code_file);
-	}
-
-	MIR_gen_finish(*m_mir);
-
 	return success;
 }
 
-void MirJit::bind_runtime() {
-	MIR_load_external(*m_mir, "asea_call_script_function", reinterpret_cast<void*>(asea_call_script_function));
-}
+struct InputData {
+	std::string* c_source;
+	std::size_t  current_offset;
+
+	InputData(std::string& source) : c_source{&source}, current_offset{0} {}
+};
 
 static int c2mir_getc_callback(void* user_data) {
 	InputData& info = *static_cast<InputData*>(user_data);
@@ -148,7 +155,7 @@ static int c2mir_getc_callback(void* user_data) {
 	return c;
 }
 
-bool MirJit::compile_module(
+bool MirJit::compile_c_module(
     BytecodeToC&                  c_generator,
     c2mir_options&                c_options,
     const char*                   internal_module_name,
@@ -165,7 +172,7 @@ bool MirJit::compile_module(
 	}
 
 	InputData input_data(c_generator.source());
-	if (!c2mir_compile(*m_mir, &c_options, c2mir_getc_callback, &input_data, internal_module_name, nullptr)) {
+	if (!c2mir_compile(m_mir, &c_options, c2mir_getc_callback, &input_data, internal_module_name, nullptr)) {
 		log(config(),
 		    engine(),
 		    LogSeverity::ERROR,
@@ -189,12 +196,12 @@ bool MirJit::compile_module(
 bool MirJit::link_compiled_functions(const std::unordered_map<std::string, asIScriptFunction*>& c_name_to_func) {
 	bool success = true;
 
-	for (MIR_module_t module = DLIST_HEAD(MIR_module_t, *MIR_get_module_list(*m_mir)); module != nullptr;
+	for (MIR_module_t module = DLIST_HEAD(MIR_module_t, *MIR_get_module_list(m_mir)); module != nullptr;
 	     module              = DLIST_NEXT(MIR_module_t, module)) {
-		MIR_load_module(*m_mir, module);
+		MIR_load_module(m_mir, module);
 
 		// TODO: investigate the difference gen interfaces
-		MIR_link(*m_mir, MIR_set_lazy_gen_interface, nullptr);
+		MIR_link(m_mir, MIR_set_lazy_gen_interface, nullptr);
 
 		for (MIR_item_t mir_func = DLIST_HEAD(MIR_item_t, module->items); mir_func != nullptr;
 		     mir_func            = DLIST_NEXT(MIR_item_t, mir_func)) {
@@ -213,7 +220,7 @@ bool MirJit::link_compiled_functions(const std::unordered_map<std::string, asISc
 
 			asIScriptFunction& fn = *it->second;
 
-			auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(*m_mir, mir_func));
+			auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(m_mir, mir_func));
 
 			log(config(),
 			    engine(),
