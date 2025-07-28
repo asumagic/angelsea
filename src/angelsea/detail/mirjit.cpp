@@ -206,34 +206,36 @@ bool MirJit::link_compiled_functions(const std::unordered_map<std::string, asISc
 
 			// TODO: pointless string allocation but heterogeneous lookup is
 			// annoying in C++ unordered_map
-			auto it = c_name_to_func.find(mir_func->u.func->name);
-			if (it != c_name_to_func.end()) {
-				asIScriptFunction& fn = *it->second;
+			auto it = c_name_to_func.find(std::string{symbol});
+			if (it == c_name_to_func.end()) {
+				continue;
+			}
 
-				auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(*m_mir, mir_func));
+			asIScriptFunction& fn = *it->second;
 
+			auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(*m_mir, mir_func));
+
+			log(config(),
+			    engine(),
+			    fn,
+			    LogSeverity::VERBOSE,
+			    "Hooking function `{}` as `{}`!",
+			    fn.GetDeclaration(true, true, true),
+			    fmt::ptr(entry_point));
+
+			if (entry_point == nullptr) {
 				log(config(),
 				    engine(),
 				    fn,
-				    LogSeverity::VERBOSE,
-				    "Hooking function `{}` as `{}`!",
-				    fn.GetDeclaration(true, true, true),
-				    fmt::ptr(entry_point));
+				    LogSeverity::ERROR,
+				    "Failed to compile function `{}`",
+				    fn.GetDeclaration(true, true, true));
 
-				if (entry_point == nullptr) {
-					log(config(),
-					    engine(),
-					    fn,
-					    LogSeverity::ERROR,
-					    "Failed to compile function `{}`",
-					    fn.GetDeclaration(true, true, true));
-
-					success = false;
-				}
-
-				const auto err = fn.SetJITFunction(entry_point);
-				angelsea_assert(err == asSUCCESS);
+				success = false;
 			}
+
+			const auto err = fn.SetJITFunction(entry_point);
+			angelsea_assert(err == asSUCCESS);
 		}
 	}
 
