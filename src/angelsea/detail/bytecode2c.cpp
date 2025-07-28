@@ -69,7 +69,11 @@ FunctionId BytecodeToC::translate_function(std::string_view internal_module_name
 	}
 
 	// JIT entry signature is `void(asSVMRegisters *regs, asPWORD jitArg)`
-	emit("void {name}(asSVMRegisters *regs, asPWORD entryLabel) {{\n", fmt::arg("name", func_name));
+	emit("void {name}(asSVMRegisters *_regs, asPWORD entryLabel) {{\n", fmt::arg("name", func_name));
+
+	// HACK: which we would prefer not to do; but accessing valueRegister is
+	// going to be pain with strict aliasing either way
+	emit("\tasea_vm_registers *regs = (asea_vm_registers *)_regs;\n");
 
 	// We define l_sp/l_fp as void* instead of asea_stack_var* to avoid doing
 	// plain arithmetic over it directly
@@ -909,9 +913,11 @@ typedef union {
 /* TODO: figure out how to implement these abstractions without having to know
    about the C++ ABI (for the vtable, etc.) -- otherwise we have to always
    interact via the runtime.hpp wrappers */
+typedef void asSVMRegisters;
 typedef void asIScriptContext;
 typedef void asITypeInfo;
 
+/* Layout exactly mimics asSVMRegisters */
 typedef struct
 {
 	/*
@@ -927,7 +933,7 @@ typedef struct
 	/* HACK: doProcessSuspend is normally defined as bool in C++; assume int equivalent */
 	int              doProcessSuspend;    /* whether or not the JIT should break out when it encounters a suspend instruction */
 	asIScriptContext *ctx;                /* the active context */
-} asSVMRegisters;
+} asea_vm_registers;
 
 #endif
 
