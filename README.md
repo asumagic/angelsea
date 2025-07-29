@@ -35,6 +35,14 @@ git clone https://github.com/asumagic/angelsea.git
 cd angelsea
 ```
 
+Or, if you want to vendor it as a Git submodule to your repository:
+
+```bash
+cd whatever/vendor/directory/
+git submodule add https://github.com/asumagic/angelsea.git
+cd angelsea
+```
+
 Angelsea has hard dependencies on:
 
 - [**AngelScript**](https://www.angelcode.com/angelscript/) v2.37.0+(\*)
