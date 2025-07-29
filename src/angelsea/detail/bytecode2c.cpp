@@ -72,9 +72,9 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	// plain arithmetic over it directly
 	emit(
 	    // "#ifdef __MIRC__\n"
-	    // "\tasDWORD *l_bc __attribute__((antialias(\"bc-sp\")));\n"
-	    // "\tasDWORD *l_sp __attribute__((antialias(\"bc-sp\")));\n"
-	    // "\tasDWORD *l_fp;\n"
+	    // "\tasDWORD *l_bc __attribute__((antialias(bc_sp)));\n"
+	    // "\tvoid *l_sp __attribute__((antialias(bc_sp)));\n"
+	    // "\tvoid *l_fp;\n"
 	    // "#else\n"
 	    "\tasDWORD *l_bc;\n"
 	    "\tvoid *l_sp;\n"
