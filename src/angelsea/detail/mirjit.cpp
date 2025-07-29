@@ -18,7 +18,7 @@ Mir::~Mir() { MIR_finish(m_ctx); }
 C2Mir::C2Mir(Mir& mir) : m_ctx(mir) { c2mir_init(m_ctx); }
 C2Mir::~C2Mir() { c2mir_finish(m_ctx); }
 
-void jit_release_workaround(asSVMRegisters*, asPWORD) {}
+void jit_release_workaround(asSVMRegisters* regs, asPWORD) { regs->programPointer += 1 + AS_PTR_SIZE; }
 
 void MirJit::register_function(asIScriptFunction& script_function) {
 	m_functions.emplace(&script_function);
