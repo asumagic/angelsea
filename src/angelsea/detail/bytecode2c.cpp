@@ -230,7 +230,6 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 		);
 		break;
 	}
-
 	case asBC_PshC8: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -2);\n"
@@ -250,11 +249,19 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 		);
 		break;
 	}
-
 	case asBC_PshV8: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -2);\n"
 		    "\t\tASEA_STACK_VAR(0).as_asQWORD = ASEA_FRAME_VAR({SWORD0}).as_asQWORD;\n"
+		    "\t\t++l_bc;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		break;
+	}
+	case asBC_PshVPtr: {
+		emit(
+		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tASEA_STACK_VAR(0).as_asPWORD = ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n"
 		    "\t\t++l_bc;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -581,7 +588,6 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 	case asBC_IncVi:
 	case asBC_DecVi:
 	case asBC_COPY:
-	case asBC_PshVPtr:
 	case asBC_RDSPtr:
 	case asBC_CMPd:
 	case asBC_CMPu:
