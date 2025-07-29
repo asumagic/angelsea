@@ -59,8 +59,8 @@ If you use CMake to build your project, you can choose to use the AngelScript
 version we vendor for your own project and link against the `asea_angelscript`
 target.
 
-If you want to provide any of dependencies yourself (e.g. because you also use
-them), see the optional step.
+If you want to provide any of dependencies yourself (e.g. you also use them and
+don't want to rely on Angelsea building it), see the optional step.
 
 > [!NOTE]
 > The `vendor/angelscript` submodule points to the
