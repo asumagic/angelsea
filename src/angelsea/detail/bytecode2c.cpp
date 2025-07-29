@@ -397,8 +397,16 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 		emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 == 0");
 		break;
 	}
+	case asBC_JLowZ: {
+		emit_cond_branch(ins, 2, "regs->valueRegister.as_asBYTE == 0");
+		break;
+	}
 	case asBC_JNZ: {
 		emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 != 0");
+		break;
+	}
+	case asBC_JLowNZ: {
+		emit_cond_branch(ins, 2, "regs->valueRegister.as_asBYTE != 0");
 		break;
 	}
 	case asBC_JS: {
@@ -691,8 +699,6 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 	case asBC_LoadRObjR:
 	case asBC_LoadVObjR:
 	case asBC_RefCpyV:
-	case asBC_JLowZ:
-	case asBC_JLowNZ:
 	case asBC_AllocMem:
 	case asBC_SetListSize:
 	case asBC_PshListElmnt:
