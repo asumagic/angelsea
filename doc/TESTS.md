@@ -2,8 +2,13 @@
 
 ## Setting up environment
 
-TODO: initialize the Catch2 submodule
-TODO: building the CMakeLists with test support
+Make sure that the vendored test dependencies are cloned:
+
+```bash
+git submodule update --init --recursive tests/vendor/*
+```
+
+When configuring the library with CMake, also provide `-DASEA_ENABLE_TESTING=1`.
 
 ## Running tests
 
