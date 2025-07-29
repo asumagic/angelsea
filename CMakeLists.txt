@@ -10,8 +10,8 @@ project(angelsea)
 
 if (CMAKE_BUILD_TYPE MATCHES "Debug")
     if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
-        add_compile_options(-fsanitize=address)
-        add_link_options(-fsanitize=address)
+        add_compile_options(-Og -fsanitize=address)
+        add_link_options(-Og -fsanitize=address)
     endif()
 endif()
 
