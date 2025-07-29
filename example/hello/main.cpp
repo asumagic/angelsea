@@ -35,6 +35,8 @@ int main() {
 
 	// Configure interface
 	int r;
+	r = engine->SetMessageCallback(asFUNCTION(message_callback), nullptr, asCALL_CDECL);
+	assert(r >= 0);
 	RegisterStdString(engine);
 	r = engine->RegisterGlobalFunction("void print(const string &in)", asFUNCTION(print), asCALL_CDECL);
 	assert(r >= 0);
