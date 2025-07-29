@@ -26,6 +26,28 @@ generating fairly portable C code, so it shouldn't be hard to port.
 (Ideally, we would setup CI to automatically test other platforms; perhaps even
 using qemu integration with containers to test aarch64 etc.)
 
+In order of what would be nice to try and get working (but that will wait before
+the project is more functional):
+
+- ✅ **Linux x86-64** (main test platform)
+- MinGW x86-64
+- Linux aarch64
+- macOS aarch64
+- macOS x86-64
+- MSVC x86-64
+
+32-bit x86 is not planned as it is not supported by MIR (and kind of can't be).
+
+## Current status
+
+The JIT compiler can already be used, but it is limited: Instruction support is
+still very partial and will only improve.
+
+Performance is likely not an improvement over the interpreter.
+
+The JIT compilation is currently rather slow (say 10-20x script compile
+time...), but it is single-threaded and synchronous _for now_.
+
 ## Clone & Build
 
 Start by cloning the repository itself:
