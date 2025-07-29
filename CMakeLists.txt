@@ -22,7 +22,7 @@ add_subdirectory(vendor/fmt/)
 
 # Configure MIR build
 # Upstream CMakeLists doesn't allow us from excluding tests and such
-set(MIR_ROOT "vendor/mir/")
+set(MIR_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/vendor/mir/")
 add_library(
     mir
     OBJECT
@@ -36,18 +36,8 @@ add_library(
 target_include_directories(mir PUBLIC ${MIR_ROOT})
 
 # Configure AngelScript build
-set(ANGELSCRIPT_ROOT "vendor/angelscript/sdk")
-set(ANGELSCRIPT_ADDON_ROOT "vendor/angelscript/sdk/add_on")
+set(ANGELSCRIPT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/vendor/angelscript/sdk")
 add_subdirectory(${ANGELSCRIPT_ROOT}/angelscript/projects/cmake)
-
-# Configure AngelScript add-ons
-add_library(angelscript-addons STATIC
-    ${ANGELSCRIPT_ADDON_ROOT}/scriptarray/scriptarray.cpp
-    ${ANGELSCRIPT_ADDON_ROOT}/scriptbuilder/scriptbuilder.cpp
-    ${ANGELSCRIPT_ADDON_ROOT}/scriptstdstring/scriptstdstring.cpp
-)
-target_include_directories(angelscript-addons PUBLIC ${ANGELSCRIPT_ADDON_ROOT})
-target_link_libraries(angelscript-addons PRIVATE angelscript)
 
 #### Angelsea
 
