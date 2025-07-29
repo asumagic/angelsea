@@ -726,17 +726,17 @@ void BytecodeToC::emit_vm_fallback(asIScriptFunction& fn, std::string_view reaso
 
 void BytecodeToC::emit_save_vm_registers() {
 	emit(
-	    "\t\t(*regs).programPointer = l_bc;\n"
-	    "\t\t(*regs).stackPointer = l_sp;\n"
-	    "\t\t(*regs).stackFramePointer = l_fp;\n"
+	    "\t\tregs->programPointer = l_bc;\n"
+	    "\t\tregs->stackPointer = l_sp;\n"
+	    "\t\tregs->stackFramePointer = l_fp;\n"
 	);
 }
 
 void BytecodeToC::emit_load_vm_registers() {
 	emit(
-	    "\t\tl_bc = (*regs).programPointer;\n"
-	    "\t\tl_sp = (*regs).stackPointer;\n"
-	    "\t\tl_fp = (*regs).stackFramePointer;\n"
+	    "\t\tl_bc = regs->programPointer;\n"
+	    "\t\tl_sp = regs->stackPointer;\n"
+	    "\t\tl_fp = regs->stackFramePointer;\n"
 	);
 }
 
