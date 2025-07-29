@@ -49,6 +49,11 @@ see rationale further below.
 It has optional dependencies on:
 - [**Catch2**](https://github.com/catchorg/Catch2/tree/devel) (for testing)
 
+> [!NOTE] In theory, if you want to avoid building via CMake, you could pull
+> Angelsea into your trunk to avoid the build process, and you would just have
+> to ensure the include directories are right. We do not test or support this
+> usecase.
+
 ### 1. Use vendored versions
 
 **By default, these dependencies are vendored via git submodules.**  
