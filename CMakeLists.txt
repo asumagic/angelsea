@@ -16,6 +16,7 @@ endif()
 #### DEPENDENCIES
 
 option(ASEA_FMT_SYSTEM "Disable building of vendored libfmt, and look it up via CMake instead" OFF)
+option(ASEA_FMT_EXTERNAL "Disable CMake lookup of libfmt when -DASEA_FMT_SYSTEM=1 is set, and find headers via -DASEA_FMT_ROOT" OFF)
 
 # Configure fmtlib build
 set(
@@ -25,10 +26,18 @@ set(
     "When building vendored libfmt, its root path"
 )
 if (ASEA_FMT_SYSTEM)
-    find_package(fmt)
+    if (NOT ASEA_FMT_EXTERNAL)
+        find_package(fmt)
+        set(ASEA_FMT_TARGET "fmt")
+    else()
+        add_library(asea_fmt INTERFACE)
+        target_include_directories(asea_fmt INTERFACE ${ASEA_FMT_ROOT}/include)
+        set(ASEA_FMT_TARGET "asea_fmt")
+    endif()
 else()
     message("angelsea: Using vendored libfmt at ${ASEA_FMT_ROOT}")
     add_subdirectory(${ASEA_FMT_ROOT})
+    set(ASEA_FMT_TARGET "fmt")
 endif()
 
 # Configure MIR build
@@ -98,7 +107,7 @@ add_library(angelsea STATIC
     src/angelsea/detail/bytecode2c.cpp
     src/angelsea/detail/bytecodedisasm.cpp
 )
-target_link_libraries(angelsea PRIVATE fmt::fmt asea_mir asea_angelscript_internal)
+target_link_libraries(angelsea PRIVATE ${ASEA_FMT_TARGET} asea_mir asea_angelscript_internal)
 target_include_directories(angelsea PUBLIC include/)
 target_compile_features(angelsea PUBLIC cxx_std_20)
 

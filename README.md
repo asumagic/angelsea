@@ -97,6 +97,10 @@ git submodule update --init --recursive tests/vendor/*
 
 ### Optional: Provide specific dependencies yourself
 
+TODO: the current steps work for static lib builds, but won't for dynamic libs
+and doesn't work for tests, and it should provide a way to provide the paths to
+built dependencies in that case.
+
 #### AngelScript
 
 Pass to CMake:
@@ -106,7 +110,13 @@ Pass to CMake:
 
 #### fmt
 
-Pass `-DASEA_FMT_SYSTEM=1` to CMake to rely on `find_package(fmt)`.
+Either:
+
+- Pass `-DASEA_FMT_SYSTEM=1` to CMake to rely on `find_package(fmt)`.
+- Pass the following to point headers to a known directory:
+    - `-DASEA_FMT_SYSTEM=1`
+    - `-DASEA_FMT_EXTERNAL=1`
+    - `-DASEA_FMT_ROOT=/path/to/fmt` **(defaults to `vendor/fmt`)**
 
 #### MIR
 
