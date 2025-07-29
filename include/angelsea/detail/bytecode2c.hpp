@@ -62,8 +62,6 @@ class BytecodeToC {
 
 	std::string& source() { return m_state.buffer; }
 
-	bool is_human_readable() const;
-
 	/// Configure the callback to be invoked when a function is mapped to a C
 	/// function name. This is useful to track the generated entry points in
 	/// the source code.
@@ -89,7 +87,9 @@ class BytecodeToC {
 	private:
 	void write_header();
 
-	void translate_instruction(asIScriptFunction& fn, BytecodeInstruction instruction);
+	struct FunctionTranslationState {};
+
+	void translate_instruction(asIScriptFunction& fn, BytecodeInstruction instruction, FunctionTranslationState& state);
 
 	template<class... Ts> void emit(fmt::format_string<Ts...> format, Ts&&... format_args) {
 		fmt::format_to(std::back_inserter(m_state.buffer), format, std::forward<Ts>(format_args)...);

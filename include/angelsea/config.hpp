@@ -70,6 +70,12 @@ struct JitConfig {
 		LazyBB,
 	};
 	MirCompilationMode mir_compilation_mode = MirCompilationMode::Normal;
+
+	struct CGeneratorConfig {
+		// bool use_gnuc_label_as_address_extension = true;
+		bool human_readable = true;
+	};
+	CGeneratorConfig c;
 };
 
 } // namespace angelsea

@@ -49,7 +49,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		m_on_map_function_callback(fn, func_name);
 	}
 
-	if (is_human_readable()) {
+	if (m_config.c.human_readable) {
 		const char* section_name;
 		int         row, col;
 		fn.GetDeclaredAt(&section_name, &row, &col);
@@ -137,7 +137,8 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 
 	emit_entry_dispatch(fn);
 
-	walk_bytecode(get_bytecode(fn), [&](BytecodeInstruction ins) { translate_instruction(fn, ins); });
+	FunctionTranslationState state;
+	walk_bytecode(get_bytecode(fn), [&](BytecodeInstruction ins) { translate_instruction(fn, ins, state); });
 
 	emit("}}\n");
 }
@@ -162,51 +163,75 @@ std::string BytecodeToC::entry_point_name(asIScriptFunction& fn) const {
 }
 
 void BytecodeToC::emit_entry_dispatch(asIScriptFunction& fn) {
-	// TODO: (optionally) generate a goto dispatch table, which should be
-	// supported by c2mir and probably would at least elide a branch
+	// doesn't seem supported by c2mir after all?
+	// if (m_config.c.use_gnuc_label_as_address_extension) {
+	// 	emit(
+	// 	    "\tstatic const void *const dispatch[] = {{\n"
+	// 	    "\t\t0,\n" // because JitEntry always starts at 1
+	// 	);
 
-	// 0 means the JIT entry point will not be used, start at 1
-	asPWORD current_entry_id = 1;
+	// 	walk_bytecode(get_bytecode(fn), [&](BytecodeInstruction ins) {
+	// 		if (ins.info->bc != asBC_JitEntry) {
+	// 			return;
+	// 		}
 
-	emit("\tswitch(entryLabel) {{\n");
+	// 		if (ins.pword0() == 0) {
+	// 			// codegen eliminated this jit entry
+	// 			return;
+	// 		}
+
+	// 		emit("\t\t&&bc{},", ins.offset);
+	// 	});
+
+	// 	emit(
+	// 	    "\t}};\n"
+	// 	    "\tgoto *dispatch[entryLabel];\n"
+	// 	);
+
+	// }
+
+	emit(
+	    "\tswitch(entryLabel) {{\n"
+	    "\tdefault:\n"
+	);
+
+	bool    last_was_jit_entry = false;
+	asPWORD jit_entry_id       = 1;
 
 	walk_bytecode(get_bytecode(fn), [&](BytecodeInstruction ins) {
 		if (ins.info->bc != asBC_JitEntry) {
+			last_was_jit_entry = false;
 			return; // skip to the next
 		}
 
-		// patch the JIT entry with the index we use in the switch
-		ins.pword0() = current_entry_id;
+		if (last_was_jit_entry) {
+			// ignore successive JIT entries
+			return;
+		}
 
-		emit("\tcase {}: goto bc{};\n", current_entry_id, ins.offset);
+		ins.pword0() = jit_entry_id;
 
-		++current_entry_id;
+		emit("\tcase {}: goto bc{};\n", jit_entry_id, ins.offset);
+		last_was_jit_entry = true;
+
+		++jit_entry_id;
 	});
 
 	emit("\t}}\n\n");
 }
 
-void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstruction ins) {
+void BytecodeToC::translate_instruction(
+    asIScriptFunction&        fn,
+    BytecodeInstruction       ins,
+    FunctionTranslationState& state
+) {
 	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
 
-	if (is_human_readable()) {
+	if (m_config.c.human_readable) {
 		emit("\t/* bytecode: {} */\n", disassemble(m_script_engine, ins));
 	}
 
 	emit("\tbc{}: {{\n", ins.offset);
-
-	// TODO: after a fallback don't bother emitting fallback code at all
-	// until the next JitEntry
-
-	// TODO: elide jit entries when we're not dropping down to the VM
-	// between them (assign their jitarg to 0 to be sure)
-	// this does mean having to recompute indices
-
-	// TODO: elide jit entries when they immediately precede an unhandled
-	// instruction
-
-	// TODO: if all jit entries were elided from the first jit entry, entirely
-	// optimize away the dispatch
 
 	switch (ins.info->bc) {
 	case asBC_JitEntry: {
@@ -361,7 +386,7 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 		);
 		emit_save_vm_registers();
 		emit(
-		    "\t\tint r = asea_call_script_function(regs, (asCScriptFunction*)(&{FN}));\n"
+		    "\t\tasea_call_script_function(regs, (asCScriptFunction*)(&{FN}));\n"
 		    "\t\treturn;\n",
 		    fmt::arg("FN", fn_symbol),
 		    fmt::arg("FN_ID", fn_idx)
@@ -739,7 +764,7 @@ void BytecodeToC::emit_vm_fallback(asIScriptFunction& fn, std::string_view reaso
 
 	emit_save_vm_registers();
 
-	if (is_human_readable()) {
+	if (m_config.c.human_readable) {
 		emit("\t\treturn; /* {} */\n", reason);
 	} else {
 		emit("\t\treturn;\n");
@@ -854,8 +879,6 @@ void BytecodeToC::emit_arithmetic_simple_stack_imm(
 	    fmt::arg("RHS_EXPR", rhs_expr)
 	);
 }
-
-bool BytecodeToC::is_human_readable() const { return true; }
 
 void BytecodeToC::write_header() {
 	m_state.buffer += R"___(/* start of angelsea static header */
@@ -1010,7 +1033,7 @@ typedef struct
     The following definitions are part of the angelsea runtime.hpp
 */
 
-int asea_call_script_function(void* vm_registers, void* function);
+void asea_call_script_function(void* vm_registers, void* function);
 
 /*
     The following definitions are additional angelsea helpers

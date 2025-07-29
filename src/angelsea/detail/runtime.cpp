@@ -10,10 +10,8 @@
 #include <as_scriptfunction.h>
 
 extern "C" {
-int asea_call_script_function(asSVMRegisters* vm_registers, asCScriptFunction& fn) {
+void asea_call_script_function(asSVMRegisters* vm_registers, asCScriptFunction& fn) {
 	auto& context = static_cast<asCContext&>(*vm_registers->ctx);
 	context.CallScriptFunction(&fn);
-
-	return context.m_status;
 }
 }
