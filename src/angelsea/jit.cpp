@@ -10,7 +10,12 @@ Jit::Jit(const JitConfig& config, asIScriptEngine& engine) :
 
 Jit::~Jit() {}
 
-void Jit::NewFunction(asIScriptFunction* scriptFunc) { m_compiler->register_function(*scriptFunc); }
+void Jit::NewFunction(asIScriptFunction* scriptFunc) {
+	if (scriptFunc == nullptr) {
+		return;
+	}
+	m_compiler->register_function(*scriptFunc);
+}
 
 void Jit::CleanFunction(asIScriptFunction* scriptFunc, asJITFunction jitFunc) {
 	m_compiler->unregister_function(*scriptFunc);
