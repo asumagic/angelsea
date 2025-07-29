@@ -27,8 +27,9 @@ void MirJit::register_function(asIScriptFunction& script_function) {
 
 void MirJit::unregister_function(asIScriptFunction& script_function) {
 	const auto it = m_functions.find(&script_function);
-	angelsea_assert(it != m_functions.end());
-	m_functions.erase(it);
+	if (it != m_functions.end()) {
+		m_functions.erase(it);
+	}
 }
 
 bool MirJit::compile_all() {
