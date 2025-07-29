@@ -464,6 +464,19 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 		break;
 	}
 
+	case asBC_ADDi64: {
+		emit_arithmetic_simple_stack_stack(ins, "+", var_types::s64, var_types::s64, var_types::s64);
+		break;
+	}
+	case asBC_SUBi64: {
+		emit_arithmetic_simple_stack_stack(ins, "-", var_types::s64, var_types::s64, var_types::s64);
+		break;
+	}
+	case asBC_MULi64: {
+		emit_arithmetic_simple_stack_stack(ins, "*", var_types::s64, var_types::s64, var_types::s64);
+		break;
+	}
+
 	case asBC_BNOT64: {
 		emit_arithmetic_simple_stack_unary_inplace(ins, "~", var_types::u64);
 		break;
@@ -680,9 +693,6 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 	case asBC_NEGi64:
 	case asBC_INCi64:
 	case asBC_DECi64:
-	case asBC_ADDi64:
-	case asBC_SUBi64:
-	case asBC_MULi64:
 	case asBC_DIVi64:
 	case asBC_MODi64:
 	case asBC_CMPi64:
