@@ -1,7 +1,7 @@
 # angelsea
 
 > [!IMPORTANT]
-> Angelsea is in very early stages of development and is not suitable for use.
+> Angelsea is alpha quality software.
 
 Angelsea is a **JIT compiler for AngelScript** written in C++20 which leverages
 the lightweight [MIR](https://github.com/vnmakarov/mir) JIT runtime and its C11
