@@ -46,7 +46,8 @@ int main() {
 
 	// Set up JIT
 	angelsea::JitConfig config;
-	angelsea::Jit       jit{config, *engine};
+	config.dump_mir_code = true; // dump the code to see it's working
+	angelsea::Jit jit{config, *engine};
 
 	r = engine->SetJITCompiler(&jit);
 	assert(r >= 0);
@@ -56,6 +57,8 @@ int main() {
 	builder.StartNewModule(engine, "build");
 	builder.AddSectionFromMemory("str", (std::string("void main() { print(\"hello, world!\"); }").c_str()));
 	builder.BuildModule();
+
+	jit.CompileModules();
 
 	asIScriptModule* module = builder.GetModule();
 	assert(module != nullptr);
