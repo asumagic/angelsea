@@ -58,7 +58,8 @@ else()
 endif()
 
 # Configure AngelScript build
-set(ASEA_ANGELSCRIPT_SYSTEM "Disable building of vendored AngelScript. Make sure to provide -ASEA_ANGELSCRIPT_ROOT" OFF)
+# TODO: could probably use find_package too?
+option(ASEA_ANGELSCRIPT_SYSTEM "Disable building of vendored AngelScript. Make sure to provide -ASEA_ANGELSCRIPT_ROOT" OFF)
 
 set(
     ASEA_ANGELSCRIPT_ROOT
@@ -70,6 +71,9 @@ set(
 if (NOT ASEA_ANGELSCRIPT_SYSTEM)
     message("angelsea: Using vendored AngelScript at ${ASEA_ANGELSCRIPT_ROOT}")
     add_subdirectory(${ASEA_ANGELSCRIPT_ROOT}/angelscript/projects/cmake)
+    if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(angelscript PRIVATE -fno-strict-aliasing)
+    endif()
 endif()
 
 # AngelScript CMake module doesn't give us the include, make a target that does

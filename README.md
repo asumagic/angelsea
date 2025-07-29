@@ -43,6 +43,8 @@ git submodule add https://github.com/asumagic/angelsea.git
 cd angelsea
 ```
 
+**Example project:** [`example/hello/`](example/hello)
+
 Angelsea has hard dependencies on:
 
 - [**AngelScript**](https://www.angelcode.com/angelscript/) v2.37.0+(\*)
