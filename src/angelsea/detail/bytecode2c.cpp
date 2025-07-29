@@ -291,8 +291,6 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 		break;
 	}
 
-		// TODO: valueRegister into a union too
-
 	case asBC_CpyVtoR4: {
 		emit(
 		    "\t\tregs->valueRegister.as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n"
