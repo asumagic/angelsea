@@ -10,6 +10,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <variant>
 
 namespace angelsea::detail {
 
@@ -36,6 +37,12 @@ class BytecodeToC {
 	public:
 	using OnMapFunctionCallback = std::function<void(asIScriptFunction&, const std::string& name)>;
 
+	struct ExternGlobalVariable {
+		int id;
+	};
+	using ExternMapping       = std::variant<ExternGlobalVariable>;
+	using OnMapExternCallback = std::function<void(const char* c_name, const ExternMapping& kind, void* raw_value)>;
+
 	BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string jit_fn_prefix = "asea_jit");
 
 	void prepare_new_context();
@@ -57,7 +64,19 @@ class BytecodeToC {
 	/// Configure the callback to be invoked when a function is mapped to a C
 	/// function name. This is useful to track the generated entry points in
 	/// the source code.
-	void set_map_function_callback(OnMapFunctionCallback callback) { m_on_map_function_callback = callback; }
+	void set_map_function_callback(OnMapFunctionCallback callback) { m_on_map_function_callback = std::move(callback); }
+
+	/// Configure the callback to be invoked when the C code is declaring an
+	/// `extern` asPWORD variable that it knows the value of (through the
+	/// engine); typically to allow making the C code not hardcode references to
+	/// address in memory.
+	/// The value is not kept around/defined in the C code: You *must* provide
+	/// this information to the linker you are using (e.g. `MIR_load_external`,
+	/// or figuring some way out if you are doing AOT).
+	/// It is also possible for redundant calls to happen. In this case, the
+	/// caller should at best assert that the value has not unexpectedly
+	/// changed.
+	void set_map_extern_callback(OnMapExternCallback callback) { m_on_map_extern_callback = std::move(callback); }
 
 	/// Returns the number of fallbacks to the VM generated since
 	/// `prepare_new_context`.
@@ -103,6 +122,7 @@ class BytecodeToC {
 	std::string      m_jit_fn_prefix;
 
 	OnMapFunctionCallback m_on_map_function_callback;
+	OnMapExternCallback   m_on_map_extern_callback;
 
 	/// State for the current `prepare_new_context` context.
 	struct ContextState {

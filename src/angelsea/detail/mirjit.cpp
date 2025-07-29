@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 #include "mir-gen.h"
+#include "mir.h"
 #include <angelscript.h>
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/debug.hpp>
@@ -54,9 +55,9 @@ bool MirJit::compile_all() {
 		c_name_to_func.emplace(name, &fn);
 	});
 
-	success &= compile_c_to_mir(c_generator);
-
 	MIR_gen_init(m_mir);
+
+	success &= compile_c_to_mir(c_generator);
 
 	MIR_gen_set_debug_file(m_mir, config().mir_diagnostic_file);
 	MIR_gen_set_debug_level(m_mir, config().mir_debug_level);
@@ -76,9 +77,7 @@ bool MirJit::compile_all() {
 	return success;
 }
 
-void MirJit::bind_runtime() {
-	MIR_load_external(m_mir, "asea_call_script_function", reinterpret_cast<void*>(asea_call_script_function));
-}
+void MirJit::bind_runtime() {}
 
 bool MirJit::compile_c_to_mir(BytecodeToC& c_generator) {
 	bool success = true;
@@ -178,6 +177,9 @@ bool MirJit::compile_c_module(
 ) {
 
 	c_generator.prepare_new_context();
+	c_generator.set_map_extern_callback([&](const char*                       c_name,
+	                                        const BytecodeToC::ExternMapping& mapping,
+	                                        void* raw_value) { MIR_load_external(m_mir, c_name, raw_value); });
 	c_generator.translate_module(internal_module_name, script_module, functions);
 
 	if (config().dump_c_code) {

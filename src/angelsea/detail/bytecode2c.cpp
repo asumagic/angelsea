@@ -9,6 +9,7 @@
 #include <angelsea/detail/bytecodetools.hpp>
 #include <angelsea/detail/debug.hpp>
 #include <angelsea/detail/log.hpp>
+#include <as_scriptengine.h>
 
 namespace angelsea::detail {
 
@@ -186,6 +187,8 @@ void BytecodeToC::emit_entry_dispatch(asIScriptFunction& fn) {
 }
 
 void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstruction ins) {
+	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
+
 	if (is_human_readable()) {
 		emit("\t/* bytecode: {} */\n", disassemble(m_script_engine, ins));
 	}
@@ -338,34 +341,21 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 		break;
 	}
 
-		// case asBC_CALL:
-		// {
-		//     // TODO: when possible, translate this to a JIT to JIT function call
-
-		//     int fn = ins.arg_int();
-		//     emit(
-		//         "\t\tint i = {FN_ID};\n"
-		//         "\t\tl_bc += 2;\n"
-		//         "\t\tasASSERT( i>= 0 );\n"
-		//         // "\t\t asASSERT( (i & FUNC_IMPORTED) == 0 );"
-		//         "",
-		//         fmt::arg("FN_ID", fn)
-		//     );
-		//     emit_save_vm_registers();
-		//     emit(
-		//         "\t\tint r = asea_call_script_function(regs, {FN_ID});\n",
-		//         fmt::arg("FN_ID", fn)
-		//     );
-		//     emit_load_vm_registers();
-		//     emit("\t\tif (r != asEXECUTION_ACTIVE) {{ return; }}\n");
-		//     branch_bc();
-		//     break;
-		// }
-
 	case asBC_CALL: {
-		emit_vm_fallback(fn, "instructions that branch to l_bc are not supported yet");
+		// TODO: when possible, translate this to a JIT to JIT function call
+
+		// int                fn_idx    = ins.int0();
+		// const std::string  fn_symbol = fmt::format("asea_script_fn{}", fn_idx);
+		// asCScriptFunction* function  = engine.scriptFunctions[fn_idx];
+
+		emit_vm_fallback(fn, "Cannot materialize script calls yet");
 		break;
 	}
+
+		// case asBC_CALL: {
+		// 	emit_vm_fallback(fn, "instructions that branch to l_bc are not supported yet");
+		// 	break;
+		// }
 
 	case asBC_CMPIi: {
 		emit(
@@ -979,9 +969,10 @@ typedef union {
 /* TODO: figure out how to implement these abstractions without having to know
    about the C++ ABI (for the vtable, etc.) -- otherwise we have to always
    interact via the runtime.hpp wrappers */
-typedef void asSVMRegisters;
-typedef void asIScriptContext;
-typedef void asITypeInfo;
+typedef struct asSVMRegisters asSVMRegisters;
+typedef struct asIScriptContext asIScriptContext;
+typedef struct asITypeInfo asITypeInfo;
+typedef struct asCScriptFunction asCScriptFunction;
 
 /* Layout exactly mimics asSVMRegisters */
 typedef struct
@@ -1007,7 +998,7 @@ typedef struct
     The following definitions are part of the angelsea runtime.hpp
 */
 
-int asea_call_script_function(void* vm_registers, int function_idx);
+int asea_call_script_function(void* vm_registers, void* function);
 
 /*
     The following definitions are additional angelsea helpers
