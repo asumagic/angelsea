@@ -18,7 +18,12 @@ Mir::~Mir() { MIR_finish(m_ctx); }
 C2Mir::C2Mir(Mir& mir) : m_ctx(mir) { c2mir_init(m_ctx); }
 C2Mir::~C2Mir() { c2mir_finish(m_ctx); }
 
-void MirJit::register_function(asIScriptFunction& script_function) { m_functions.emplace(&script_function); }
+void jit_release_workaround(asSVMRegisters*, asPWORD) {}
+
+void MirJit::register_function(asIScriptFunction& script_function) {
+	m_functions.emplace(&script_function);
+	script_function.SetJITFunction(static_cast<asJITFunction>(jit_release_workaround));
+}
 
 void MirJit::unregister_function(asIScriptFunction& script_function) {
 	const auto it = m_functions.find(&script_function);
