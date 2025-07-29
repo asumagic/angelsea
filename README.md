@@ -116,7 +116,8 @@ all you would need to do is to add some glue code by implementing your own
 3. In theory, it enables the ability to inject native C code. Because MIR is
 capable of inlining functions, they could be made to implement
 performance-sensitive things like some array calls and avoid a native function
-call.
+call. (This would still be feasible even if we generated MIR directly, but it is
+an advantage of using C.)
 4. Generated C code is a lot like the VM code. This is fairly quick to do and is
 surprisingly human-readable even to people with no prior compilation experience.
     - We do take more care with strict aliasing rules than AS does, though.
