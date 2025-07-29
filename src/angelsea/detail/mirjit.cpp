@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include "mir-gen.h"
 #include <angelscript.h>
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/debug.hpp>
@@ -207,8 +208,14 @@ bool MirJit::link_compiled_functions(const std::unordered_map<std::string, asISc
 	     module              = DLIST_NEXT(MIR_module_t, module)) {
 		MIR_load_module(m_mir, module);
 
-		// TODO: investigate the difference gen interfaces
-		MIR_link(m_mir, MIR_set_lazy_gen_interface, nullptr);
+		void (*jit_interface)(MIR_context_t ctx, MIR_item_t item);
+		switch (config().mir_compilation_mode) {
+		case JitConfig::MirCompilationMode::Lazy: jit_interface = MIR_set_lazy_gen_interface; break;
+		case JitConfig::MirCompilationMode::LazyBB: jit_interface = MIR_set_lazy_bb_gen_interface; break;
+		case JitConfig::MirCompilationMode::Normal:
+		default: jit_interface = MIR_set_gen_interface;
+		}
+		MIR_link(m_mir, jit_interface, nullptr);
 
 		for (MIR_item_t mir_func = DLIST_HEAD(MIR_item_t, module->items); mir_func != nullptr;
 		     mir_func            = DLIST_NEXT(MIR_item_t, mir_func)) {

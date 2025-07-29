@@ -55,6 +55,21 @@ struct JitConfig {
 	/// codegen).
 	/// MIR default is `2`. Meaningful values are 0 through 3.
 	int mir_optimization_level = 3;
+
+	// TODO: determine performance consequences for typical AS code
+	// in quick testing it doesn't change any insn count? are we supposed to do
+	// anything special?
+	enum class MirCompilationMode {
+		/// Regular compilation mode
+		Normal,
+		/// Lazy generation: Functions are generated on the first call of the
+		/// function; functions that are never executed are never generated
+		Lazy,
+		/// Lazy BB generation: Basic blocks are compiled on first execution of
+		/// the BB
+		LazyBB,
+	};
+	MirCompilationMode mir_compilation_mode = MirCompilationMode::Normal;
 };
 
 } // namespace angelsea
