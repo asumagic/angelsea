@@ -344,11 +344,28 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 	case asBC_CALL: {
 		// TODO: when possible, translate this to a JIT to JIT function call
 
-		// int                fn_idx    = ins.int0();
-		// const std::string  fn_symbol = fmt::format("asea_script_fn{}", fn_idx);
-		// asCScriptFunction* function  = engine.scriptFunctions[fn_idx];
+		int                fn_idx    = ins.int0();
+		const std::string  fn_symbol = fmt::format("asea_script_fn{}", fn_idx);
+		asCScriptFunction* function  = engine.scriptFunctions[fn_idx];
 
-		emit_vm_fallback(fn, "Cannot materialize script calls yet");
+		if (m_on_map_extern_callback) {
+			m_on_map_extern_callback(fn_symbol.c_str(), ExternScriptFunction{fn_idx}, function);
+		}
+
+		// Call fallback: We initiate the call from JIT, and the rest of the
+		// JitEntry handler will branch into the correct instruction.
+		emit(
+		    "\t\textern char {FN};\n"
+		    "\t\tl_bc += 2;\n",
+		    fmt::arg("FN", fn_symbol)
+		);
+		emit_save_vm_registers();
+		emit(
+		    "\t\tint r = asea_call_script_function(regs, (asCScriptFunction*)(&{FN}));\n"
+		    "\t\treturn;\n",
+		    fmt::arg("FN", fn_symbol),
+		    fmt::arg("FN_ID", fn_idx)
+		);
 		break;
 	}
 

@@ -77,7 +77,9 @@ bool MirJit::compile_all() {
 	return success;
 }
 
-void MirJit::bind_runtime() {}
+void MirJit::bind_runtime() {
+	MIR_load_external(m_mir, "asea_call_script_function", reinterpret_cast<void*>(asea_call_script_function));
+}
 
 bool MirJit::compile_c_to_mir(BytecodeToC& c_generator) {
 	bool success = true;

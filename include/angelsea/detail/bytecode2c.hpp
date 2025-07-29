@@ -37,10 +37,13 @@ class BytecodeToC {
 	public:
 	using OnMapFunctionCallback = std::function<void(asIScriptFunction&, const std::string& name)>;
 
+	struct ExternScriptFunction {
+		int id;
+	};
 	struct ExternGlobalVariable {
 		int id;
 	};
-	using ExternMapping       = std::variant<ExternGlobalVariable>;
+	using ExternMapping       = std::variant<ExternGlobalVariable, ExternScriptFunction>;
 	using OnMapExternCallback = std::function<void(const char* c_name, const ExternMapping& kind, void* raw_value)>;
 
 	BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string jit_fn_prefix = "asea_jit");
