@@ -369,11 +369,6 @@ void BytecodeToC::translate_instruction(asIScriptFunction& fn, BytecodeInstructi
 		break;
 	}
 
-		// case asBC_CALL: {
-		// 	emit_vm_fallback(fn, "instructions that branch to l_bc are not supported yet");
-		// 	break;
-		// }
-
 	case asBC_CMPIi: {
 		emit(
 		    "\t\tint i1 = ASEA_FRAME_VAR({SWORD0}).as_asINT32;\n"
