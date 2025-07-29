@@ -43,7 +43,8 @@ the project is more functional):
 The JIT compiler can already be used, but it is limited: Instruction support is
 still very partial and will only improve.
 
-Performance is likely not an improvement over the interpreter.
+Performance is likely not an improvement over the interpreter for the time
+being.
 
 The JIT compilation is currently rather slow (say 10-20x script compile
 time...), but it is single-threaded and synchronous _for now_.
