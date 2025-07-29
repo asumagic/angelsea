@@ -160,7 +160,7 @@ On Linux anyway, the resulting library will be available as
 `build/libangelsea.a`, which you can now link against in your build. For
 vendored dependencies, make sure you link against them:
 
-- `build/libmir.a`
+- `build/libasea_mir.a`
 - `build/vendor/fmt/libfmt.a` (`libfmtd.a` in debug)
 - `build/vendor/angelscript/sdk/angelscript/projects/cmake/libangelscript.a`
 
