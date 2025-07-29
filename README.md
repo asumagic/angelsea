@@ -113,14 +113,18 @@ certain platforms (e.g. iOS) which notoriously ban JITs. You still would need
 the interpreter (if only because Angelsea will fallback to it), but in theory,
 all you would need to do is to add some glue code by implementing your own
 `asIJITCompiler` that map JIT entry points to C++.
-3. Generated C code is a lot like the VM code. This is fairly quick to do and is
+3. In theory, it enables the ability to inject native C code. Because MIR is
+capable of inlining functions, they could be made to implement
+performance-sensitive things like some array calls and avoid a native function
+call.
+4. Generated C code is a lot like the VM code. This is fairly quick to do and is
 surprisingly human-readable even to people with no prior compilation experience.
     - We do take more care with strict aliasing rules than AS does, though.
-4. The fact we can just speak C greatly simplifies interfacing with script
+5. The fact we can just speak C greatly simplifies interfacing with script
 engine structures. Dealing with the C++ ABI (such as for certain native function
 calls, or to call virtual AS engine functions) would be annoying, but we can
 work around it to some extent.
-5. In theory, it does mean we can leverage native tooling such as
+6. In theory, it does mean we can leverage native tooling such as
 AddressSanitizer and static analysis to debug JIT bugs.
 
 #### What about other JIT compilers?
