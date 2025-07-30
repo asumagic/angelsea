@@ -247,15 +247,18 @@ when the time comes, we may contribute back design improvements for it.
 
 It actually makes a lot of sense to take this "lazy" approach.
 
-1. Our bytecode2c compiler generates fairly standard C code. Entry points use
-the `asJITFunction` signature, but nothing about it is really specific to JIT or
-even to MIR...
+1. Our bytecode2c compiler generates standard (enough) C code. Entry points use
+the `asJITFunction` signature. We also try to resolve all references to pointers
+baked in the bytecode and forward detailed information via a callback. =
+Fundamentally, nothing about the codegen is really specific to JIT or even to
+MIR...
 2. ... So nothing really prevents you from AOT compiling AngelScript code to C
 using bytecode2c for release builds, which might be interesting for consoles and
 certain platforms (e.g. iOS) which notoriously ban JITs. You still would need
 the interpreter (if only because Angelsea will fallback to it), but in theory,
-all you would need to do is to add some glue code by implementing your own
-`asIJITCompiler` that map JIT entry points to C++.
+all you would need to do is use bytecode2c with appropriate symbol callbacks,
+and add some glue code by implementing your own `asIJITCompiler` that map JIT
+entry points to C++.
 3. In theory, it enables the ability to inject native C code. Because MIR is
 capable of inlining functions, they could be made to implement
 performance-sensitive things like some array calls and avoid a native function
