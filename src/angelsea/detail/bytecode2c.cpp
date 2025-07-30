@@ -392,6 +392,14 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_PopPtr: {
+		emit(
+		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tl_bc++;\n"
+		);
+		break;
+	}
+
 	case asBC_RefCpyV: {
 		asCObjectType*    type = reinterpret_cast<asCObjectType*>(ins.pword0());
 		asSTypeBehaviour& beh  = type->beh;
@@ -656,7 +664,6 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
-	case asBC_PopPtr:
 	case asBC_PSF:
 	case asBC_SwapPtr:
 	case asBC_NOT:
