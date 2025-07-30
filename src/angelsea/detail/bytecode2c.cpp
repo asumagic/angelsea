@@ -805,6 +805,14 @@ void BytecodeToC::translate_instruction(
 		emit_primitive_cast_stack(ins, var_types::s32, var_types::s64, false);
 		break;
 	}
+	case asBC_fTOd: {
+		emit_primitive_cast_stack(ins, var_types::f32, var_types::f64, false);
+		break;
+	}
+	case asBC_dTOf: {
+		emit_primitive_cast_stack(ins, var_types::f64, var_types::f32, false);
+		break;
+	}
 
 	case asBC_PSF:
 	case asBC_SwapPtr:
@@ -859,10 +867,8 @@ void BytecodeToC::translate_instruction(
 	case asBC_CmpPtr:
 	case asBC_dTOi:
 	case asBC_dTOu:
-	case asBC_dTOf:
 	case asBC_iTOd:
 	case asBC_uTOd:
-	case asBC_fTOd:
 	case asBC_DIVi:
 	case asBC_MODi:
 	case asBC_ADDf:
