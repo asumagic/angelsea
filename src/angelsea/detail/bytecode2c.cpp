@@ -442,6 +442,27 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_REFCPY: {
+		asCObjectType*    type = reinterpret_cast<asCObjectType*>(ins.pword0());
+		asSTypeBehaviour& beh  = type->beh;
+
+		if (!(type->flags & (asOBJ_NOCOUNT | asOBJ_VALUE))) {
+			emit_vm_fallback(fn, "can't handle release/addref for RefCpy calls yet");
+			break;
+		}
+
+		emit(
+		    "\t\tasPWORD *dst = (asPWORD*)ASEA_STACK_TOP.as_asPWORD;\n"
+		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, AS_PTR_SIZE);\n"
+		    "\t\tasPWORD src = ASEA_STACK_TOP.as_asPWORD;\n"
+		    "\t\t*dst = src;\n"
+		    "\t\tl_bc += 1+AS_PTR_SIZE;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+
+		break;
+	}
+
 	case asBC_CALL: {
 		// TODO: when possible, translate this to a JIT to JIT function call
 
@@ -726,7 +747,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_LOADOBJ:
 	case asBC_STOREOBJ:
 	case asBC_GETOBJ:
-	case asBC_REFCPY:
 	case asBC_CHKREF:
 	case asBC_GETREF:
 	case asBC_PshNull:
