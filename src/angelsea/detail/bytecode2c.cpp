@@ -420,7 +420,7 @@ void BytecodeToC::translate_instruction(
 
 	case asBC_PopPtr: {
 		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, AS_PTR_SIZE);\n"
 		    "\t\tl_bc++;\n"
 		);
 		break;
