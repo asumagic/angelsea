@@ -79,6 +79,7 @@ bool MirJit::compile_all() {
 
 void MirJit::bind_runtime() {
 	MIR_load_external(m_mir, "asea_call_script_function", reinterpret_cast<void*>(asea_call_script_function));
+	MIR_load_external(m_mir, "asea_debug_message", reinterpret_cast<void*>(asea_debug_message));
 }
 
 bool MirJit::compile_c_to_mir(BytecodeToC& c_generator) {

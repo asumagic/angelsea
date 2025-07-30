@@ -138,6 +138,20 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	//     etc.
 	// }
 
+	if (m_config.debug.trace_functions) {
+		const char* section;
+		int         row, col;
+		fn.GetDeclaredAt(&section, &row, &col);
+		emit(
+		    "\tasea_debug_message(regs, \"TRACE FUNCTION: module {}: {}:{}:{}: {}\");\n\n",
+		    internal_module_name,
+		    escape_c_literal(section),
+		    row,
+		    col,
+		    escape_c_literal(fn.GetDeclaration(true, true, true))
+		);
+	}
+
 	emit_entry_dispatch(fn);
 
 	FunctionTranslationState state;
@@ -1304,6 +1318,7 @@ typedef struct
 */
 
 void asea_call_script_function(void* vm_registers, void* function);
+void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
 
 /*
     The following definitions are additional angelsea helpers

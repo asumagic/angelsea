@@ -55,6 +55,9 @@ struct JitConfig {
 		/// Bytecode instructions that should emit a VM fallback; for debugging
 		/// miscompiles and such.
 		std::vector<asEBCInstr> blacklist_instructions;
+
+		/// Emit a debug message via the engine on every function call.
+		bool trace_functions = false;
 	};
 	Debug debug;
 

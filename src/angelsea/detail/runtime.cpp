@@ -15,4 +15,9 @@ void asea_call_script_function(asSVMRegisters* vm_registers, asCScriptFunction& 
 	auto& context = static_cast<asCContext&>(*vm_registers->ctx);
 	context.CallScriptFunction(&fn);
 }
+
+void asea_debug_message(asSVMRegisters* vm_registers, const char* text) {
+	auto& context = static_cast<asCContext&>(*vm_registers->ctx);
+	context.GetEngine()->WriteMessage("<angelsea_debug>", 0, 0, asMSGTYPE_INFORMATION, text);
+}
 }

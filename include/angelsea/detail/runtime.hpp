@@ -16,4 +16,7 @@ extern "C" {
 /// The caller must ensure that the VM registers are saved before calling.
 /// The JIT function should always return to the VM after calling this function.
 void asea_call_script_function(asSVMRegisters* vm_registers, asCScriptFunction& fn);
+
+/// \brief Prints a debug message via the engine, only enabled when debugging.
+void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
 }
