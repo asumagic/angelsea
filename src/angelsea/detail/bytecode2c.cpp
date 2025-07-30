@@ -463,6 +463,48 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_RDR1: {
+		emit(
+		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
+		    "\t\tvar->as_asDWORD = 0;\n"
+		    "\t\tvar->as_asBYTE = ASEA_VALUEREG_DEREF().as_asBYTE;\n"
+		    "\t\tl_bc++;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		break;
+	}
+
+	case asBC_RDR2: {
+		emit(
+		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
+		    "\t\tvar->as_asDWORD = 0;\n"
+		    "\t\tvar->as_asWORD = ASEA_VALUEREG_DEREF().as_asWORD;\n"
+		    "\t\tl_bc++;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		break;
+	}
+
+	case asBC_RDR4: {
+		emit(
+		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
+		    "\t\tvar->as_asDWORD = ASEA_VALUEREG_DEREF().as_asDWORD;\n"
+		    "\t\tl_bc++;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		break;
+	}
+
+	case asBC_RDR8: {
+		emit(
+		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
+		    "\t\tvar->as_asQWORD = ASEA_VALUEREG_DEREF().as_asQWORD;\n"
+		    "\t\tl_bc++;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		break;
+	}
+
 	case asBC_CALL: {
 		// TODO: when possible, translate this to a JIT to JIT function call
 
@@ -769,10 +811,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_WRTV2:
 	case asBC_WRTV4:
 	case asBC_WRTV8:
-	case asBC_RDR1:
-	case asBC_RDR2:
-	case asBC_RDR4:
-	case asBC_RDR8:
 	case asBC_LDG:
 	case asBC_CmpPtr:
 	case asBC_dTOi:
