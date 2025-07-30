@@ -143,7 +143,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		int         row, col;
 		fn.GetDeclaredAt(&section, &row, &col);
 		emit(
-		    "\tasea_debug_message(regs, \"TRACE FUNCTION: module {}: {}:{}:{}: {}\");\n\n",
+		    "\tasea_debug_message((asSVMRegisters*)regs, \"TRACE FUNCTION: module {}: {}:{}:{}: {}\");\n\n",
 		    internal_module_name,
 		    escape_c_literal(section),
 		    row,
