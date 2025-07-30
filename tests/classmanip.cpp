@@ -68,6 +68,8 @@ TEST_CASE("push global address variable", "[asBC_PGA]") {
 	PgaTestBase b;
 	ctx.engine->RegisterGlobalProperty("Base b", &b);
 
+	out = {};
+
 	asIScriptModule& module = ctx.build("asbc_pga_test", "scripts/bc_pga_var_test.as");
 	ctx.run(module, "void foo()");
 
