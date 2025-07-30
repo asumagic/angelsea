@@ -41,9 +41,15 @@ class BytecodeToC {
 		int id;
 	};
 	struct ExternGlobalVariable {
-		int id;
+		// TODO: seems like you can extract the info from the ptr via FindGlobalPropPtrIndex
+		void* ptr;
 	};
-	using ExternMapping       = std::variant<ExternGlobalVariable, ExternScriptFunction>;
+	/// An external string constant, whose type depends on the registered string
+	/// factory.
+	struct ExternStringConstant {
+		void* ptr;
+	};
+	using ExternMapping       = std::variant<ExternGlobalVariable, ExternStringConstant, ExternScriptFunction>;
 	using OnMapExternCallback = std::function<void(const char* c_name, const ExternMapping& kind, void* raw_value)>;
 
 	BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string jit_fn_prefix = "asea_jit");
@@ -131,10 +137,14 @@ class BytecodeToC {
 	struct ContextState {
 		std::string buffer;
 		std::size_t fallback_count;
+		std::size_t string_constant_idx;
 	};
 	ContextState m_state;
 };
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset);
+
+bool        is_alpha_numerical(char c);
+std::string escape_c_literal(std::string_view str);
 
 } // namespace angelsea::detail

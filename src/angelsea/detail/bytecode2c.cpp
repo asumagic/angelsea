@@ -20,7 +20,8 @@ BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::
 
 void BytecodeToC::prepare_new_context() {
 	m_state.buffer.clear();
-	m_state.fallback_count = 0;
+	m_state.fallback_count      = 0;
+	m_state.string_constant_idx = 0;
 	write_header();
 }
 
@@ -151,7 +152,7 @@ std::string BytecodeToC::entry_point_name(asIScriptFunction& fn) const {
 	if (const char* module_name = fn.GetModuleName(); module_name != nullptr) {
 		mangled_module = "module_";
 		for (char c : std::string_view{module_name}) {
-			if (std::isalnum(c)) {
+			if (is_alpha_numerical(c)) {
 				mangled_module += c;
 			} else {
 				mangled_module += fmt::format("_{:02X}_", c);
@@ -366,6 +367,41 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_PGA: {
+		asSMapNode<void*, asCGlobalProperty*>* var_cursor = nullptr;
+		void*                                  pointer    = reinterpret_cast<void*>(ins.pword0());
+		if (engine.varAddressMap.MoveTo(&var_cursor, pointer)) {
+			// if (m_on_map_extern_callback) {
+			// 	m_on_map_extern_callback(fn_symbol.c_str(), ExternGlobalVariable{}, function);
+			// }
+
+			// emit(
+
+			// );
+			emit_vm_fallback(fn, "todo");
+		}
+
+		// at that point, it has to be a string constant pointer
+		const std::string fn_symbol
+		    = fmt::format("asea_strobj{}_{}", m_state.string_constant_idx, entry_point_name(fn));
+
+		emit(
+		    "\t\textern char {OBJ};\n"
+		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tASEA_STACK_VAR(0).as_asPWORD = (asPWORD)&{OBJ};\n"
+		    "\t\tl_bc += 1+AS_PTR_SIZE;\n",
+		    fmt::arg("OBJ", fn_symbol)
+		);
+
+		if (m_on_map_extern_callback) {
+			m_on_map_extern_callback(fn_symbol.c_str(), ExternStringConstant{pointer}, pointer);
+		}
+
+		++m_state.string_constant_idx;
+
+		break;
+	}
+
 	case asBC_CALL: {
 		// TODO: when possible, translate this to a JIT to JIT function call
 
@@ -386,7 +422,7 @@ void BytecodeToC::translate_instruction(
 		);
 		emit_save_vm_registers();
 		emit(
-		    "\t\tasea_call_script_function(regs, (asCScriptFunction*)(&{FN}));\n"
+		    "\t\tasea_call_script_function(regs, (asCScriptFunction*)&{FN});\n"
 		    "\t\treturn;\n",
 		    fmt::arg("FN", fn_symbol),
 		    fmt::arg("FN_ID", fn_idx)
@@ -674,7 +710,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_RDR4:
 	case asBC_RDR8:
 	case asBC_LDG:
-	case asBC_PGA:
 	case asBC_CmpPtr:
 	case asBC_VAR:
 	case asBC_dTOi:
@@ -1051,6 +1086,38 @@ void asea_call_script_function(void* vm_registers, void* function);
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset) {
 	return std::size_t(std::int64_t(base_offset) + std::int64_t(relative_offset));
+}
+
+bool is_alpha_numerical(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'); }
+
+std::string escape_c_literal(std::string_view str) {
+	std::string ret;
+	ret.reserve(str.size()); // always underestimated but that's ok
+
+	std::string_view legal_chars = "!#%&'()*+,-./:;<=>?[]^_{|}~ ";
+
+	for (char c : str) {
+		// handle the most common cases (either paste the characters as-is or
+		// escape them) for the string to be readable
+		if (is_alpha_numerical(c) || legal_chars.find(c) != legal_chars.npos) {
+			ret += c;
+		} else if (c == '\r') {
+			ret += "\\r";
+		} else if (c == '\n') {
+			ret += "\\n";
+		} else if (c == '\t') {
+			ret += "\\t";
+		} else if (c == '"') {
+			ret += "\\\"";
+		} else if (c == '\\') {
+			ret += "\\\\";
+		} else {
+			// hex encode the rest
+			ret += fmt::format("\\x{:02x}", c);
+		}
+	}
+
+	return ret;
 }
 
 } // namespace angelsea::detail
