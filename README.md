@@ -249,7 +249,7 @@ It actually makes a lot of sense to take this "lazy" approach.
 
 1. Our bytecode2c compiler generates standard (enough) C code. Entry points use
 the `asJITFunction` signature. We also try to resolve all references to pointers
-baked in the bytecode and forward detailed information via a callback. =
+baked in the bytecode and forward detailed information via a callback.  
 Fundamentally, nothing about the codegen is really specific to JIT or even to
 MIR...
 2. ... So nothing really prevents you from AOT compiling AngelScript code to C
