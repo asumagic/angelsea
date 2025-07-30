@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include "angelscript.h"
 #include "common.hpp"
 
 TEST_CASE("string handling", "[str]") {
@@ -46,6 +47,31 @@ TEST_CASE("globals with user classes", "[userclass][globals][globalswithclasses]
 
 TEST_CASE("user class Vec3f", "[userclass][vec3f]") {
 	REQUIRE(run("scripts/vec3f.as") == "150\nx: -50; y: 100; z: -50\nx: 10; y: 7.5; z: 5\n");
+}
+
+class PgaTestBase {
+	public:
+	virtual void foo() { out << bar << '\n'; }
+	int          bar;
+};
+
+void pga_test_construct(PgaTestBase* s) {}
+void pga_test_destruct(PgaTestBase* s) {}
+
+TEST_CASE("push global address variable", "[asBC_PGA]") {
+
+	EngineContext ctx;
+	ctx.engine->RegisterObjectType("Base", sizeof(PgaTestBase), asOBJ_REF | asOBJ_NOCOUNT);
+	ctx.engine->RegisterObjectMethod("Base", "void foo()", asMETHOD(PgaTestBase, foo), asCALL_THISCALL);
+	ctx.engine->RegisterObjectProperty("Base", "int bar", asOFFSET(PgaTestBase, bar));
+
+	PgaTestBase b;
+	ctx.engine->RegisterGlobalProperty("Base b", &b);
+
+	asIScriptModule& module = ctx.build("asbc_pga_test", "scripts/bc_pga_var_test.as");
+	ctx.run(module, "void foo()");
+
+	REQUIRE(out.str() == "123\n");
 }
 
 TEST_CASE("devirtualization", "[devirt]") { REQUIRE(run("scripts/devirt.as") == "hello\n"); }
