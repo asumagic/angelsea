@@ -400,6 +400,16 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_VAR: {
+		emit(
+		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD){SWORD0};\n"
+		    "\t\tl_bc++;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		break;
+	}
+
 	case asBC_RefCpyV: {
 		asCObjectType*    type = reinterpret_cast<asCObjectType*>(ins.pword0());
 		asSTypeBehaviour& beh  = type->beh;
@@ -727,7 +737,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_RDR8:
 	case asBC_LDG:
 	case asBC_CmpPtr:
-	case asBC_VAR:
 	case asBC_dTOi:
 	case asBC_dTOu:
 	case asBC_dTOf:
