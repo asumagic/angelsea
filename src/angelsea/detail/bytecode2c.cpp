@@ -5,6 +5,7 @@
 #include "as_property.h"
 #include <fmt/format.h>
 
+#include <algorithm>
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/bytecodedisasm.hpp>
 #include <angelsea/detail/bytecodetools.hpp>
@@ -222,6 +223,11 @@ void BytecodeToC::emit_entry_dispatch(asIScriptFunction& fn) {
 	emit("\t}}\n\n");
 }
 
+bool BytecodeToC::is_instruction_blacklisted(asEBCInstr bc) const {
+	return std::find(m_config.debug.blacklist_instructions.begin(), m_config.debug.blacklist_instructions.end(), bc)
+	    != m_config.debug.blacklist_instructions.end();
+}
+
 void BytecodeToC::translate_instruction(
     asIScriptFunction&        fn,
     BytecodeInstruction       ins,
@@ -234,6 +240,12 @@ void BytecodeToC::translate_instruction(
 	}
 
 	emit("\tbc{}: {{\n", ins.offset);
+
+	if (is_instruction_blacklisted(ins.info->bc)) {
+		emit_vm_fallback(fn, "instruction blacklisted by config.debug, force fallback");
+		emit("\t}}\n");
+		return;
+	}
 
 	switch (ins.info->bc) {
 	case asBC_JitEntry: {

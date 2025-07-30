@@ -5,6 +5,7 @@
 #include <angelscript.h>
 
 #include <cstdio>
+#include <vector>
 
 namespace angelsea {
 
@@ -50,6 +51,10 @@ struct JitConfig {
 
 		/// What file to dump MIR debug logging into, if mir_debug_level >= 0.
 		FILE* mir_diagnostic_file = stderr;
+
+		/// Bytecode instructions that should emit a VM fallback; for debugging
+		/// miscompiles and such.
+		std::vector<asEBCInstr> blacklist_instructions;
 	};
 	Debug debug;
 

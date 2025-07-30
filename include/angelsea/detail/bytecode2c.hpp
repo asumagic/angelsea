@@ -96,6 +96,7 @@ class BytecodeToC {
 
 	struct FunctionTranslationState {};
 
+	bool is_instruction_blacklisted(asEBCInstr bc) const;
 	void translate_instruction(asIScriptFunction& fn, BytecodeInstruction instruction, FunctionTranslationState& state);
 
 	template<class... Ts> void emit(fmt::format_string<Ts...> format, Ts&&... format_args) {
