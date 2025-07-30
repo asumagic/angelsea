@@ -111,6 +111,10 @@ target_link_libraries(angelsea PRIVATE ${ASEA_FMT_TARGET} asea_mir asea_angelscr
 target_include_directories(angelsea PUBLIC include/)
 target_compile_features(angelsea PUBLIC cxx_std_20)
 
+if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(angelsea PRIVATE -Wall -Wextra)
+endif()
+
 option(ASEA_ENABLE_TESTING "Enable test building and support via Catch2" OFF)
 
 if (ASEA_ENABLE_TESTING)
