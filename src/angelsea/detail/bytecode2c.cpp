@@ -1001,6 +1001,10 @@ void BytecodeToC::translate_instruction(
 	}
 	}
 
+	if (ins.info->bc == m_config.debug.fallback_after_instruction) {
+		emit_vm_fallback(fn, "debug.fallback_after_instruction");
+	}
+
 	emit("\t}}\n");
 }
 

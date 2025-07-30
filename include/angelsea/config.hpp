@@ -58,6 +58,14 @@ struct JitConfig {
 
 		/// Emit a debug message via the engine on every function call.
 		bool trace_functions = false;
+
+		/// Generate a VM fallback after the given instruction, *after*
+		/// the content of its handler. This can be useful to diagnose crashes
+		/// caused by an instruction in some cases, as using
+		/// `blacklist_instructions` may prevent some instructions from ever
+		/// being reached.
+		/// Might not be valid for all handlers.
+		asEBCInstr fallback_after_instruction = asEBCInstr(-1);
 	};
 	Debug debug;
 
