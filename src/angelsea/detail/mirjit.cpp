@@ -55,9 +55,9 @@ bool MirJit::compile_all() {
 		c_name_to_func.emplace(name, &fn);
 	});
 
-	MIR_gen_init(m_mir);
-
 	success &= compile_c_to_mir(c_generator);
+
+	MIR_gen_init(m_mir);
 
 	MIR_gen_set_debug_file(m_mir, config().debug.mir_diagnostic_file);
 	MIR_gen_set_debug_level(m_mir, config().debug.mir_debug_level);
@@ -84,8 +84,6 @@ void MirJit::bind_runtime() {
 
 bool MirJit::compile_c_to_mir(BytecodeToC& c_generator) {
 	bool success = true;
-
-	C2Mir c2mir{m_mir};
 
 	// no include dir
 	std::array<const char*, 1> include_dirs{nullptr};
@@ -178,6 +176,7 @@ bool MirJit::compile_c_module(
     asIScriptModule*              script_module,
     std::span<asIScriptFunction*> functions
 ) {
+	C2Mir c2mir{m_mir};
 
 	c_generator.prepare_new_context();
 	c_generator.set_map_extern_callback([&](const char*                       c_name,
