@@ -612,9 +612,61 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_INCi8: {
+		emit(
+		    "\t\t++ASEA_VALUEREG_DEREF().as_asBYTE;\n"
+		    "\t\tl_bc++;\n"
+		);
+		break;
+	}
 	case asBC_DECi8: {
 		emit(
-		    "\t\t--ASEA_VALUEREG_DEREF().as_asINT8;\n"
+		    "\t\t--ASEA_VALUEREG_DEREF().as_asBYTE;\n"
+		    "\t\tl_bc++;\n"
+		);
+		break;
+	}
+
+	case asBC_INCi16: {
+		emit(
+		    "\t\t++ASEA_VALUEREG_DEREF().as_asWORD;\n"
+		    "\t\tl_bc++;\n"
+		);
+		break;
+	}
+	case asBC_DECi16: {
+		emit(
+		    "\t\t--ASEA_VALUEREG_DEREF().as_asWORD;\n"
+		    "\t\tl_bc++;\n"
+		);
+		break;
+	}
+
+	case asBC_INCi: {
+		emit(
+		    "\t\t++ASEA_VALUEREG_DEREF().as_asDWORD;\n"
+		    "\t\tl_bc++;\n"
+		);
+		break;
+	}
+	case asBC_DECi: {
+		emit(
+		    "\t\t--ASEA_VALUEREG_DEREF().as_asDWORD;\n"
+		    "\t\tl_bc++;\n"
+		);
+		break;
+	}
+
+	case asBC_INCi64: {
+		emit(
+		    "\t\t++ASEA_VALUEREG_DEREF().as_asQWORD;\n"
+		    "\t\tl_bc++;\n"
+		);
+		break;
+	}
+	case asBC_DECi64: {
+		emit(
+		    "\t\t--ASEA_VALUEREG_DEREF().as_asQWORD;\n"
 		    "\t\tl_bc++;\n"
 		);
 		break;
@@ -763,11 +815,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_NEGi:
 	case asBC_NEGf:
 	case asBC_NEGd:
-	case asBC_INCi16:
-	case asBC_INCi8:
-	case asBC_DECi16:
-	case asBC_INCi:
-	case asBC_DECi:
 	case asBC_INCf:
 	case asBC_DECf:
 	case asBC_INCd:
@@ -849,8 +896,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_i64TOd:
 	case asBC_u64TOd:
 	case asBC_NEGi64:
-	case asBC_INCi64:
-	case asBC_DECi64:
 	case asBC_DIVi64:
 	case asBC_MODi64:
 	case asBC_CMPi64:
