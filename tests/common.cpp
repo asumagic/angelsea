@@ -61,12 +61,14 @@ bool set_env_int_variable(const char* env, int& target) {
 
 angelsea::JitConfig get_test_jit_config() {
 	angelsea::JitConfig config{
-	    .log_targets   = {},
-	    .dump_c_code   = is_env_set("ASEA_DUMP_C"),
-	    .dump_mir_code = is_env_set("ASEA_DUMP_MIR"),
+	    .log_targets = {},
+	    .debug       = {
+	              .dump_c_code   = is_env_set("ASEA_DUMP_C"),
+	              .dump_mir_code = is_env_set("ASEA_DUMP_MIR"),
+        },
 	};
 
-	set_env_int_variable("ASEA_MIR_DEBUG_LEVEL", config.mir_debug_level);
+	set_env_int_variable("ASEA_MIR_DEBUG_LEVEL", config.debug.mir_debug_level);
 	set_env_int_variable("ASEA_MIR_OPT_LEVEL", config.mir_optimization_level);
 
 	return config;

@@ -59,17 +59,17 @@ bool MirJit::compile_all() {
 
 	success &= compile_c_to_mir(c_generator);
 
-	MIR_gen_set_debug_file(m_mir, config().mir_diagnostic_file);
-	MIR_gen_set_debug_level(m_mir, config().mir_debug_level);
+	MIR_gen_set_debug_file(m_mir, config().debug.mir_diagnostic_file);
+	MIR_gen_set_debug_level(m_mir, config().debug.mir_debug_level);
 
 	MIR_gen_set_optimize_level(m_mir, config().mir_optimization_level);
 
 	bind_runtime();
 	success &= link_compiled_functions(c_name_to_func);
 
-	if (config().dump_mir_code) {
-		angelsea_assert(config().dump_mir_code_file != nullptr);
-		MIR_output(m_mir, config().dump_mir_code_file);
+	if (config().debug.dump_mir_code) {
+		angelsea_assert(config().debug.dump_mir_code_file != nullptr);
+		MIR_output(m_mir, config().debug.dump_mir_code_file);
 	}
 
 	MIR_gen_finish(m_mir);
@@ -95,7 +95,7 @@ bool MirJit::compile_c_to_mir(BytecodeToC& c_generator) {
 	}};
 
 	c2mir_options c_options{
-	    .message_file       = config().c2mir_diagnostic_file,
+	    .message_file       = config().debug.c2mir_diagnostic_file,
 	    .debug_p            = false,
 	    .verbose_p          = false,
 	    .ignore_warnings_p  = false,
@@ -184,9 +184,9 @@ bool MirJit::compile_c_module(
 	                                        void* raw_value) { MIR_load_external(m_mir, c_name, raw_value); });
 	c_generator.translate_module(internal_module_name, script_module, functions);
 
-	if (config().dump_c_code) {
-		angelsea_assert(config().dump_c_code_file != nullptr);
-		fputs(c_generator.source().c_str(), config().dump_c_code_file);
+	if (config().debug.dump_c_code) {
+		angelsea_assert(config().debug.dump_c_code_file != nullptr);
+		fputs(c_generator.source().c_str(), config().debug.dump_c_code_file);
 	}
 
 	InputData input_data(c_generator.source());

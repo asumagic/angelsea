@@ -25,30 +25,33 @@ struct JitConfig {
 	/// Negative values mean messages will not be printed.
 	LogTargets log_targets = {};
 
-	/// Whether to dump generated C code to stdout.
-	bool dump_c_code = false;
+	struct Debug {
+		/// Whether to dump generated C code to stdout.
+		bool dump_c_code = false;
 
-	/// What file to dump the C file into, if dump_c_code is set.
-	/// This is more intended for debugging than for processing the output.
-	FILE* dump_c_code_file = stdout;
+		/// What file to dump the C file into, if dump_c_code is set.
+		/// This is more intended for debugging than for processing the output.
+		FILE* dump_c_code_file = stdout;
 
-	/// Whether to dump optimized MIR code to stdout.
-	bool dump_mir_code = false;
+		/// Whether to dump optimized MIR code to stdout.
+		bool dump_mir_code = false;
 
-	/// What file to dump the MIR output into, if dump_mir_code is set.
-	/// This is more intended for debugging than for processing the output.
-	FILE* dump_mir_code_file = stdout;
+		/// What file to dump the MIR output into, if dump_mir_code is set.
+		/// This is more intended for debugging than for processing the output.
+		FILE* dump_mir_code_file = stdout;
 
-	/// What file to dump C compile errors into.
-	FILE* c2mir_diagnostic_file = stderr;
+		/// What file to dump C compile errors into.
+		FILE* c2mir_diagnostic_file = stderr;
 
-	/// MIR debugging level, as passed to `MIR_gen_set_debug_level`, to dump
-	/// verbose information on the commandline.
-	/// -1 disables them. As of writing this, meaningful values are -1, 0, 2, 4.
-	int mir_debug_level = -1;
+		/// MIR debugging level, as passed to `MIR_gen_set_debug_level`, to dump
+		/// verbose information on the commandline.
+		/// -1 disables them. As of writing this, meaningful values are -1, 0, 2, 4.
+		int mir_debug_level = -1;
 
-	/// What file to dump MIR debug logging into, if mir_debug_level >= 0.
-	FILE* mir_diagnostic_file = stderr;
+		/// What file to dump MIR debug logging into, if mir_debug_level >= 0.
+		FILE* mir_diagnostic_file = stderr;
+	};
+	Debug debug;
 
 	/// MIR optimization level, as passed to `MIR_gen_set_optimize_level`, to
 	/// balance between runtime speed and compile times (higher improves
