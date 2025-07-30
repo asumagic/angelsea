@@ -392,6 +392,26 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_RefCpyV: {
+		asCObjectType*    type = reinterpret_cast<asCObjectType*>(ins.pword0());
+		asSTypeBehaviour& beh  = type->beh;
+
+		if (!(type->flags & (asOBJ_NOCOUNT | asOBJ_VALUE))) {
+			emit_vm_fallback(fn, "can't handle release/addref for RefCpyV calls yet");
+			break;
+		}
+
+		emit(
+		    "\t\tasPWORD *dst = &ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n"
+		    "\t\tasPWORD src = ASEA_STACK_VAR(0).as_asPWORD;\n"
+		    "\t\t*dst = src;\n"
+		    "\t\tl_bc += 1+AS_PTR_SIZE;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+
+		break;
+	}
+
 	case asBC_CALL: {
 		// TODO: when possible, translate this to a JIT to JIT function call
 
@@ -757,7 +777,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_MODu64:
 	case asBC_LoadRObjR:
 	case asBC_LoadVObjR:
-	case asBC_RefCpyV:
 	case asBC_AllocMem:
 	case asBC_SetListSize:
 	case asBC_PshListElmnt:
@@ -1064,13 +1083,12 @@ typedef union {
 	double as_double;
 } asea_var;
 
-/* TODO: figure out how to implement these abstractions without having to know
-   about the C++ ABI (for the vtable, etc.) -- otherwise we have to always
-   interact via the runtime.hpp wrappers */
 typedef struct asSVMRegisters asSVMRegisters;
 typedef struct asIScriptContext asIScriptContext;
 typedef struct asITypeInfo asITypeInfo;
 typedef struct asCScriptFunction asCScriptFunction;
+typedef struct asCObjectType asCObjectType;
+typedef struct asSTypeBehaviour asSTypeBehaviour;
 
 /* Layout exactly mimics asSVMRegisters */
 typedef struct
