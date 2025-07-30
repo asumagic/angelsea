@@ -35,10 +35,13 @@ TEST_CASE("user classes", "[userclass][simpleuserclass]") {
 	REQUIRE(run("scripts/userclasses.as", "void handle_test()") == "hello\n123\n456\n789\n");
 	REQUIRE(run("scripts/userclasses.as", "void return_field_test()") == "hello\nworld\n");
 
-	// 'hello' displayed twice because of the copy construction
 	REQUIRE(
 	    run("scripts/userclasses.as", "void pass_by_value_test()") == "hello\n10\n20\n30\n40\n50\n60\n70\n80\n90\n100\n"
 	);
+}
+
+TEST_CASE("globals with user classes", "[userclass][globals][globalswithclasses]") {
+	REQUIRE(run("scripts/globalswithclasses.as", "void global_test()") == "123\n456\n789\n");
 }
 
 TEST_CASE("user class Vec3f", "[userclass][vec3f]") {
