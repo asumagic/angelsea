@@ -279,7 +279,7 @@ AddressSanitizer and static analysis to debug JIT bugs.
 - [BlindMindStudio's JIT compiler](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler)
 served its purpose, but it is unmaintained (although people have forked it), has
 way suboptimal and x86-only code generation, falls back to the interpreter
-often, and contains subtle bugs.
+often (in our usecase), and contains subtle bugs.
 - I previously worked on [asllvm](https://github.com/asumagic/asllvm).
 It was a functional proof-of-concept (in fact some of angelsea's infrastructure
 originates from it), but it was way too large in scope. It more or less intended
@@ -287,8 +287,10 @@ to take over the entire interpreter, which meant total coverage of *all* of AS'
 low-level semantics before it was any useful. Besides, LLVM is _huge_, breaks on
 almost every major update, and is rather unreasonable for an embeddable
 language.
-- Hazelight's UnrealEngine-AngelScript is more involved than I thought and
+- Hazelight's UnrealEngine-AngelScript is way more involved than I thought and
 includes a [C++ AOT transpiler](https://github.com/Hazelight/UnrealEngine-Angelscript/tree/e1bdb40e97da880ae907030dda65639d5a4b7b3d/Engine/Plugins/Angelscript/Source/AngelscriptCode/Private/StaticJIT).
+To my understanding it is tightly coupled to that project and its fork of AS,
+and does not feature an actual JIT compiler.
 - There is an [AOT compiler](https://github.com/quarnster/asaot), but it is
 unmaintained and I don't know what it is worth nowadays. Due to its approach, if
 AOT is fine for you, it might actually make sense to use.
