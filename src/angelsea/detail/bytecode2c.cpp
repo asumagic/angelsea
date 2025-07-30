@@ -410,6 +410,18 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_GETOBJREF: {
+		emit(
+		    "\t\tasPWORD *dst = &ASEA_STACK_VAR({WORD0}).as_asPWORD;\n"
+		    "\t\tasPWORD var_idx = *dst;\n"
+		    "\t\tasPWORD var_addr = ASEA_FRAME_VAR(var_idx).as_asPWORD;\n"
+		    "\t\tASEA_STACK_VAR({WORD0}).as_asPWORD = var_addr;\n"
+		    "\t\tl_bc++;\n",
+		    fmt::arg("WORD0", ins.word0())
+		);
+		break;
+	}
+
 	case asBC_RefCpyV: {
 		asCObjectType*    type = reinterpret_cast<asCObjectType*>(ins.pword0());
 		asSTypeBehaviour& beh  = type->beh;
@@ -716,7 +728,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_GETOBJ:
 	case asBC_REFCPY:
 	case asBC_CHKREF:
-	case asBC_GETOBJREF:
 	case asBC_GETREF:
 	case asBC_PshNull:
 	case asBC_ClrVPtr:
