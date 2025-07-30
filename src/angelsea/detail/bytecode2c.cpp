@@ -473,7 +473,6 @@ void BytecodeToC::translate_instruction(
 		);
 		break;
 	}
-
 	case asBC_RDR2: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
@@ -484,7 +483,6 @@ void BytecodeToC::translate_instruction(
 		);
 		break;
 	}
-
 	case asBC_RDR4: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
@@ -494,7 +492,6 @@ void BytecodeToC::translate_instruction(
 		);
 		break;
 	}
-
 	case asBC_RDR8: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
