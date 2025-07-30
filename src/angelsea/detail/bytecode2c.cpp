@@ -813,6 +813,54 @@ void BytecodeToC::translate_instruction(
 		emit_primitive_cast_stack(ins, var_types::f64, var_types::f32, false);
 		break;
 	}
+	case asBC_fTOi64: {
+		emit_primitive_cast_stack(ins, var_types::f32, var_types::s64, false);
+		break;
+	}
+	case asBC_dTOi64: {
+		emit_primitive_cast_stack(ins, var_types::f64, var_types::s64, true);
+		break;
+	}
+	case asBC_fTOu64: {
+		emit_primitive_cast_stack(ins, var_types::f32, var_types::u64, false);
+		break;
+	}
+	case asBC_dTOu64: {
+		emit_primitive_cast_stack(ins, var_types::f64, var_types::u64, true);
+		break;
+	}
+	case asBC_i64TOf: {
+		emit_primitive_cast_stack(ins, var_types::s64, var_types::f32, false);
+		break;
+	}
+	case asBC_u64TOf: {
+		emit_primitive_cast_stack(ins, var_types::u64, var_types::f32, false);
+		break;
+	}
+	case asBC_i64TOd: {
+		emit_primitive_cast_stack(ins, var_types::s64, var_types::f64, true);
+		break;
+	}
+	case asBC_u64TOd: {
+		emit_primitive_cast_stack(ins, var_types::u64, var_types::f64, true);
+		break;
+	}
+	case asBC_dTOi: {
+		emit_primitive_cast_stack(ins, var_types::f64, var_types::s32, false);
+		break;
+	}
+	case asBC_dTOu: {
+		emit_primitive_cast_stack(ins, var_types::f64, var_types::u32, false);
+		break;
+	}
+	case asBC_iTOd: {
+		emit_primitive_cast_stack(ins, var_types::s32, var_types::f64, false);
+		break;
+	}
+	case asBC_uTOd: {
+		emit_primitive_cast_stack(ins, var_types::u32, var_types::f64, false);
+		break;
+	}
 
 	case asBC_PSF:
 	case asBC_SwapPtr:
@@ -865,10 +913,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_WRTV8:
 	case asBC_LDG:
 	case asBC_CmpPtr:
-	case asBC_dTOi:
-	case asBC_dTOu:
-	case asBC_iTOd:
-	case asBC_uTOd:
 	case asBC_DIVi:
 	case asBC_MODi:
 	case asBC_ADDf:
@@ -893,14 +937,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_iTOb:
 	case asBC_iTOw:
 	case asBC_Cast:
-	case asBC_fTOi64:
-	case asBC_dTOi64:
-	case asBC_fTOu64:
-	case asBC_dTOu64:
-	case asBC_i64TOf:
-	case asBC_u64TOf:
-	case asBC_i64TOd:
-	case asBC_u64TOd:
 	case asBC_NEGi64:
 	case asBC_DIVi64:
 	case asBC_MODi64:
