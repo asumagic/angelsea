@@ -254,7 +254,7 @@ void BytecodeToC::translate_instruction(
 	case asBC_PshC4: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -1);\n"
-		    "\t\tASEA_STACK_VAR(0).as_asDWORD = {DWORD0};\n"
+		    "\t\tASEA_STACK_TOP.as_asDWORD = {DWORD0};\n"
 		    "\t\tl_bc += 2;\n",
 		    fmt::arg("DWORD0", ins.dword0())
 		);
@@ -263,7 +263,7 @@ void BytecodeToC::translate_instruction(
 	case asBC_PshC8: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -2);\n"
-		    "\t\tASEA_STACK_VAR(0).as_asQWORD = {QWORD0};\n"
+		    "\t\tASEA_STACK_TOP.as_asQWORD = {QWORD0};\n"
 		    "\t\tl_bc += 3;\n",
 		    fmt::arg("QWORD0", ins.qword0())
 		);
@@ -273,7 +273,7 @@ void BytecodeToC::translate_instruction(
 	case asBC_PshV4: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -1);\n"
-		    "\t\tASEA_STACK_VAR(0).as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n"
+		    "\t\tASEA_STACK_TOP.as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n"
 		    "\t\t++l_bc;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -282,7 +282,7 @@ void BytecodeToC::translate_instruction(
 	case asBC_PshV8: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -2);\n"
-		    "\t\tASEA_STACK_VAR(0).as_asQWORD = ASEA_FRAME_VAR({SWORD0}).as_asQWORD;\n"
+		    "\t\tASEA_STACK_TOP.as_asQWORD = ASEA_FRAME_VAR({SWORD0}).as_asQWORD;\n"
 		    "\t\t++l_bc;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -291,7 +291,7 @@ void BytecodeToC::translate_instruction(
 	case asBC_PshVPtr: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
-		    "\t\tASEA_STACK_VAR(0).as_asPWORD = ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n"
+		    "\t\tASEA_STACK_TOP.as_asPWORD = ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n"
 		    "\t\t++l_bc;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -372,7 +372,7 @@ void BytecodeToC::translate_instruction(
 		std::string fn_symbol = emit_global_lookup(fn, ins, reinterpret_cast<void**>(ins.pword0()), false);
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
-		    "\t\tASEA_STACK_VAR(0).as_asPWORD = (asPWORD)&{OBJ};\n"
+		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD)&{OBJ};\n"
 		    "\t\tl_bc += 1+AS_PTR_SIZE;\n",
 		    fmt::arg("OBJ", fn_symbol)
 		);
@@ -384,7 +384,7 @@ void BytecodeToC::translate_instruction(
 		std::string fn_symbol = emit_global_lookup(fn, ins, reinterpret_cast<void**>(ins.pword0()), false);
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
-		    "\t\tASEA_STACK_VAR(0).as_asPWORD = (asPWORD){OBJ};\n"
+		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD){OBJ};\n"
 		    "\t\tl_bc += 1+AS_PTR_SIZE;\n",
 		    fmt::arg("OBJ", fn_symbol)
 		);
@@ -403,7 +403,7 @@ void BytecodeToC::translate_instruction(
 
 		emit(
 		    "\t\tasPWORD *dst = &ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n"
-		    "\t\tasPWORD src = ASEA_STACK_VAR(0).as_asPWORD;\n"
+		    "\t\tasPWORD src = ASEA_STACK_TOP.as_asPWORD;\n"
 		    "\t\t*dst = src;\n"
 		    "\t\tl_bc += 1+AS_PTR_SIZE;\n",
 		    fmt::arg("SWORD0", ins.sword0())
@@ -1123,6 +1123,7 @@ void asea_call_script_function(void* vm_registers, void* function);
 #define ASEA_STACK_DWORD_OFFSET(base, dword_offset) (void*)((char*)(base) + ((dword_offset) * 4))
 #define ASEA_FRAME_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(l_fp, -(dword_offset))))
 #define ASEA_STACK_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(l_sp, (dword_offset))))
+#define ASEA_STACK_TOP (*(asea_var*)(l_sp))
 
 /* end of angelsea static header */
 
