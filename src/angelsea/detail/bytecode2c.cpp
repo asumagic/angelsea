@@ -145,7 +145,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		emit(
 		    "\tasea_debug_message((asSVMRegisters*)regs, \"TRACE FUNCTION: module {}: {}:{}:{}: {}\");\n\n",
 		    internal_module_name,
-		    escape_c_literal(section),
+		    escape_c_literal(section != nullptr ? section : "<anon>"),
 		    row,
 		    col,
 		    escape_c_literal(fn.GetDeclaration(true, true, true))
