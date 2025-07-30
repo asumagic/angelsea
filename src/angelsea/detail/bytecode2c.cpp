@@ -2,6 +2,7 @@
 
 #include "angelscript.h"
 #include "angelsea/detail/bytecodeinstruction.hpp"
+#include "as_property.h"
 #include <fmt/format.h>
 
 #include <angelsea/detail/bytecode2c.hpp>
@@ -368,36 +369,13 @@ void BytecodeToC::translate_instruction(
 	}
 
 	case asBC_PGA: {
-		asSMapNode<void*, asCGlobalProperty*>* var_cursor = nullptr;
-		void*                                  pointer    = reinterpret_cast<void*>(ins.pword0());
-		if (engine.varAddressMap.MoveTo(&var_cursor, pointer)) {
-			// if (m_on_map_extern_callback) {
-			// 	m_on_map_extern_callback(fn_symbol.c_str(), ExternGlobalVariable{}, function);
-			// }
-
-			// emit(
-
-			// );
-			emit_vm_fallback(fn, "todo");
-		}
-
-		// at that point, it has to be a string constant pointer
-		const std::string fn_symbol
-		    = fmt::format("asea_strobj{}_{}", m_state.string_constant_idx, entry_point_name(fn));
-
+		std::string fn_symbol = emit_global_lookup(fn, ins, reinterpret_cast<void**>(ins.pword0()), false);
 		emit(
-		    "\t\textern char {OBJ};\n"
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
 		    "\t\tASEA_STACK_VAR(0).as_asPWORD = (asPWORD)&{OBJ};\n"
 		    "\t\tl_bc += 1+AS_PTR_SIZE;\n",
 		    fmt::arg("OBJ", fn_symbol)
 		);
-
-		if (m_on_map_extern_callback) {
-			m_on_map_extern_callback(fn_symbol.c_str(), ExternStringConstant{pointer}, pointer);
-		}
-
-		++m_state.string_constant_idx;
 
 		break;
 	}
@@ -832,6 +810,45 @@ void BytecodeToC::emit_primitive_cast_stack(BytecodeInstruction ins, VarType src
 	    fmt::arg("SRC", in_place ? ins.sword0() : ins.sword1()),
 	    fmt::arg("INSTRUCTION_LENGTH", in_place ? 1 : 2)
 	);
+}
+
+std::string
+BytecodeToC::emit_global_lookup(asIScriptFunction& fn, BytecodeInstruction ins, void** pointer, bool global_var_only) {
+	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
+
+	std::string                            fn_symbol;
+	asSMapNode<void*, asCGlobalProperty*>* var_cursor = nullptr;
+	if (engine.varAddressMap.MoveTo(&var_cursor, pointer)) {
+		asCGlobalProperty* property = engine.varAddressMap.GetValue(var_cursor);
+		angelsea_assert(property != nullptr);
+
+		fn_symbol = fmt::format("asea_global{}", property->id);
+
+		if (m_on_map_extern_callback) {
+			m_on_map_extern_callback(
+			    fn_symbol.c_str(),
+			    ExternGlobalVariable{.ptr = *pointer, .property = property},
+			    pointer
+			);
+		}
+	} else {
+		// pointer to a string constant (of an arbitrary registered string type)
+
+		// TODO: deduplicate references to identical strings
+
+		angelsea_assert(!global_var_only);
+
+		fn_symbol = fmt::format("asea_strobj{}_{}", m_state.string_constant_idx, entry_point_name(fn));
+
+		if (m_on_map_extern_callback) {
+			m_on_map_extern_callback(fn_symbol.c_str(), ExternStringConstant{*pointer}, pointer);
+		}
+
+		++m_state.string_constant_idx;
+	}
+
+	emit("\t\textern char {};\n", fn_symbol);
+	return fn_symbol;
 }
 
 void BytecodeToC::emit_cond_branch(BytecodeInstruction ins, std::size_t instruction_length, std::string_view test) {

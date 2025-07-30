@@ -5,6 +5,7 @@
 #include <angelscript.h>
 #include <angelsea/config.hpp>
 #include <angelsea/detail/bytecodeinstruction.hpp>
+#include <as_property.h>
 #include <fmt/format.h>
 #include <functional>
 #include <span>
@@ -41,8 +42,8 @@ class BytecodeToC {
 		int id;
 	};
 	struct ExternGlobalVariable {
-		// TODO: seems like you can extract the info from the ptr via FindGlobalPropPtrIndex
-		void* ptr;
+		void*              ptr;
+		asCGlobalProperty* property;
 	};
 	/// An external string constant, whose type depends on the registered string
 	/// factory.
@@ -106,6 +107,9 @@ class BytecodeToC {
 
 	void emit_load_vm_registers();
 	void emit_save_vm_registers();
+
+	std::string
+	emit_global_lookup(asIScriptFunction& fn, BytecodeInstruction ins, void** pointer, bool global_var_only);
 
 	void emit_cond_branch(BytecodeInstruction ins, std::size_t instruction_length, std::string_view test);
 	void emit_test(BytecodeInstruction ins, std::string_view op_with_rhs_0);
