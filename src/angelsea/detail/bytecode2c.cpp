@@ -380,6 +380,18 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_PshGPtr: {
+		std::string fn_symbol = emit_global_lookup(fn, ins, reinterpret_cast<void**>(ins.pword0()), false);
+		emit(
+		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tASEA_STACK_VAR(0).as_asPWORD = (asPWORD){OBJ};\n"
+		    "\t\tl_bc += 1+AS_PTR_SIZE;\n",
+		    fmt::arg("OBJ", fn_symbol)
+		);
+
+		break;
+	}
+
 	case asBC_CALL: {
 		// TODO: when possible, translate this to a JIT to JIT function call
 
@@ -625,7 +637,6 @@ void BytecodeToC::translate_instruction(
 	}
 
 	case asBC_PopPtr:
-	case asBC_PshGPtr:
 	case asBC_PSF:
 	case asBC_SwapPtr:
 	case asBC_NOT:
@@ -847,7 +858,7 @@ BytecodeToC::emit_global_lookup(asIScriptFunction& fn, BytecodeInstruction ins, 
 		++m_state.string_constant_idx;
 	}
 
-	emit("\t\textern char {};\n", fn_symbol);
+	emit("\t\textern void* {};\n", fn_symbol);
 	return fn_symbol;
 }
 
