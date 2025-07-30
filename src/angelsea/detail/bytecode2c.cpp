@@ -573,6 +573,14 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_DECi8: {
+		emit(
+		    "\t\t--ASEA_VALUEREG_DEREF().as_asINT8;\n"
+		    "\t\tl_bc++;\n"
+		);
+		break;
+	}
+
 	case asBC_ADDi: {
 		emit_arithmetic_simple_stack_stack(ins, "+", var_types::s32, var_types::s32, var_types::s32);
 		break;
@@ -719,7 +727,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_INCi16:
 	case asBC_INCi8:
 	case asBC_DECi16:
-	case asBC_DECi8:
 	case asBC_INCi:
 	case asBC_DECi:
 	case asBC_INCf:
@@ -1128,6 +1135,7 @@ typedef union {
 	asPWORD as_asPWORD;
 	float as_float;
 	double as_double;
+	void* as_ptr;
 } asea_var;
 
 typedef struct asSVMRegisters asSVMRegisters;
@@ -1171,6 +1179,7 @@ void asea_call_script_function(void* vm_registers, void* function);
 #define ASEA_FRAME_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(l_fp, -(dword_offset))))
 #define ASEA_STACK_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(l_sp, (dword_offset))))
 #define ASEA_STACK_TOP (*(asea_var*)(l_sp))
+#define ASEA_VALUEREG_DEREF() (*(asea_var*)(regs->valueRegister.as_ptr))
 
 /* end of angelsea static header */
 
