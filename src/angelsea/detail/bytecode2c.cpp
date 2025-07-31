@@ -567,6 +567,18 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_NOT: {
+		emit(
+		    "\t\tasea_var *var = &ASEA_FRAME_VAR({SWORD0});\n"
+		    "\t\tasDWORD value = var->as_asDWORD;\n"
+		    "\t\tvar->as_asDWORD = 0;\n"
+		    "\t\tvar->as_asBYTE = !value;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		emit_auto_bc_inc(ins);
+		break;
+	}
+
 	case asBC_JZ:           emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 == 0"); break;
 	case asBC_JLowZ:        emit_cond_branch_ins(ins, "regs->valueRegister.as_asBYTE == 0"); break;
 	case asBC_JNZ:          emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 != 0"); break;
@@ -659,7 +671,6 @@ void BytecodeToC::translate_instruction(
 
 	case asBC_PSF:
 	case asBC_SwapPtr:
-	case asBC_NOT:
 	case asBC_PshG4:
 	case asBC_LdGRdR4:
 	case asBC_RET:
@@ -796,8 +807,9 @@ void BytecodeToC::emit_primitive_cast_var_ins(BytecodeInstruction ins, VarType s
 	if (src.byte_count != dst.byte_count && dst.byte_count < 4) {
 		emit(
 		    "\t\t{DST_TYPE} value = ASEA_FRAME_VAR({SRC}).as_{SRC_TYPE};\n"
-		    "\t\tASEA_FRAME_VAR({DST}).as_asDWORD = 0;\n"
-		    "\t\tASEA_FRAME_VAR({DST}).as_{DST_TYPE} = value;\n",
+		    "\t\tasea_var *dst = &ASEA_FRAME_VAR({DST});\n"
+		    "\t\tdst->as_asDWORD = 0;\n"
+		    "\t\tdst->as_{DST_TYPE} = value;\n",
 		    fmt::arg("DST_TYPE", dst.type),
 		    fmt::arg("SRC_TYPE", src.type),
 		    fmt::arg("DST", ins.sword0()),
