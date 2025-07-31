@@ -243,9 +243,17 @@ void BytecodeToC::translate_instruction(
 	}
 
 	switch (ins.info->bc) {
-	case asBC_JitEntry: emit_auto_bc_inc(ins); break;
+	case asBC_JitEntry: {
+		emit_auto_bc_inc(ins);
+		break;
+	}
 
-	case asBC_SUSPEND:  {
+	case asBC_STR: {
+		emit_vm_fallback(fn, "deprecated instruction");
+		break;
+	}
+
+	case asBC_SUSPEND: {
 		log(m_config,
 		    m_script_engine,
 		    fn,
@@ -664,7 +672,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_JMPP:
 	case asBC_PopRPtr:
 	case asBC_PshRPtr:
-	case asBC_STR:
 	case asBC_CALLSYS:
 	case asBC_CALLBND:
 	case asBC_ALLOC:
