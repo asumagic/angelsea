@@ -793,15 +793,22 @@ void BytecodeToC::emit_load_vm_registers() {
 }
 
 void BytecodeToC::emit_primitive_cast_var_ins(BytecodeInstruction ins, VarType src, VarType dst, bool in_place) {
-	VarType dst_slot_type = dst;
 	if (src.byte_count != dst.byte_count && dst.byte_count < 4) {
-		// zero-extend to clear the upper bytes
-		dst_slot_type = var_types::u32;
+		emit(
+		    "\t\t{DST_TYPE} value = ASEA_FRAME_VAR({SRC}).as_{SRC_TYPE};\n"
+		    "\t\tASEA_FRAME_VAR({DST}).as_asDWORD = 0;\n"
+		    "\t\tASEA_FRAME_VAR({DST}).as_{DST_TYPE} = value;\n",
+		    fmt::arg("DST_TYPE", dst.type),
+		    fmt::arg("SRC_TYPE", src.type),
+		    fmt::arg("DST", ins.sword0()),
+		    fmt::arg("SRC", in_place ? ins.sword0() : ins.sword1())
+		);
+		emit_auto_bc_inc(ins);
+		return;
 	}
 	emit(
-	    "\t\tASEA_FRAME_VAR({DST}).as_{DST_SLOT_TYPE} = ({DST_TYPE})ASEA_FRAME_VAR({SRC}).as_{SRC_TYPE};\n",
+	    "\t\tASEA_FRAME_VAR({DST}).as_{DST_TYPE} = ASEA_FRAME_VAR({SRC}).as_{SRC_TYPE};\n",
 	    fmt::arg("DST_TYPE", dst.type),
-	    fmt::arg("DST_SLOT_TYPE", dst_slot_type.type),
 	    fmt::arg("SRC_TYPE", src.type),
 	    fmt::arg("DST", ins.sword0()),
 	    fmt::arg("SRC", in_place ? ins.sword0() : ins.sword1())
