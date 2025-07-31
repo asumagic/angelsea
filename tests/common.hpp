@@ -32,13 +32,18 @@ struct EngineContext {
 
 	asIScriptModule& build(const char* name, const char* script_path);
 	void             prepare_execution();
-	void             run(asIScriptModule& module, const char* entry_point);
+	void run(asIScriptModule& module, const char* entry_point, asEContextState desired_state = asEXECUTION_FINISHED);
 
 	asIScriptEngine* engine;
 	angelsea::Jit    jit;
 };
 
-std::string run(const char* path, const char* entry = "void main()");
-std::string run(EngineContext& context, const char* path, const char* entry = "void main()");
-std::string run_string(const char* str);
-std::string run_string(EngineContext& context, const char* str);
+std::string
+run(const char* path, const char* entry = "void main()", asEContextState desired_state = asEXECUTION_FINISHED);
+std::string
+            run(EngineContext&  context,
+                const char*     path,
+                const char*     entry         = "void main()",
+                asEContextState desired_state = asEXECUTION_FINISHED);
+std::string run_string(const char* str, asEContextState desired_state = asEXECUTION_FINISHED);
+std::string run_string(EngineContext& context, const char* str, asEContextState desired_state = asEXECUTION_FINISHED);

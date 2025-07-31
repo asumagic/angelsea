@@ -107,9 +107,6 @@ class BytecodeToC {
 
 	void emit_auto_bc_inc(BytecodeInstruction ins);
 
-	void emit_load_vm_registers();
-	void emit_save_vm_registers();
-
 	std::string emit_global_lookup(asIScriptFunction& fn, void** pointer, bool global_var_only);
 
 	/// Emits the complete handler for a conditional relative branching instruction.
@@ -147,6 +144,11 @@ class BytecodeToC {
 	    std::string_view    rhs_expr,
 	    VarType             dst
 	);
+
+	/// Emits the complete handler for a division operation between two float variables on the stack,
+	/// outputting to a third one. This is handled separately from regular binop because these instructions can raise
+	/// exceptions.
+	void emit_div_var_float_ins(BytecodeInstruction ins, VarType type);
 
 	const JitConfig& m_config;
 	asIScriptEngine& m_script_engine;

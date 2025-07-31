@@ -156,8 +156,9 @@ typedef struct
     The following definitions are part of the angelsea runtime.hpp
 */
 
-void asea_call_script_function(void* vm_registers, void* function);
+void asea_call_script_function(asSVMRegisters* vm_registers, void* function);
 void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
+void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text);
 
 /*
     The following definitions are additional angelsea helpers

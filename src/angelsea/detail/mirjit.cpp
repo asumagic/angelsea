@@ -78,8 +78,11 @@ bool MirJit::compile_all() {
 }
 
 void MirJit::bind_runtime() {
-	MIR_load_external(m_mir, "asea_call_script_function", reinterpret_cast<void*>(asea_call_script_function));
-	MIR_load_external(m_mir, "asea_debug_message", reinterpret_cast<void*>(asea_debug_message));
+#define ASEA_BIND_MIR(name) MIR_load_external(m_mir, #name, reinterpret_cast<void*>(name))
+	ASEA_BIND_MIR(asea_call_script_function);
+	ASEA_BIND_MIR(asea_debug_message);
+	ASEA_BIND_MIR(asea_set_internal_exception);
+#undef ASEA_BIND_MIR
 }
 
 bool MirJit::compile_c_to_mir(BytecodeToC& c_generator) {
@@ -108,8 +111,9 @@ bool MirJit::compile_c_to_mir(BytecodeToC& c_generator) {
 	    .prepro_output_file = nullptr,
 	    .output_file_name   = nullptr,
 	    .macro_commands_num = macros.size(),
+	    .include_dirs_num   = 0,
 	    .macro_commands     = macros.data(),
-	    .include_dirs       = include_dirs.data()
+	    .include_dirs       = include_dirs.data(),
 	};
 
 	auto modules = compute_module_map();
@@ -220,10 +224,10 @@ bool MirJit::link_compiled_functions(const std::unordered_map<std::string, asISc
 
 		void (*jit_interface)(MIR_context_t ctx, MIR_item_t item);
 		switch (config().mir_compilation_mode) {
-		case JitConfig::MirCompilationMode::Lazy: jit_interface = MIR_set_lazy_gen_interface; break;
+		case JitConfig::MirCompilationMode::Lazy:   jit_interface = MIR_set_lazy_gen_interface; break;
 		case JitConfig::MirCompilationMode::LazyBB: jit_interface = MIR_set_lazy_bb_gen_interface; break;
 		case JitConfig::MirCompilationMode::Normal:
-		default: jit_interface = MIR_set_gen_interface;
+		default:                                    jit_interface = MIR_set_gen_interface;
 		}
 		MIR_link(m_mir, jit_interface, nullptr);
 

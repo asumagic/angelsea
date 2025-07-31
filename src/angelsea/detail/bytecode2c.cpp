@@ -16,6 +16,18 @@
 
 namespace angelsea::detail {
 
+// TODO: fix indent level for all of those that use this...
+
+static constexpr std::string_view save_registers_sequence
+    = "\t\tregs->programPointer = l_bc;\n"
+      "\t\tregs->stackPointer = l_sp;\n"
+      "\t\tregs->stackFramePointer = l_fp;\n";
+
+static constexpr std::string_view load_registers_sequence
+    = "\t\tl_bc = regs->programPointer;\n"
+      "\t\tl_sp = regs->stackPointer;\n"
+      "\t\tl_fp = regs->stackFramePointer;\n";
+
 BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string jit_fn_prefix) :
     m_config(config), m_script_engine(engine), m_jit_fn_prefix(std::move(jit_fn_prefix)) {
 	m_state.buffer.reserve(1024 * 64);
@@ -85,9 +97,10 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	    "\tasDWORD *l_bc;\n"
 	    "\tvoid *l_sp;\n"
 	    "\tvoid *l_fp;\n"
-	    // "#endif\n"
+	    "{}",
+	    // "#endif\n",
+	    load_registers_sequence
 	);
-	emit_load_vm_registers();
 
 	// Transpiled functions are compiled to be JIT entry points for the
 	// AngelScript VM.
@@ -536,15 +549,13 @@ void BytecodeToC::translate_instruction(
 		// JitEntry handler will branch into the correct instruction.
 		emit(
 		    "\t\textern char {FN};\n"
-		    "\t\tl_bc += 2;\n",
-		    fmt::arg("FN", fn_symbol)
-		);
-		emit_save_vm_registers();
-		emit(
+		    "\t\tl_bc += 2;\n"
+		    "{SAVE_REGS}"
 		    "\t\tasea_call_script_function(_regs, (asCScriptFunction*)&{FN});\n"
 		    "\t\treturn;\n",
 		    fmt::arg("FN", fn_symbol),
-		    fmt::arg("FN_ID", fn_idx)
+		    fmt::arg("FN_ID", fn_idx),
+		    fmt::arg("SAVE_REGS", save_registers_sequence)
 		);
 		break;
 	}
@@ -631,6 +642,9 @@ void BytecodeToC::translate_instruction(
 	case asBC_ADDd:         emit_binop_var_var_ins(ins, "+", f64, f64, f64); break;
 	case asBC_SUBd:         emit_binop_var_var_ins(ins, "-", f64, f64, f64); break;
 	case asBC_MULd:         emit_binop_var_var_ins(ins, "*", f64, f64, f64); break;
+
+	case asBC_DIVf:         emit_div_var_float_ins(ins, f32); break;
+	case asBC_DIVd:         emit_div_var_float_ins(ins, f64); break;
 
 	case asBC_BNOT64:       emit_unop_var_inplace_ins(ins, "~", u64); break;
 	case asBC_BAND64:       emit_binop_var_var_ins(ins, "&", u64, u64, u64); break;
@@ -723,9 +737,7 @@ void BytecodeToC::translate_instruction(
 	case asBC_CmpPtr:
 	case asBC_DIVi:
 	case asBC_MODi:
-	case asBC_DIVf:
 	case asBC_MODf:
-	case asBC_DIVd:
 	case asBC_MODd:
 	case asBC_ADDIf:
 	case asBC_SUBIf:
@@ -784,29 +796,13 @@ void BytecodeToC::emit_auto_bc_inc(BytecodeInstruction ins) { emit("\t\tl_bc += 
 void BytecodeToC::emit_vm_fallback([[maybe_unused]] asIScriptFunction& fn, std::string_view reason) {
 	++m_state.fallback_count;
 
-	emit_save_vm_registers();
+	emit("{}", save_registers_sequence);
 
 	if (m_config.c.human_readable) {
 		emit("\t\treturn; /* {} */\n", reason);
 	} else {
 		emit("\t\treturn;\n");
 	}
-}
-
-void BytecodeToC::emit_save_vm_registers() {
-	emit(
-	    "\t\tregs->programPointer = l_bc;\n"
-	    "\t\tregs->stackPointer = l_sp;\n"
-	    "\t\tregs->stackFramePointer = l_fp;\n"
-	);
-}
-
-void BytecodeToC::emit_load_vm_registers() {
-	emit(
-	    "\t\tl_bc = regs->programPointer;\n"
-	    "\t\tl_sp = regs->stackPointer;\n"
-	    "\t\tl_fp = regs->stackFramePointer;\n"
-	);
 }
 
 void BytecodeToC::emit_primitive_cast_var_ins(BytecodeInstruction ins, VarType src, VarType dst) {
@@ -925,8 +921,7 @@ void BytecodeToC::emit_binop_var_var_ins(
 	emit(
 	    "\t\t{LHS_TYPE} lhs = ASEA_FRAME_VAR({SWORD1}).as_{LHS_TYPE};\n"
 	    "\t\t{RHS_TYPE} rhs = ASEA_FRAME_VAR({SWORD2}).as_{RHS_TYPE};\n"
-	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{RET_TYPE} = lhs {OP} rhs;\n"
-	    "\t\tl_bc += 2;\n",
+	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{RET_TYPE} = lhs {OP} rhs;\n",
 	    fmt::arg("LHS_TYPE", lhs.type),
 	    fmt::arg("RHS_TYPE", rhs.type),
 	    fmt::arg("RET_TYPE", dst.type),
@@ -935,6 +930,7 @@ void BytecodeToC::emit_binop_var_var_ins(
 	    fmt::arg("SWORD1", ins.sword1()),
 	    fmt::arg("SWORD2", ins.sword2())
 	);
+	emit_auto_bc_inc(ins);
 }
 
 void BytecodeToC::emit_binop_var_imm_ins(
@@ -946,8 +942,7 @@ void BytecodeToC::emit_binop_var_imm_ins(
 ) {
 	emit(
 	    "\t\t{LHS_TYPE} lhs = ASEA_FRAME_VAR({SWORD1}).as_{LHS_TYPE};\n"
-	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{DST_TYPE} = lhs {OP} ({RHS_EXPR});\n"
-	    "\t\tl_bc += 3;\n",
+	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{DST_TYPE} = lhs {OP} ({RHS_EXPR});\n",
 	    fmt::arg("LHS_TYPE", lhs.type),
 	    fmt::arg("DST_TYPE", dst.type),
 	    fmt::arg("OP", op),
@@ -955,6 +950,25 @@ void BytecodeToC::emit_binop_var_imm_ins(
 	    fmt::arg("SWORD1", ins.sword1()),
 	    fmt::arg("RHS_EXPR", rhs_expr)
 	);
+	emit_auto_bc_inc(ins);
+}
+
+void BytecodeToC::emit_div_var_float_ins(BytecodeInstruction ins, VarType type) {
+	emit(
+	    "\t\t{TYPE} lhs = ASEA_FRAME_VAR({SWORD1}).as_{TYPE};\n"
+	    "\t\t{TYPE} divider = ASEA_FRAME_VAR({SWORD2}).as_{TYPE};\n"
+	    "\t\tif (divider == 0) {{\n"
+	    "{SAVE_REGS}"
+	    "\t\t\treturn;\n"
+	    "\t\t}}\n"
+	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = lhs / divider;\n",
+	    fmt::arg("TYPE", type.type),
+	    fmt::arg("SWORD0", ins.sword0()),
+	    fmt::arg("SWORD1", ins.sword1()),
+	    fmt::arg("SWORD2", ins.sword2()),
+	    fmt::arg("SAVE_REGS", save_registers_sequence)
+	);
+	emit_auto_bc_inc(ins);
 }
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset) {

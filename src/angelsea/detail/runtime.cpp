@@ -10,14 +10,21 @@
 #include <as_scriptengine.h>
 #include <as_scriptfunction.h>
 
+static asCContext&      asea_get_context(asSVMRegisters* regs) { return static_cast<asCContext&>(*regs->ctx); }
+static asCScriptEngine& asea_get_engine(asSVMRegisters* regs) {
+	return static_cast<asCScriptEngine&>(*asea_get_context(regs).GetEngine());
+}
+
 extern "C" {
 void asea_call_script_function(asSVMRegisters* vm_registers, asCScriptFunction& fn) {
-	auto& context = static_cast<asCContext&>(*vm_registers->ctx);
-	context.CallScriptFunction(&fn);
+	asea_get_context(vm_registers).CallScriptFunction(&fn);
 }
 
 void asea_debug_message(asSVMRegisters* vm_registers, const char* text) {
-	auto& context = static_cast<asCContext&>(*vm_registers->ctx);
-	context.GetEngine()->WriteMessage("<angelsea_debug>", 0, 0, asMSGTYPE_INFORMATION, text);
+	asea_get_engine(vm_registers).WriteMessage("<angelsea_debug>", 0, 0, asMSGTYPE_INFORMATION, text);
+}
+
+void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text) {
+	asea_get_context(vm_registers).SetInternalException(text);
 }
 }

@@ -19,4 +19,8 @@ void asea_call_script_function(asSVMRegisters* vm_registers, asCScriptFunction& 
 
 /// \brief Prints a debug message via the engine, only enabled when debugging.
 void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
+
+/// \brief Wrapper for asCContext::SetInternalException. `text` should typically
+/// be use one of the TXT_* AngelScript macros for the relevant exception.
+void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text);
 }

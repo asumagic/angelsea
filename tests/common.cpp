@@ -120,7 +120,7 @@ void EngineContext::prepare_execution() {
 #endif
 }
 
-void EngineContext::run(asIScriptModule& module, const char* entry_point) {
+void EngineContext::run(asIScriptModule& module, const char* entry_point, asEContextState desired_state) {
 	prepare_execution();
 
 	asIScriptFunction* function = module.GetFunctionByDecl(entry_point);
@@ -129,29 +129,29 @@ void EngineContext::run(asIScriptModule& module, const char* entry_point) {
 	asIScriptContext* context = engine->CreateContext();
 	ANGELSEA_TEST_CHECK(context->Prepare(function) >= 0);
 
-	ANGELSEA_TEST_CHECK(context->Execute() == asEXECUTION_FINISHED);
+	ANGELSEA_TEST_CHECK(context->Execute() == desired_state);
 
 	context->Release();
 }
 
-std::string run(const char* path, const char* entry) {
+std::string run(const char* path, const char* entry, asEContextState desired_state) {
 	EngineContext context;
-	return run(context, path, entry);
+	return run(context, path, entry, desired_state);
 }
 
-std::string run(EngineContext& context, const char* path, const char* entry) {
+std::string run(EngineContext& context, const char* path, const char* entry, asEContextState desired_state) {
 	out                     = {};
 	asIScriptModule& module = context.build(path, path);
-	context.run(module, entry);
+	context.run(module, entry, desired_state);
 	return out.str();
 }
 
-std::string run_string(const char* str) {
+std::string run_string(const char* str, asEContextState desired_state) {
 	EngineContext context;
-	return run_string(context, str);
+	return run_string(context, str, desired_state);
 }
 
-std::string run_string(EngineContext& context, const char* str) {
+std::string run_string(EngineContext& context, const char* str, asEContextState desired_state) {
 	out = {};
 
 	CScriptBuilder builder;
@@ -159,7 +159,7 @@ std::string run_string(EngineContext& context, const char* str) {
 	builder.AddSectionFromMemory("str", (std::string("void main() {") + str + ";}").c_str());
 	builder.BuildModule();
 
-	context.run(*context.engine->GetModule("build"), "void main()");
+	context.run(*context.engine->GetModule("build"), "void main()", desired_state);
 
 	return out.str();
 }
