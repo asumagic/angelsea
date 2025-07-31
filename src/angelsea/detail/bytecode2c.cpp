@@ -782,8 +782,16 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_ADDIi: {
+		emit_arithmetic_simple_stack_imm(ins, "+", var_types::s32, fmt::to_string(ins.int0(1)), var_types::s32);
+		break;
+	}
 	case asBC_SUBIi: {
 		emit_arithmetic_simple_stack_imm(ins, "-", var_types::s32, fmt::to_string(ins.int0(1)), var_types::s32);
+		break;
+	}
+	case asBC_MULIi: {
+		emit_arithmetic_simple_stack_imm(ins, "*", var_types::s32, fmt::to_string(ins.int0(1)), var_types::s32);
 		break;
 	}
 
@@ -951,8 +959,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_MULd:
 	case asBC_DIVd:
 	case asBC_MODd:
-	case asBC_ADDIi:
-	case asBC_MULIi:
 	case asBC_ADDIf:
 	case asBC_SUBIf:
 	case asBC_MULIf:
