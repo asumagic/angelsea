@@ -7,7 +7,7 @@
 class asCScriptFunction;
 
 // NOTE: all of these function declarations should be:
-// - mirrored in the generated header in bytecode2c.cpp
+// - mirrored in the generated header in runtimeheader.hpp
 // - registered to MIR in jitcompiler.cpp
 
 extern "C" {
