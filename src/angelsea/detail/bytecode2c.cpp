@@ -385,6 +385,16 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_PSF: {
+		emit(
+		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD)&ASEA_FRAME_VAR({SWORD0});\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		emit_auto_bc_inc(ins);
+		break;
+	}
+
 	case asBC_PGA: {
 		std::string fn_symbol = emit_global_lookup(fn, reinterpret_cast<void**>(ins.pword0()), false);
 		emit(
@@ -674,7 +684,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_iTOd:         emit_primitive_cast_var_ins(ins, s32, f64, false); break;
 	case asBC_uTOd:         emit_primitive_cast_var_ins(ins, u32, f64, false); break;
 
-	case asBC_PSF:
 	case asBC_SwapPtr:
 	case asBC_PshG4:
 	case asBC_LdGRdR4:
