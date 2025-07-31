@@ -92,8 +92,6 @@ class BytecodeToC {
 	std::size_t get_fallback_count() const { return m_state.fallback_count; }
 
 	private:
-	void write_header();
-
 	struct FunctionTranslationState {};
 
 	bool is_instruction_blacklisted(asEBCInstr bc) const;
