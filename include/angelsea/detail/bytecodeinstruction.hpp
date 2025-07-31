@@ -10,6 +10,7 @@ struct BytecodeInstruction {
 	asDWORD*         pointer;
 	const asSBCInfo* info;
 	std::size_t      offset;
+	std::size_t      size;
 
 	asDWORD& dword0(std::size_t offset = 0) { return asBC_DWORDARG(pointer + offset); }
 	int&     int0(std::size_t offset = 0) { return asBC_INTARG(pointer + offset); }

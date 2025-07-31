@@ -159,7 +159,9 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	emit_entry_dispatch(fn);
 
 	FunctionTranslationState state;
-	walk_bytecode(get_bytecode(fn), [&](BytecodeInstruction ins) { translate_instruction(fn, ins, state); });
+	for (BytecodeInstruction ins : get_bytecode(fn)) {
+		translate_instruction(fn, ins, state);
+	}
 
 	emit("}}\n");
 }
@@ -192,15 +194,15 @@ void BytecodeToC::emit_entry_dispatch(asIScriptFunction& fn) {
 	bool    last_was_jit_entry = false;
 	asPWORD jit_entry_id       = 1;
 
-	walk_bytecode(get_bytecode(fn), [&](BytecodeInstruction ins) {
+	for (BytecodeInstruction ins : get_bytecode(fn)) {
 		if (ins.info->bc != asBC_JitEntry) {
 			last_was_jit_entry = false;
-			return; // skip to the next
+			continue; // skip to the next
 		}
 
 		if (last_was_jit_entry) {
 			// ignore successive JIT entries
-			return;
+			continue;
 		}
 
 		ins.pword0() = jit_entry_id;
@@ -209,7 +211,7 @@ void BytecodeToC::emit_entry_dispatch(asIScriptFunction& fn) {
 		last_was_jit_entry = true;
 
 		++jit_entry_id;
-	});
+	}
 
 	emit("\t}}\n\n");
 }
