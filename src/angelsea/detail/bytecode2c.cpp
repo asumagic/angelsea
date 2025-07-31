@@ -559,65 +559,30 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
-	case asBC_JZ:     emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 == 0"); break;
-	case asBC_JLowZ:  emit_cond_branch_ins(ins, "regs->valueRegister.as_asBYTE == 0"); break;
-	case asBC_JNZ:    emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 != 0"); break;
-	case asBC_JLowNZ: emit_cond_branch_ins(ins, "regs->valueRegister.as_asBYTE != 0"); break;
-	case asBC_JS:     emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 < 0"); break;
-	case asBC_JNS:    emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 >= 0"); break;
-	case asBC_JP:     emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 > 0"); break;
-	case asBC_JNP:    emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 <= 0"); break;
+	case asBC_JZ:           emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 == 0"); break;
+	case asBC_JLowZ:        emit_cond_branch_ins(ins, "regs->valueRegister.as_asBYTE == 0"); break;
+	case asBC_JNZ:          emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 != 0"); break;
+	case asBC_JLowNZ:       emit_cond_branch_ins(ins, "regs->valueRegister.as_asBYTE != 0"); break;
+	case asBC_JS:           emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 < 0"); break;
+	case asBC_JNS:          emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 >= 0"); break;
+	case asBC_JP:           emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 > 0"); break;
+	case asBC_JNP:          emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 <= 0"); break;
 
-	case asBC_TZ:     emit_test_ins(ins, "=="); break;
-	case asBC_TNZ:    emit_test_ins(ins, "!="); break;
-	case asBC_TS:     emit_test_ins(ins, "<"); break;
-	case asBC_TNS:    emit_test_ins(ins, ">="); break;
-	case asBC_TP:     emit_test_ins(ins, ">"); break;
-	case asBC_TNP:    emit_test_ins(ins, "<"); break;
+	case asBC_TZ:           emit_test_ins(ins, "=="); break;
+	case asBC_TNZ:          emit_test_ins(ins, "!="); break;
+	case asBC_TS:           emit_test_ins(ins, "<"); break;
+	case asBC_TNS:          emit_test_ins(ins, ">="); break;
+	case asBC_TP:           emit_test_ins(ins, ">"); break;
+	case asBC_TNP:          emit_test_ins(ins, "<"); break;
 
-	case asBC_INCi8:  {
-		emit("\t\t++ASEA_VALUEREG_DEREF().as_asBYTE;\n");
-		emit_auto_bc_inc(ins);
-		break;
-	}
-	case asBC_DECi8: {
-		emit("\t\t--ASEA_VALUEREG_DEREF().as_asBYTE;\n");
-		emit_auto_bc_inc(ins);
-		break;
-	}
-
-	case asBC_INCi16: {
-		emit("\t\t++ASEA_VALUEREG_DEREF().as_asWORD;\n");
-		emit_auto_bc_inc(ins);
-		break;
-	}
-	case asBC_DECi16: {
-		emit("\t\t--ASEA_VALUEREG_DEREF().as_asWORD;\n");
-		emit_auto_bc_inc(ins);
-		break;
-	}
-
-	case asBC_INCi: {
-		emit("\t\t++ASEA_VALUEREG_DEREF().as_asDWORD;\n");
-		emit_auto_bc_inc(ins);
-		break;
-	}
-	case asBC_DECi: {
-		emit("\t\t--ASEA_VALUEREG_DEREF().as_asDWORD;\n");
-		emit_auto_bc_inc(ins);
-		break;
-	}
-
-	case asBC_INCi64: {
-		emit("\t\t++ASEA_VALUEREG_DEREF().as_asQWORD;\n");
-		emit_auto_bc_inc(ins);
-		break;
-	}
-	case asBC_DECi64: {
-		emit("\t\t--ASEA_VALUEREG_DEREF().as_asQWORD;\n");
-		emit_auto_bc_inc(ins);
-		break;
-	}
+	case asBC_INCi8:        emit_prefixop_valuereg_ins(ins, "++", u8); break;
+	case asBC_DECi8:        emit_prefixop_valuereg_ins(ins, "--", u8); break;
+	case asBC_INCi16:       emit_prefixop_valuereg_ins(ins, "++", u16); break;
+	case asBC_DECi16:       emit_prefixop_valuereg_ins(ins, "--", u16); break;
+	case asBC_INCi:         emit_prefixop_valuereg_ins(ins, "++", u32); break;
+	case asBC_DECi:         emit_prefixop_valuereg_ins(ins, "--", u32); break;
+	case asBC_INCi64:       emit_prefixop_valuereg_ins(ins, "++", u64); break;
+	case asBC_DECi64:       emit_prefixop_valuereg_ins(ins, "--", u64); break;
 
 	case asBC_ADDi:         emit_binop_var_var_ins(ins, "+", s32, s32, s32); break;
 	case asBC_SUBi:         emit_binop_var_var_ins(ins, "-", s32, s32, s32); break;
@@ -895,6 +860,11 @@ void BytecodeToC::emit_test_ins(BytecodeInstruction ins, std::string_view op_wit
 	    "VALUE_OF_BOOLEAN_TRUE : 0;\n",
 	    fmt::arg("OP", op_with_rhs_0)
 	);
+	emit_auto_bc_inc(ins);
+}
+
+void BytecodeToC::emit_prefixop_valuereg_ins(BytecodeInstruction ins, std::string_view op, VarType var) {
+	emit("\t\t{OP}ASEA_VALUEREG_DEREF().as_{TYPE};\n", fmt::arg("OP", op), fmt::arg("TYPE", var.type));
 	emit_auto_bc_inc(ins);
 }
 

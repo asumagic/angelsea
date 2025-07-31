@@ -114,6 +114,7 @@ class BytecodeToC {
 	void emit_cond_branch_ins(BytecodeInstruction ins, std::string_view test);
 	void emit_test_ins(BytecodeInstruction ins, std::string_view op_with_rhs_0);
 	void emit_primitive_cast_var_ins(BytecodeInstruction ins, VarType src, VarType dst, bool in_place);
+	void emit_prefixop_valuereg_ins(BytecodeInstruction ins, std::string_view op, VarType var);
 	void emit_unop_var_inplace_ins(BytecodeInstruction ins, std::string_view op, VarType var);
 	void emit_binop_var_var_ins(BytecodeInstruction ins, std::string_view op, VarType lhs, VarType rhs, VarType dst);
 	void emit_binop_var_imm_ins(
