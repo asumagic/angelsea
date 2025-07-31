@@ -608,6 +608,11 @@ void BytecodeToC::translate_instruction(
 	case asBC_INCd:         emit_prefixop_valuereg_ins(ins, "++", f64); break;
 	case asBC_DECd:         emit_prefixop_valuereg_ins(ins, "--", f64); break;
 
+	case asBC_NEGi:         emit_unop_var_inplace_ins(ins, "-", s32); break;
+	case asBC_NEGi64:       emit_unop_var_inplace_ins(ins, "-", s64); break;
+	case asBC_NEGf:         emit_unop_var_inplace_ins(ins, "-", f32); break;
+	case asBC_NEGd:         emit_unop_var_inplace_ins(ins, "-", f64); break;
+
 	case asBC_ADDi:         emit_binop_var_var_ins(ins, "+", s32, s32, s32); break;
 	case asBC_SUBi:         emit_binop_var_var_ins(ins, "-", s32, s32, s32); break;
 	case asBC_MULi:         emit_binop_var_var_ins(ins, "*", s32, s32, s32); break;
@@ -674,9 +679,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_PshG4:
 	case asBC_LdGRdR4:
 	case asBC_RET:
-	case asBC_NEGi:
-	case asBC_NEGf:
-	case asBC_NEGd:
 	case asBC_IncVi:
 	case asBC_DecVi:
 	case asBC_COPY:
@@ -728,7 +730,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_ChkNullV:
 	case asBC_CALLINTF:
 	case asBC_Cast:
-	case asBC_NEGi64:
 	case asBC_DIVi64:
 	case asBC_MODi64:
 	case asBC_CMPi64:
