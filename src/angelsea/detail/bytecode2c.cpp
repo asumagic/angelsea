@@ -243,12 +243,9 @@ void BytecodeToC::translate_instruction(
 	}
 
 	switch (ins.info->bc) {
-	case asBC_JitEntry: {
-		emit("\t\tl_bc += 1+AS_PTR_SIZE;\n");
-		break;
-	}
+	case asBC_JitEntry: emit_auto_bc_inc(ins); break;
 
-	case asBC_SUSPEND: {
+	case asBC_SUSPEND:  {
 		log(m_config,
 		    m_script_engine,
 		    fn,
@@ -261,47 +258,47 @@ void BytecodeToC::translate_instruction(
 	case asBC_PshC4: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -1);\n"
-		    "\t\tASEA_STACK_TOP.as_asDWORD = {DWORD0};\n"
-		    "\t\tl_bc += 2;\n",
+		    "\t\tASEA_STACK_TOP.as_asDWORD = {DWORD0};\n",
 		    fmt::arg("DWORD0", ins.dword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 	case asBC_PshC8: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -2);\n"
-		    "\t\tASEA_STACK_TOP.as_asQWORD = {QWORD0};\n"
-		    "\t\tl_bc += 3;\n",
+		    "\t\tASEA_STACK_TOP.as_asQWORD = {QWORD0};\n",
 		    fmt::arg("QWORD0", ins.qword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_PshV4: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -1);\n"
-		    "\t\tASEA_STACK_TOP.as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n"
-		    "\t\t++l_bc;\n",
+		    "\t\tASEA_STACK_TOP.as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 	case asBC_PshV8: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -2);\n"
-		    "\t\tASEA_STACK_TOP.as_asQWORD = ASEA_FRAME_VAR({SWORD0}).as_asQWORD;\n"
-		    "\t\t++l_bc;\n",
+		    "\t\tASEA_STACK_TOP.as_asQWORD = ASEA_FRAME_VAR({SWORD0}).as_asQWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 	case asBC_PshVPtr: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
-		    "\t\tASEA_STACK_TOP.as_asPWORD = ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n"
-		    "\t\t++l_bc;\n",
+		    "\t\tASEA_STACK_TOP.as_asPWORD = ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
@@ -310,115 +307,111 @@ void BytecodeToC::translate_instruction(
 	case asBC_SetV2:
 	case asBC_SetV4: {
 		emit(
-		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asDWORD = (asDWORD){DWORD0};\n"
-		    "\t\tl_bc += 2;\n",
+		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asDWORD = (asDWORD){DWORD0};\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("DWORD0", ins.dword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_SetV8: {
 		emit(
-		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asQWORD = (asQWORD){QWORD0};\n"
-		    "\t\tl_bc += 3;\n",
+		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asQWORD = (asQWORD){QWORD0};\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("QWORD0", ins.qword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_CpyVtoR4: {
 		emit(
 		    "\t\tregs->valueRegister.as_asDWORD = "
-		    "ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n"
-		    "\t\tl_bc++;\n",
+		    "ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_CpyRtoV4: {
 		emit(
 		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asDWORD = "
-		    "regs->valueRegister.as_asDWORD;\n"
-		    "\t\tl_bc++;\n",
+		    "regs->valueRegister.as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_CpyVtoV4: {
 		emit(
 		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asDWORD = "
-		    "ASEA_FRAME_VAR({SWORD1}).as_asDWORD;\n"
-		    "\t\tl_bc += 2;\n",
+		    "ASEA_FRAME_VAR({SWORD1}).as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("SWORD1", ins.sword1())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_CpyVtoV8: {
 		emit(
 		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asQWORD = "
-		    "ASEA_FRAME_VAR({SWORD1}).as_asQWORD;\n"
-		    "\t\tl_bc += 2;\n",
+		    "ASEA_FRAME_VAR({SWORD1}).as_asQWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("SWORD1", ins.sword1())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_LDV: {
 		emit(
 		    "\t\tregs->valueRegister.as_asPWORD = "
-		    "(asPWORD)&ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n"
-		    "\t\tl_bc++;\n",
+		    "(asPWORD)&ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_PGA: {
-		std::string fn_symbol = emit_global_lookup(fn, ins, reinterpret_cast<void**>(ins.pword0()), false);
+		std::string fn_symbol = emit_global_lookup(fn, reinterpret_cast<void**>(ins.pword0()), false);
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
-		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD)&{OBJ};\n"
-		    "\t\tl_bc += 1+AS_PTR_SIZE;\n",
+		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD)&{OBJ};\n",
 		    fmt::arg("OBJ", fn_symbol)
 		);
-
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_PshGPtr: {
-		std::string fn_symbol = emit_global_lookup(fn, ins, reinterpret_cast<void**>(ins.pword0()), false);
+		std::string fn_symbol = emit_global_lookup(fn, reinterpret_cast<void**>(ins.pword0()), false);
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
-		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD){OBJ};\n"
-		    "\t\tl_bc += 1+AS_PTR_SIZE;\n",
+		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD){OBJ};\n",
 		    fmt::arg("OBJ", fn_symbol)
 		);
-
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_PopPtr: {
-		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, AS_PTR_SIZE);\n"
-		    "\t\tl_bc++;\n"
-		);
+		emit("\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, AS_PTR_SIZE);\n");
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_VAR: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
-		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD){SWORD0};\n"
-		    "\t\tl_bc++;\n",
+		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD){SWORD0};\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
@@ -427,10 +420,10 @@ void BytecodeToC::translate_instruction(
 		    "\t\tasPWORD *dst = &ASEA_STACK_VAR({WORD0}).as_asPWORD;\n"
 		    "\t\tasPWORD var_idx = *dst;\n"
 		    "\t\tasPWORD var_addr = ASEA_FRAME_VAR(var_idx).as_asPWORD;\n"
-		    "\t\tASEA_STACK_VAR({WORD0}).as_asPWORD = var_addr;\n"
-		    "\t\tl_bc++;\n",
+		    "\t\tASEA_STACK_VAR({WORD0}).as_asPWORD = var_addr;\n",
 		    fmt::arg("WORD0", ins.word0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
@@ -446,10 +439,10 @@ void BytecodeToC::translate_instruction(
 		emit(
 		    "\t\tasPWORD *dst = &ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n"
 		    "\t\tasPWORD src = ASEA_STACK_TOP.as_asPWORD;\n"
-		    "\t\t*dst = src;\n"
-		    "\t\tl_bc += 1+AS_PTR_SIZE;\n",
+		    "\t\t*dst = src;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 
 		break;
 	}
@@ -467,10 +460,10 @@ void BytecodeToC::translate_instruction(
 		    "\t\tasPWORD *dst = (asPWORD*)ASEA_STACK_TOP.as_asPWORD;\n"
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, AS_PTR_SIZE);\n"
 		    "\t\tasPWORD src = ASEA_STACK_TOP.as_asPWORD;\n"
-		    "\t\t*dst = src;\n"
-		    "\t\tl_bc += 1+AS_PTR_SIZE;\n",
+		    "\t\t*dst = src;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 
 		break;
 	}
@@ -479,38 +472,38 @@ void BytecodeToC::translate_instruction(
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
 		    "\t\tvar->as_asDWORD = 0;\n"
-		    "\t\tvar->as_asBYTE = ASEA_VALUEREG_DEREF().as_asBYTE;\n"
-		    "\t\tl_bc++;\n",
+		    "\t\tvar->as_asBYTE = ASEA_VALUEREG_DEREF().as_asBYTE;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 	case asBC_RDR2: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
 		    "\t\tvar->as_asDWORD = 0;\n"
-		    "\t\tvar->as_asWORD = ASEA_VALUEREG_DEREF().as_asWORD;\n"
-		    "\t\tl_bc++;\n",
+		    "\t\tvar->as_asWORD = ASEA_VALUEREG_DEREF().as_asWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 	case asBC_RDR4: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
-		    "\t\tvar->as_asDWORD = ASEA_VALUEREG_DEREF().as_asDWORD;\n"
-		    "\t\tl_bc++;\n",
+		    "\t\tvar->as_asDWORD = ASEA_VALUEREG_DEREF().as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 	case asBC_RDR8: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
-		    "\t\tvar->as_asQWORD = ASEA_VALUEREG_DEREF().as_asQWORD;\n"
-		    "\t\tl_bc++;\n",
+		    "\t\tvar->as_asQWORD = ASEA_VALUEREG_DEREF().as_asQWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
@@ -548,11 +541,11 @@ void BytecodeToC::translate_instruction(
 		    "\t\tint i2 = {INT0};\n"
 		    "\t\tif( i1 == i2 )     regs->valueRegister.as_asINT64 = 0;\n"
 		    "\t\telse if( i1 < i2 ) regs->valueRegister.as_asINT64 = -1;\n"
-		    "\t\telse               regs->valueRegister.as_asINT64 = 1;\n"
-		    "\t\tl_bc += 2;\n",
+		    "\t\telse               regs->valueRegister.as_asINT64 = 1;\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("INT0", ins.int0())
 		);
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
@@ -560,141 +553,125 @@ void BytecodeToC::translate_instruction(
 		emit(
 		    "\t\tl_bc += {BRANCH_OFFSET};\n"
 		    "\t\tgoto bc{BRANCH_TARGET};\n",
-		    fmt::arg("BRANCH_OFFSET", ins.int0() + 2),
-		    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + 2))
+		    fmt::arg("BRANCH_OFFSET", ins.int0() + ins.size),
+		    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + ins.size))
 		);
 		break;
 	}
 
-	case asBC_JZ:     emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 == 0"); break;
-	case asBC_JLowZ:  emit_cond_branch(ins, 2, "regs->valueRegister.as_asBYTE == 0"); break;
-	case asBC_JNZ:    emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 != 0"); break;
-	case asBC_JLowNZ: emit_cond_branch(ins, 2, "regs->valueRegister.as_asBYTE != 0"); break;
-	case asBC_JS:     emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 < 0"); break;
-	case asBC_JNS:    emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 >= 0"); break;
-	case asBC_JP:     emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 > 0"); break;
-	case asBC_JNP:    emit_cond_branch(ins, 2, "regs->valueRegister.as_asINT64 <= 0"); break;
+	case asBC_JZ:     emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 == 0"); break;
+	case asBC_JLowZ:  emit_cond_branch_ins(ins, "regs->valueRegister.as_asBYTE == 0"); break;
+	case asBC_JNZ:    emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 != 0"); break;
+	case asBC_JLowNZ: emit_cond_branch_ins(ins, "regs->valueRegister.as_asBYTE != 0"); break;
+	case asBC_JS:     emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 < 0"); break;
+	case asBC_JNS:    emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 >= 0"); break;
+	case asBC_JP:     emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 > 0"); break;
+	case asBC_JNP:    emit_cond_branch_ins(ins, "regs->valueRegister.as_asINT64 <= 0"); break;
 
-	case asBC_TZ:     emit_test(ins, "=="); break;
-	case asBC_TNZ:    emit_test(ins, "!="); break;
-	case asBC_TS:     emit_test(ins, "<"); break;
-	case asBC_TNS:    emit_test(ins, ">="); break;
-	case asBC_TP:     emit_test(ins, ">"); break;
-	case asBC_TNP:    emit_test(ins, "<"); break;
+	case asBC_TZ:     emit_test_ins(ins, "=="); break;
+	case asBC_TNZ:    emit_test_ins(ins, "!="); break;
+	case asBC_TS:     emit_test_ins(ins, "<"); break;
+	case asBC_TNS:    emit_test_ins(ins, ">="); break;
+	case asBC_TP:     emit_test_ins(ins, ">"); break;
+	case asBC_TNP:    emit_test_ins(ins, "<"); break;
 
 	case asBC_INCi8:  {
-		emit(
-		    "\t\t++ASEA_VALUEREG_DEREF().as_asBYTE;\n"
-		    "\t\tl_bc++;\n"
-		);
+		emit("\t\t++ASEA_VALUEREG_DEREF().as_asBYTE;\n");
+		emit_auto_bc_inc(ins);
 		break;
 	}
 	case asBC_DECi8: {
-		emit(
-		    "\t\t--ASEA_VALUEREG_DEREF().as_asBYTE;\n"
-		    "\t\tl_bc++;\n"
-		);
+		emit("\t\t--ASEA_VALUEREG_DEREF().as_asBYTE;\n");
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_INCi16: {
-		emit(
-		    "\t\t++ASEA_VALUEREG_DEREF().as_asWORD;\n"
-		    "\t\tl_bc++;\n"
-		);
+		emit("\t\t++ASEA_VALUEREG_DEREF().as_asWORD;\n");
+		emit_auto_bc_inc(ins);
 		break;
 	}
 	case asBC_DECi16: {
-		emit(
-		    "\t\t--ASEA_VALUEREG_DEREF().as_asWORD;\n"
-		    "\t\tl_bc++;\n"
-		);
+		emit("\t\t--ASEA_VALUEREG_DEREF().as_asWORD;\n");
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_INCi: {
-		emit(
-		    "\t\t++ASEA_VALUEREG_DEREF().as_asDWORD;\n"
-		    "\t\tl_bc++;\n"
-		);
+		emit("\t\t++ASEA_VALUEREG_DEREF().as_asDWORD;\n");
+		emit_auto_bc_inc(ins);
 		break;
 	}
 	case asBC_DECi: {
-		emit(
-		    "\t\t--ASEA_VALUEREG_DEREF().as_asDWORD;\n"
-		    "\t\tl_bc++;\n"
-		);
+		emit("\t\t--ASEA_VALUEREG_DEREF().as_asDWORD;\n");
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
 	case asBC_INCi64: {
-		emit(
-		    "\t\t++ASEA_VALUEREG_DEREF().as_asQWORD;\n"
-		    "\t\tl_bc++;\n"
-		);
+		emit("\t\t++ASEA_VALUEREG_DEREF().as_asQWORD;\n");
+		emit_auto_bc_inc(ins);
 		break;
 	}
 	case asBC_DECi64: {
-		emit(
-		    "\t\t--ASEA_VALUEREG_DEREF().as_asQWORD;\n"
-		    "\t\tl_bc++;\n"
-		);
+		emit("\t\t--ASEA_VALUEREG_DEREF().as_asQWORD;\n");
+		emit_auto_bc_inc(ins);
 		break;
 	}
 
-	case asBC_ADDi:         emit_binop_var_var(ins, "+", s32, s32, s32); break;
-	case asBC_SUBi:         emit_binop_var_var(ins, "-", s32, s32, s32); break;
-	case asBC_MULi:         emit_binop_var_var(ins, "*", s32, s32, s32); break;
+	case asBC_ADDi:         emit_binop_var_var_ins(ins, "+", s32, s32, s32); break;
+	case asBC_SUBi:         emit_binop_var_var_ins(ins, "-", s32, s32, s32); break;
+	case asBC_MULi:         emit_binop_var_var_ins(ins, "*", s32, s32, s32); break;
 
-	case asBC_ADDi64:       emit_binop_var_var(ins, "+", s64, s64, s64); break;
-	case asBC_SUBi64:       emit_binop_var_var(ins, "-", s64, s64, s64); break;
-	case asBC_MULi64:       emit_binop_var_var(ins, "*", s64, s64, s64); break;
+	case asBC_ADDi64:       emit_binop_var_var_ins(ins, "+", s64, s64, s64); break;
+	case asBC_SUBi64:       emit_binop_var_var_ins(ins, "-", s64, s64, s64); break;
+	case asBC_MULi64:       emit_binop_var_var_ins(ins, "*", s64, s64, s64); break;
 
-	case asBC_BNOT64:       emit_unop_var_inplace(ins, "~", u64); break;
-	case asBC_BAND64:       emit_binop_var_var(ins, "&", u64, u64, u64); break;
-	case asBC_BXOR64:       emit_binop_var_var(ins, "^", u64, u64, u64); break;
-	case asBC_BOR64:        emit_binop_var_var(ins, "|", u64, u64, u64); break;
-	case asBC_BSLL64:       emit_binop_var_var(ins, "<<", u64, u32, u64); break;
-	case asBC_BSRL64:       emit_binop_var_var(ins, ">>", u64, u32, u64); break;
-	case asBC_BSRA64:       emit_binop_var_var(ins, ">>", s64, u32, s64); break;
+	case asBC_BNOT64:       emit_unop_var_inplace_ins(ins, "~", u64); break;
+	case asBC_BAND64:       emit_binop_var_var_ins(ins, "&", u64, u64, u64); break;
+	case asBC_BXOR64:       emit_binop_var_var_ins(ins, "^", u64, u64, u64); break;
+	case asBC_BOR64:        emit_binop_var_var_ins(ins, "|", u64, u64, u64); break;
+	case asBC_BSLL64:       emit_binop_var_var_ins(ins, "<<", u64, u32, u64); break;
+	case asBC_BSRL64:       emit_binop_var_var_ins(ins, ">>", u64, u32, u64); break;
+	case asBC_BSRA64:       emit_binop_var_var_ins(ins, ">>", s64, u32, s64); break;
 
-	case asBC_BNOT:         emit_unop_var_inplace(ins, "~", u32); break;
-	case asBC_BAND:         emit_binop_var_var(ins, "&", u32, u32, u32); break;
-	case asBC_BXOR:         emit_binop_var_var(ins, "^", u32, u32, u32); break;
-	case asBC_BOR:          emit_binop_var_var(ins, "|", u32, u32, u32); break;
-	case asBC_BSLL:         emit_binop_var_var(ins, "<<", u32, u32, u32); break;
-	case asBC_BSRL:         emit_binop_var_var(ins, ">>", u32, u32, u32); break;
-	case asBC_BSRA:         emit_binop_var_var(ins, ">>", s32, u32, s32); break;
+	case asBC_BNOT:         emit_unop_var_inplace_ins(ins, "~", u32); break;
+	case asBC_BAND:         emit_binop_var_var_ins(ins, "&", u32, u32, u32); break;
+	case asBC_BXOR:         emit_binop_var_var_ins(ins, "^", u32, u32, u32); break;
+	case asBC_BOR:          emit_binop_var_var_ins(ins, "|", u32, u32, u32); break;
+	case asBC_BSLL:         emit_binop_var_var_ins(ins, "<<", u32, u32, u32); break;
+	case asBC_BSRL:         emit_binop_var_var_ins(ins, ">>", u32, u32, u32); break;
+	case asBC_BSRA:         emit_binop_var_var_ins(ins, ">>", s32, u32, s32); break;
 
-	case asBC_ADDIi:        emit_binop_var_imm(ins, "+", s32, fmt::to_string(ins.int0(1)), s32); break;
-	case asBC_SUBIi:        emit_binop_var_imm(ins, "-", s32, fmt::to_string(ins.int0(1)), s32); break;
-	case asBC_MULIi:        emit_binop_var_imm(ins, "*", s32, fmt::to_string(ins.int0(1)), s32); break;
+	case asBC_ADDIi:        emit_binop_var_imm_ins(ins, "+", s32, fmt::to_string(ins.int0(1)), s32); break;
+	case asBC_SUBIi:        emit_binop_var_imm_ins(ins, "-", s32, fmt::to_string(ins.int0(1)), s32); break;
+	case asBC_MULIi:        emit_binop_var_imm_ins(ins, "*", s32, fmt::to_string(ins.int0(1)), s32); break;
 
-	case asBC_iTOf:         emit_primitive_cast_var(ins, s32, f32, true); break;
-	case asBC_fTOi:         emit_primitive_cast_var(ins, f32, s32, true); break;
-	case asBC_uTOf:         emit_primitive_cast_var(ins, u32, f32, true); break;
-	case asBC_fTOu:         emit_primitive_cast_var(ins, f32, u32, true); break;
-	case asBC_sbTOi:        emit_primitive_cast_var(ins, s8, s32, true); break;
-	case asBC_swTOi:        emit_primitive_cast_var(ins, s16, s32, true); break;
-	case asBC_ubTOi:        emit_primitive_cast_var(ins, u8, s32, true); break;
-	case asBC_uwTOi:        emit_primitive_cast_var(ins, u16, s32, true); break;
-	case asBC_i64TOi:       emit_primitive_cast_var(ins, s64, s32, false); break;
-	case asBC_uTOi64:       emit_primitive_cast_var(ins, u32, s64, false); break;
-	case asBC_iTOi64:       emit_primitive_cast_var(ins, s32, s64, false); break;
-	case asBC_fTOd:         emit_primitive_cast_var(ins, f32, f64, false); break;
-	case asBC_dTOf:         emit_primitive_cast_var(ins, f64, f32, false); break;
-	case asBC_fTOi64:       emit_primitive_cast_var(ins, f32, s64, false); break;
-	case asBC_dTOi64:       emit_primitive_cast_var(ins, f64, s64, true); break;
-	case asBC_fTOu64:       emit_primitive_cast_var(ins, f32, u64, false); break;
-	case asBC_dTOu64:       emit_primitive_cast_var(ins, f64, u64, true); break;
-	case asBC_i64TOf:       emit_primitive_cast_var(ins, s64, f32, false); break;
-	case asBC_u64TOf:       emit_primitive_cast_var(ins, u64, f32, false); break;
-	case asBC_i64TOd:       emit_primitive_cast_var(ins, s64, f64, true); break;
-	case asBC_u64TOd:       emit_primitive_cast_var(ins, u64, f64, true); break;
-	case asBC_dTOi:         emit_primitive_cast_var(ins, f64, s32, false); break;
-	case asBC_dTOu:         emit_primitive_cast_var(ins, f64, u32, false); break;
-	case asBC_iTOd:         emit_primitive_cast_var(ins, s32, f64, false); break;
-	case asBC_uTOd:         emit_primitive_cast_var(ins, u32, f64, false); break;
+	case asBC_iTOf:         emit_primitive_cast_var_ins(ins, s32, f32, true); break;
+	case asBC_fTOi:         emit_primitive_cast_var_ins(ins, f32, s32, true); break;
+	case asBC_uTOf:         emit_primitive_cast_var_ins(ins, u32, f32, true); break;
+	case asBC_fTOu:         emit_primitive_cast_var_ins(ins, f32, u32, true); break;
+	case asBC_sbTOi:        emit_primitive_cast_var_ins(ins, s8, s32, true); break;
+	case asBC_swTOi:        emit_primitive_cast_var_ins(ins, s16, s32, true); break;
+	case asBC_ubTOi:        emit_primitive_cast_var_ins(ins, u8, s32, true); break;
+	case asBC_uwTOi:        emit_primitive_cast_var_ins(ins, u16, s32, true); break;
+	case asBC_i64TOi:       emit_primitive_cast_var_ins(ins, s64, s32, false); break;
+	case asBC_uTOi64:       emit_primitive_cast_var_ins(ins, u32, s64, false); break;
+	case asBC_iTOi64:       emit_primitive_cast_var_ins(ins, s32, s64, false); break;
+	case asBC_fTOd:         emit_primitive_cast_var_ins(ins, f32, f64, false); break;
+	case asBC_dTOf:         emit_primitive_cast_var_ins(ins, f64, f32, false); break;
+	case asBC_fTOi64:       emit_primitive_cast_var_ins(ins, f32, s64, false); break;
+	case asBC_dTOi64:       emit_primitive_cast_var_ins(ins, f64, s64, true); break;
+	case asBC_fTOu64:       emit_primitive_cast_var_ins(ins, f32, u64, false); break;
+	case asBC_dTOu64:       emit_primitive_cast_var_ins(ins, f64, u64, true); break;
+	case asBC_i64TOf:       emit_primitive_cast_var_ins(ins, s64, f32, false); break;
+	case asBC_u64TOf:       emit_primitive_cast_var_ins(ins, u64, f32, false); break;
+	case asBC_i64TOd:       emit_primitive_cast_var_ins(ins, s64, f64, true); break;
+	case asBC_u64TOd:       emit_primitive_cast_var_ins(ins, u64, f64, true); break;
+	case asBC_dTOi:         emit_primitive_cast_var_ins(ins, f64, s32, false); break;
+	case asBC_dTOu:         emit_primitive_cast_var_ins(ins, f64, u32, false); break;
+	case asBC_iTOd:         emit_primitive_cast_var_ins(ins, s32, f64, false); break;
+	case asBC_uTOd:         emit_primitive_cast_var_ins(ins, u32, f64, false); break;
 
 	case asBC_PSF:
 	case asBC_SwapPtr:
@@ -814,7 +791,9 @@ void BytecodeToC::translate_instruction(
 	emit("\t}}\n");
 }
 
-void BytecodeToC::emit_vm_fallback(asIScriptFunction& fn, std::string_view reason) {
+void BytecodeToC::emit_auto_bc_inc(BytecodeInstruction ins) { emit("\t\tl_bc += {};\n", ins.size); }
+
+void BytecodeToC::emit_vm_fallback([[maybe_unused]] asIScriptFunction& fn, std::string_view reason) {
 	++m_state.fallback_count;
 
 	emit_save_vm_registers();
@@ -842,7 +821,7 @@ void BytecodeToC::emit_load_vm_registers() {
 	);
 }
 
-void BytecodeToC::emit_primitive_cast_var(BytecodeInstruction ins, VarType src, VarType dst, bool in_place) {
+void BytecodeToC::emit_primitive_cast_var_ins(BytecodeInstruction ins, VarType src, VarType dst, bool in_place) {
 	emit(
 	    "\t\tASEA_FRAME_VAR({DST}).as_{DST_TYPE} = "
 	    "ASEA_FRAME_VAR({SRC}).as_{SRC_TYPE};\n"
@@ -855,8 +834,7 @@ void BytecodeToC::emit_primitive_cast_var(BytecodeInstruction ins, VarType src, 
 	);
 }
 
-std::string
-BytecodeToC::emit_global_lookup(asIScriptFunction& fn, BytecodeInstruction ins, void** pointer, bool global_var_only) {
+std::string BytecodeToC::emit_global_lookup(asIScriptFunction& fn, void** pointer, bool global_var_only) {
 	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
 
 	std::string                            fn_symbol;
@@ -894,7 +872,7 @@ BytecodeToC::emit_global_lookup(asIScriptFunction& fn, BytecodeInstruction ins, 
 	return fn_symbol;
 }
 
-void BytecodeToC::emit_cond_branch(BytecodeInstruction ins, std::size_t instruction_length, std::string_view test) {
+void BytecodeToC::emit_cond_branch_ins(BytecodeInstruction ins, std::string_view test) {
 	emit(
 	    "\t\tif( {TEST} ) {{\n"
 	    "\t\t\tl_bc += {BRANCH_OFFSET};\n"
@@ -903,34 +881,34 @@ void BytecodeToC::emit_cond_branch(BytecodeInstruction ins, std::size_t instruct
 	    "\t\t\tl_bc += {INSTRUCTION_LENGTH};\n"
 	    "\t\t}}\n",
 	    fmt::arg("TEST", test),
-	    fmt::arg("INSTRUCTION_LENGTH", instruction_length),
-	    fmt::arg("BRANCH_OFFSET", ins.int0() + (long)instruction_length),
-	    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + (long)instruction_length))
+	    fmt::arg("INSTRUCTION_LENGTH", ins.size),
+	    fmt::arg("BRANCH_OFFSET", ins.int0() + (long)ins.size),
+	    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + (long)ins.size))
 	);
 }
 
-void BytecodeToC::emit_test(BytecodeInstruction ins, std::string_view op_with_rhs_0) {
+void BytecodeToC::emit_test_ins(BytecodeInstruction ins, std::string_view op_with_rhs_0) {
 	emit(
 	    "\t\tasINT32 value = regs->valueRegister.as_asINT32;\n"
 	    "\t\tregs->valueRegister.as_asQWORD = 0;\n"
 	    "\t\tregs->valueRegister.as_asBYTE = (value {OP} 0) ? "
-	    "VALUE_OF_BOOLEAN_TRUE : 0;\n"
-	    "\t\tl_bc++;\n",
+	    "VALUE_OF_BOOLEAN_TRUE : 0;\n",
 	    fmt::arg("OP", op_with_rhs_0)
 	);
+	emit_auto_bc_inc(ins);
 }
 
-void BytecodeToC::emit_unop_var_inplace(BytecodeInstruction ins, std::string_view op, VarType var) {
+void BytecodeToC::emit_unop_var_inplace_ins(BytecodeInstruction ins, std::string_view op, VarType var) {
 	emit(
-	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = {OP} ASEA_FRAME_VAR({SWORD0}).as_{TYPE};\n"
-	    "\t\t++l_bc;\n",
+	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = {OP} ASEA_FRAME_VAR({SWORD0}).as_{TYPE};\n",
 	    fmt::arg("TYPE", var.type),
 	    fmt::arg("OP", op),
 	    fmt::arg("SWORD0", ins.sword0())
 	);
+	emit_auto_bc_inc(ins);
 }
 
-void BytecodeToC::emit_binop_var_var(
+void BytecodeToC::emit_binop_var_var_ins(
     BytecodeInstruction ins,
     std::string_view    op,
     VarType             lhs,
@@ -952,7 +930,7 @@ void BytecodeToC::emit_binop_var_var(
 	);
 }
 
-void BytecodeToC::emit_binop_var_imm(
+void BytecodeToC::emit_binop_var_imm_ins(
     BytecodeInstruction ins,
     std::string_view    op,
     VarType             lhs,

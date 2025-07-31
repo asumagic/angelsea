@@ -104,18 +104,19 @@ class BytecodeToC {
 	void emit_entry_dispatch(asIScriptFunction& fn);
 	void emit_vm_fallback(asIScriptFunction& fn, std::string_view reason);
 
+	void emit_auto_bc_inc(BytecodeInstruction ins);
+
 	void emit_load_vm_registers();
 	void emit_save_vm_registers();
 
-	std::string
-	emit_global_lookup(asIScriptFunction& fn, BytecodeInstruction ins, void** pointer, bool global_var_only);
+	std::string emit_global_lookup(asIScriptFunction& fn, void** pointer, bool global_var_only);
 
-	void emit_cond_branch(BytecodeInstruction ins, std::size_t instruction_length, std::string_view test);
-	void emit_test(BytecodeInstruction ins, std::string_view op_with_rhs_0);
-	void emit_primitive_cast_var(BytecodeInstruction ins, VarType src, VarType dst, bool in_place);
-	void emit_unop_var_inplace(BytecodeInstruction ins, std::string_view op, VarType var);
-	void emit_binop_var_var(BytecodeInstruction ins, std::string_view op, VarType lhs, VarType rhs, VarType dst);
-	void emit_binop_var_imm(
+	void emit_cond_branch_ins(BytecodeInstruction ins, std::string_view test);
+	void emit_test_ins(BytecodeInstruction ins, std::string_view op_with_rhs_0);
+	void emit_primitive_cast_var_ins(BytecodeInstruction ins, VarType src, VarType dst, bool in_place);
+	void emit_unop_var_inplace_ins(BytecodeInstruction ins, std::string_view op, VarType var);
+	void emit_binop_var_var_ins(BytecodeInstruction ins, std::string_view op, VarType lhs, VarType rhs, VarType dst);
+	void emit_binop_var_imm_ins(
 	    BytecodeInstruction ins,
 	    std::string_view    op,
 	    VarType             lhs,
