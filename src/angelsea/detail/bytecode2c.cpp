@@ -591,14 +591,23 @@ void BytecodeToC::translate_instruction(
 	case asBC_DECi:         emit_prefixop_valuereg_ins(ins, "--", u32); break;
 	case asBC_INCi64:       emit_prefixop_valuereg_ins(ins, "++", u64); break;
 	case asBC_DECi64:       emit_prefixop_valuereg_ins(ins, "--", u64); break;
+	case asBC_INCf:         emit_prefixop_valuereg_ins(ins, "++", f32); break;
+	case asBC_DECf:         emit_prefixop_valuereg_ins(ins, "--", f32); break;
+	case asBC_INCd:         emit_prefixop_valuereg_ins(ins, "++", f64); break;
+	case asBC_DECd:         emit_prefixop_valuereg_ins(ins, "--", f64); break;
 
 	case asBC_ADDi:         emit_binop_var_var_ins(ins, "+", s32, s32, s32); break;
 	case asBC_SUBi:         emit_binop_var_var_ins(ins, "-", s32, s32, s32); break;
 	case asBC_MULi:         emit_binop_var_var_ins(ins, "*", s32, s32, s32); break;
-
 	case asBC_ADDi64:       emit_binop_var_var_ins(ins, "+", s64, s64, s64); break;
 	case asBC_SUBi64:       emit_binop_var_var_ins(ins, "-", s64, s64, s64); break;
 	case asBC_MULi64:       emit_binop_var_var_ins(ins, "*", s64, s64, s64); break;
+	case asBC_ADDf:         emit_binop_var_var_ins(ins, "+", f32, f32, f32); break;
+	case asBC_SUBf:         emit_binop_var_var_ins(ins, "-", f32, f32, f32); break;
+	case asBC_MULf:         emit_binop_var_var_ins(ins, "*", f32, f32, f32); break;
+	case asBC_ADDd:         emit_binop_var_var_ins(ins, "+", f64, f64, f64); break;
+	case asBC_SUBd:         emit_binop_var_var_ins(ins, "-", f64, f64, f64); break;
+	case asBC_MULd:         emit_binop_var_var_ins(ins, "*", f64, f64, f64); break;
 
 	case asBC_BNOT64:       emit_unop_var_inplace_ins(ins, "~", u64); break;
 	case asBC_BAND64:       emit_binop_var_var_ins(ins, "&", u64, u64, u64); break;
@@ -657,10 +666,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_NEGi:
 	case asBC_NEGf:
 	case asBC_NEGd:
-	case asBC_INCf:
-	case asBC_DECf:
-	case asBC_INCd:
-	case asBC_DECd:
 	case asBC_IncVi:
 	case asBC_DecVi:
 	case asBC_COPY:
@@ -700,14 +705,8 @@ void BytecodeToC::translate_instruction(
 	case asBC_CmpPtr:
 	case asBC_DIVi:
 	case asBC_MODi:
-	case asBC_ADDf:
-	case asBC_SUBf:
-	case asBC_MULf:
 	case asBC_DIVf:
 	case asBC_MODf:
-	case asBC_ADDd:
-	case asBC_SUBd:
-	case asBC_MULd:
 	case asBC_DIVd:
 	case asBC_MODd:
 	case asBC_ADDIf:
