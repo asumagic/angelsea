@@ -335,8 +335,7 @@ void BytecodeToC::translate_instruction(
 
 	case asBC_CpyVtoR4: {
 		emit(
-		    "\t\tregs->valueRegister.as_asDWORD = "
-		    "ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
+		    "\t\tregs->valueRegister.as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(ins);
@@ -345,8 +344,7 @@ void BytecodeToC::translate_instruction(
 
 	case asBC_CpyRtoV4: {
 		emit(
-		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asDWORD = "
-		    "regs->valueRegister.as_asDWORD;\n",
+		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asDWORD = regs->valueRegister.as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(ins);
@@ -355,8 +353,7 @@ void BytecodeToC::translate_instruction(
 
 	case asBC_CpyVtoV4: {
 		emit(
-		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asDWORD = "
-		    "ASEA_FRAME_VAR({SWORD1}).as_asDWORD;\n",
+		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asDWORD = ASEA_FRAME_VAR({SWORD1}).as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("SWORD1", ins.sword1())
 		);
@@ -377,8 +374,7 @@ void BytecodeToC::translate_instruction(
 
 	case asBC_LDV: {
 		emit(
-		    "\t\tregs->valueRegister.as_asPWORD = "
-		    "(asPWORD)&ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
+		    "\t\tregs->valueRegister.as_asPWORD = (asPWORD)&ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(ins);
