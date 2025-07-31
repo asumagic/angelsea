@@ -182,33 +182,6 @@ std::string BytecodeToC::entry_point_name(asIScriptFunction& fn) const {
 }
 
 void BytecodeToC::emit_entry_dispatch(asIScriptFunction& fn) {
-	// doesn't seem supported by c2mir after all?
-	// if (m_config.c.use_gnuc_label_as_address_extension) {
-	// 	emit(
-	// 	    "\tstatic const void *const dispatch[] = {{\n"
-	// 	    "\t\t0,\n" // because JitEntry always starts at 1
-	// 	);
-
-	// 	walk_bytecode(get_bytecode(fn), [&](BytecodeInstruction ins) {
-	// 		if (ins.info->bc != asBC_JitEntry) {
-	// 			return;
-	// 		}
-
-	// 		if (ins.pword0() == 0) {
-	// 			// codegen eliminated this jit entry
-	// 			return;
-	// 		}
-
-	// 		emit("\t\t&&bc{},", ins.offset);
-	// 	});
-
-	// 	emit(
-	// 	    "\t}};\n"
-	// 	    "\tgoto *dispatch[entryLabel];\n"
-	// 	);
-
-	// }
-
 	emit(
 	    "\tswitch(entryLabel) {{\n"
 	    "\tdefault:\n"
