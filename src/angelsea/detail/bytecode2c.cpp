@@ -146,7 +146,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		int         row, col;
 		fn.GetDeclaredAt(&section, &row, &col);
 		emit(
-		    "\tasea_debug_message((asSVMRegisters*)regs, \"TRACE FUNCTION: module "
+		    "\tasea_debug_message(_regs, \"TRACE FUNCTION: module "
 		    "{}: {}:{}:{}: {}\");\n\n",
 		    internal_module_name,
 		    escape_c_literal(section != nullptr ? section : "<anon>"),
@@ -541,7 +541,7 @@ void BytecodeToC::translate_instruction(
 		);
 		emit_save_vm_registers();
 		emit(
-		    "\t\tasea_call_script_function(regs, (asCScriptFunction*)&{FN});\n"
+		    "\t\tasea_call_script_function(_regs, (asCScriptFunction*)&{FN});\n"
 		    "\t\treturn;\n",
 		    fmt::arg("FN", fn_symbol),
 		    fmt::arg("FN_ID", fn_idx)
@@ -652,33 +652,33 @@ void BytecodeToC::translate_instruction(
 	case asBC_SUBIi:        emit_binop_var_imm_ins(ins, "-", s32, fmt::to_string(ins.int0(1)), s32); break;
 	case asBC_MULIi:        emit_binop_var_imm_ins(ins, "*", s32, fmt::to_string(ins.int0(1)), s32); break;
 
-	case asBC_iTOf:         emit_primitive_cast_var_ins(ins, s32, f32, true); break;
-	case asBC_fTOi:         emit_primitive_cast_var_ins(ins, f32, s32, true); break;
-	case asBC_uTOf:         emit_primitive_cast_var_ins(ins, u32, f32, true); break;
-	case asBC_fTOu:         emit_primitive_cast_var_ins(ins, f32, u32, true); break;
-	case asBC_sbTOi:        emit_primitive_cast_var_ins(ins, s8, s32, true); break;
-	case asBC_swTOi:        emit_primitive_cast_var_ins(ins, s16, s32, true); break;
-	case asBC_ubTOi:        emit_primitive_cast_var_ins(ins, u8, s32, true); break;
-	case asBC_uwTOi:        emit_primitive_cast_var_ins(ins, u16, s32, true); break;
-	case asBC_iTOb:         emit_primitive_cast_var_ins(ins, u32, s8, true); break;
-	case asBC_iTOw:         emit_primitive_cast_var_ins(ins, u32, s16, true); break;
-	case asBC_i64TOi:       emit_primitive_cast_var_ins(ins, s64, s32, false); break;
-	case asBC_uTOi64:       emit_primitive_cast_var_ins(ins, u32, s64, false); break;
-	case asBC_iTOi64:       emit_primitive_cast_var_ins(ins, s32, s64, false); break;
-	case asBC_fTOd:         emit_primitive_cast_var_ins(ins, f32, f64, false); break;
-	case asBC_dTOf:         emit_primitive_cast_var_ins(ins, f64, f32, false); break;
-	case asBC_fTOi64:       emit_primitive_cast_var_ins(ins, f32, s64, false); break;
-	case asBC_dTOi64:       emit_primitive_cast_var_ins(ins, f64, s64, true); break;
-	case asBC_fTOu64:       emit_primitive_cast_var_ins(ins, f32, u64, false); break;
-	case asBC_dTOu64:       emit_primitive_cast_var_ins(ins, f64, u64, true); break;
-	case asBC_i64TOf:       emit_primitive_cast_var_ins(ins, s64, f32, false); break;
-	case asBC_u64TOf:       emit_primitive_cast_var_ins(ins, u64, f32, false); break;
-	case asBC_i64TOd:       emit_primitive_cast_var_ins(ins, s64, f64, true); break;
-	case asBC_u64TOd:       emit_primitive_cast_var_ins(ins, u64, f64, true); break;
-	case asBC_dTOi:         emit_primitive_cast_var_ins(ins, f64, s32, false); break;
-	case asBC_dTOu:         emit_primitive_cast_var_ins(ins, f64, u32, false); break;
-	case asBC_iTOd:         emit_primitive_cast_var_ins(ins, s32, f64, false); break;
-	case asBC_uTOd:         emit_primitive_cast_var_ins(ins, u32, f64, false); break;
+	case asBC_iTOf:         emit_primitive_cast_var_ins(ins, s32, f32); break;
+	case asBC_fTOi:         emit_primitive_cast_var_ins(ins, f32, s32); break;
+	case asBC_uTOf:         emit_primitive_cast_var_ins(ins, u32, f32); break;
+	case asBC_fTOu:         emit_primitive_cast_var_ins(ins, f32, u32); break;
+	case asBC_sbTOi:        emit_primitive_cast_var_ins(ins, s8, s32); break;
+	case asBC_swTOi:        emit_primitive_cast_var_ins(ins, s16, s32); break;
+	case asBC_ubTOi:        emit_primitive_cast_var_ins(ins, u8, s32); break;
+	case asBC_uwTOi:        emit_primitive_cast_var_ins(ins, u16, s32); break;
+	case asBC_iTOb:         emit_primitive_cast_var_ins(ins, u32, s8); break;
+	case asBC_iTOw:         emit_primitive_cast_var_ins(ins, u32, s16); break;
+	case asBC_i64TOi:       emit_primitive_cast_var_ins(ins, s64, s32); break;
+	case asBC_uTOi64:       emit_primitive_cast_var_ins(ins, u32, s64); break;
+	case asBC_iTOi64:       emit_primitive_cast_var_ins(ins, s32, s64); break;
+	case asBC_fTOd:         emit_primitive_cast_var_ins(ins, f32, f64); break;
+	case asBC_dTOf:         emit_primitive_cast_var_ins(ins, f64, f32); break;
+	case asBC_fTOi64:       emit_primitive_cast_var_ins(ins, f32, s64); break;
+	case asBC_dTOi64:       emit_primitive_cast_var_ins(ins, f64, s64); break;
+	case asBC_fTOu64:       emit_primitive_cast_var_ins(ins, f32, u64); break;
+	case asBC_dTOu64:       emit_primitive_cast_var_ins(ins, f64, u64); break;
+	case asBC_i64TOf:       emit_primitive_cast_var_ins(ins, s64, f32); break;
+	case asBC_u64TOf:       emit_primitive_cast_var_ins(ins, u64, f32); break;
+	case asBC_i64TOd:       emit_primitive_cast_var_ins(ins, s64, f64); break;
+	case asBC_u64TOd:       emit_primitive_cast_var_ins(ins, u64, f64); break;
+	case asBC_dTOi:         emit_primitive_cast_var_ins(ins, f64, s32); break;
+	case asBC_dTOu:         emit_primitive_cast_var_ins(ins, f64, u32); break;
+	case asBC_iTOd:         emit_primitive_cast_var_ins(ins, s32, f64); break;
+	case asBC_uTOd:         emit_primitive_cast_var_ins(ins, u32, f64); break;
 
 	case asBC_SwapPtr:
 	case asBC_PshG4:
@@ -809,7 +809,9 @@ void BytecodeToC::emit_load_vm_registers() {
 	);
 }
 
-void BytecodeToC::emit_primitive_cast_var_ins(BytecodeInstruction ins, VarType src, VarType dst, bool in_place) {
+void BytecodeToC::emit_primitive_cast_var_ins(BytecodeInstruction ins, VarType src, VarType dst) {
+	const bool in_place = ins.size == 1;
+
 	if (src.byte_count != dst.byte_count && dst.byte_count < 4) {
 		emit(
 		    "\t\t{DST_TYPE} value = ASEA_FRAME_VAR({SRC}).as_{SRC_TYPE};\n"

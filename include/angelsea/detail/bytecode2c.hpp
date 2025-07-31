@@ -112,12 +112,34 @@ class BytecodeToC {
 
 	std::string emit_global_lookup(asIScriptFunction& fn, void** pointer, bool global_var_only);
 
+	/// Emits the complete handler for a conditional relative branching instruction.
+	/// If the condition provided by the expression in `test` is true, then perform a relative jump by the specified
+	/// amount.
 	void emit_cond_branch_ins(BytecodeInstruction ins, std::string_view test);
+
+	/// Emits the complete handler for a test instruction.
+	/// Writes the boolean result of `valueRegister {op} 0` to `valueRegister`.
 	void emit_test_ins(BytecodeInstruction ins, std::string_view op_with_rhs_0);
-	void emit_primitive_cast_var_ins(BytecodeInstruction ins, VarType src, VarType dst, bool in_place);
+
+	/// Emits the complete handler for a primitive cast of a variable on the stack to another.
+	/// Automatically determines whether the instruction takes two arguments (source and destination), or whether the
+	/// operation occurs in place in the same variable location.
+	void emit_primitive_cast_var_ins(BytecodeInstruction ins, VarType src, VarType dst);
+
+	/// Emits the complete handler for an in-place prefix operation on the valueRegister, that is,
+	/// `{op}valueRegister` (`op` normally being either `++` or `--`).
 	void emit_prefixop_valuereg_ins(BytecodeInstruction ins, std::string_view op, VarType var);
+
+	/// Emits the complete handler for an in-place unary operation on a variable on the stack, that is,
+	/// `var = {op} var`.
 	void emit_unop_var_inplace_ins(BytecodeInstruction ins, std::string_view op, VarType var);
+
+	/// Emits the complete handler for a binary operation between two variables on the stack, outputting to a third
+	/// one, that is, `result = lhs {op} rhs`.
 	void emit_binop_var_var_ins(BytecodeInstruction ins, std::string_view op, VarType lhs, VarType rhs, VarType dst);
+
+	/// Emits the complete handler for a binary operation between a variable on the stack and an immediate value,
+	/// outputting to another variable, that is, `result = lhs {op} (rhs_expr)`.
 	void emit_binop_var_imm_ins(
 	    BytecodeInstruction ins,
 	    std::string_view    op,
