@@ -14,6 +14,7 @@ TEST_CASE("8-bit signed math", "[signedmath8]") {
 	REQUIRE(run_string("int8 a = 7, b = 4; print(a % b)") == "3\n");
 	REQUIRE(run_string("int8 a = 10; print(++a)") == "11\n");
 	REQUIRE(run_string("int8 a = 10; print(--a)") == "9\n");
+	REQUIRE(run_string("int32 a = 128, b = -129; print(int8(a) + int8(b))") == "-1\n");
 }
 
 TEST_CASE("16-bit signed math", "[signedmath16]") {
@@ -24,6 +25,7 @@ TEST_CASE("16-bit signed math", "[signedmath16]") {
 	REQUIRE(run_string("int16 a = 7, b = 4; print(a % b)") == "3\n");
 	REQUIRE(run_string("int16 a = 10; print(++a)") == "11\n");
 	REQUIRE(run_string("int16 a = 10; print(--a)") == "9\n");
+	REQUIRE(run_string("int32 a = 128, b = -129; print(int16(a) + int16(b))") == "-1\n");
 }
 
 TEST_CASE("32-bit signed math", "[signedmath32]") {

@@ -25,13 +25,14 @@ enum class AccessGranularity { DWORD, QWORD };
 struct VarType {
 	/// C type name
 	std::string_view type;
+	std::size_t      byte_count;
 
 	bool operator==(const VarType& other) const { return type == other.type; };
 };
 
 namespace var_types {
-static constexpr VarType s8{"asINT8"}, s16{"asINT16"}, s32{"asINT32"}, s64{"asINT64"}, u8{"asBYTE"}, u16{"asWORD"},
-    u32{"asDWORD"}, u64{"asQWORD"}, f32{"float"}, f64{"double"};
+static constexpr VarType s8{"asINT8", 1}, s16{"asINT16", 2}, s32{"asINT32", 4}, s64{"asINT64", 8}, u8{"asBYTE", 1},
+    u16{"asWORD", 2}, u32{"asDWORD", 4}, u64{"asQWORD", 8}, f32{"float", 4}, f64{"double", 8};
 } // namespace var_types
 
 class BytecodeToC {

@@ -628,6 +628,8 @@ void BytecodeToC::translate_instruction(
 	case asBC_swTOi:        emit_primitive_cast_var_ins(ins, s16, s32, true); break;
 	case asBC_ubTOi:        emit_primitive_cast_var_ins(ins, u8, s32, true); break;
 	case asBC_uwTOi:        emit_primitive_cast_var_ins(ins, u16, s32, true); break;
+	case asBC_iTOb:         emit_primitive_cast_var_ins(ins, u32, s8, true); break;
+	case asBC_iTOw:         emit_primitive_cast_var_ins(ins, u32, s16, true); break;
 	case asBC_i64TOi:       emit_primitive_cast_var_ins(ins, s64, s32, false); break;
 	case asBC_uTOi64:       emit_primitive_cast_var_ins(ins, u32, s64, false); break;
 	case asBC_iTOi64:       emit_primitive_cast_var_ins(ins, s32, s64, false); break;
@@ -715,8 +717,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_ChkRefS:
 	case asBC_ChkNullV:
 	case asBC_CALLINTF:
-	case asBC_iTOb:
-	case asBC_iTOw:
 	case asBC_Cast:
 	case asBC_NEGi64:
 	case asBC_DIVi64:
@@ -794,16 +794,20 @@ void BytecodeToC::emit_load_vm_registers() {
 }
 
 void BytecodeToC::emit_primitive_cast_var_ins(BytecodeInstruction ins, VarType src, VarType dst, bool in_place) {
+	VarType dst_slot_type = dst;
+	if (src.byte_count != dst.byte_count && dst.byte_count < 4) {
+		// zero-extend to clear the upper bytes
+		dst_slot_type = var_types::u32;
+	}
 	emit(
-	    "\t\tASEA_FRAME_VAR({DST}).as_{DST_TYPE} = "
-	    "ASEA_FRAME_VAR({SRC}).as_{SRC_TYPE};\n"
-	    "\t\tl_bc += {INSTRUCTION_LENGTH};\n",
+	    "\t\tASEA_FRAME_VAR({DST}).as_{DST_SLOT_TYPE} = ({DST_TYPE})ASEA_FRAME_VAR({SRC}).as_{SRC_TYPE};\n",
 	    fmt::arg("DST_TYPE", dst.type),
+	    fmt::arg("DST_SLOT_TYPE", dst_slot_type.type),
 	    fmt::arg("SRC_TYPE", src.type),
 	    fmt::arg("DST", ins.sword0()),
-	    fmt::arg("SRC", in_place ? ins.sword0() : ins.sword1()),
-	    fmt::arg("INSTRUCTION_LENGTH", in_place ? 1 : 2)
+	    fmt::arg("SRC", in_place ? ins.sword0() : ins.sword1())
 	);
+	emit_auto_bc_inc(ins);
 }
 
 std::string BytecodeToC::emit_global_lookup(asIScriptFunction& fn, void** pointer, bool global_var_only) {
