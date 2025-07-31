@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-#include "angelscript.h"
-#include "angelsea/detail/bytecodeinstruction.hpp"
-#include "as_property.h"
-#include <fmt/format.h>
-
 #include <algorithm>
+#include <angelscript.h>
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/bytecodedisasm.hpp>
+#include <angelsea/detail/bytecodeinstruction.hpp>
 #include <angelsea/detail/bytecodetools.hpp>
 #include <angelsea/detail/debug.hpp>
 #include <angelsea/detail/log.hpp>
+#include <angelsea/detail/stringutil.hpp>
+#include <as_property.h>
 #include <as_scriptengine.h>
+#include <fmt/format.h>
 
 namespace angelsea::detail {
 
@@ -673,7 +673,7 @@ void BytecodeToC::translate_instruction(
 	case asBC_SUBi64:       emit_binop_var_var(ins, "-", s64, s64, s64); break;
 	case asBC_MULi64:       emit_binop_var_var(ins, "*", s64, s64, s64); break;
 
-	case asBC_BNOT64:       emit_arithmetic_simple_stack_unary_inplace(ins, "~", u64); break;
+	case asBC_BNOT64:       emit_unop_var_inplace(ins, "~", u64); break;
 	case asBC_BAND64:       emit_binop_var_var(ins, "&", u64, u64, u64); break;
 	case asBC_BXOR64:       emit_binop_var_var(ins, "^", u64, u64, u64); break;
 	case asBC_BOR64:        emit_binop_var_var(ins, "|", u64, u64, u64); break;
@@ -681,7 +681,7 @@ void BytecodeToC::translate_instruction(
 	case asBC_BSRL64:       emit_binop_var_var(ins, ">>", u64, u32, u64); break;
 	case asBC_BSRA64:       emit_binop_var_var(ins, ">>", s64, u32, s64); break;
 
-	case asBC_BNOT:         emit_arithmetic_simple_stack_unary_inplace(ins, "~", u32); break;
+	case asBC_BNOT:         emit_unop_var_inplace(ins, "~", u32); break;
 	case asBC_BAND:         emit_binop_var_var(ins, "&", u32, u32, u32); break;
 	case asBC_BXOR:         emit_binop_var_var(ins, "^", u32, u32, u32); break;
 	case asBC_BOR:          emit_binop_var_var(ins, "|", u32, u32, u32); break;
@@ -943,14 +943,9 @@ void BytecodeToC::emit_test(BytecodeInstruction ins, std::string_view op_with_rh
 	);
 }
 
-void BytecodeToC::emit_arithmetic_simple_stack_unary_inplace(
-    BytecodeInstruction ins,
-    std::string_view    op,
-    VarType             var
-) {
+void BytecodeToC::emit_unop_var_inplace(BytecodeInstruction ins, std::string_view op, VarType var) {
 	emit(
-	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = {OP} "
-	    "ASEA_FRAME_VAR({SWORD0}).as_{TYPE};\n"
+	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = {OP} ASEA_FRAME_VAR({SWORD0}).as_{TYPE};\n"
 	    "\t\t++l_bc;\n",
 	    fmt::arg("TYPE", var.type),
 	    fmt::arg("OP", op),
@@ -1174,38 +1169,6 @@ void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset) {
 	return std::size_t(std::int64_t(base_offset) + std::int64_t(relative_offset));
-}
-
-bool is_alpha_numerical(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'); }
-
-std::string escape_c_literal(std::string_view str) {
-	std::string ret;
-	ret.reserve(str.size()); // always underestimated but that's ok
-
-	std::string_view legal_chars = "!#%&'()*+,-./:;<=>?[]^_{|}~ ";
-
-	for (char c : str) {
-		// handle the most common cases (either paste the characters as-is or
-		// escape them) for the string to be readable
-		if (is_alpha_numerical(c) || legal_chars.find(c) != legal_chars.npos) {
-			ret += c;
-		} else if (c == '\r') {
-			ret += "\\r";
-		} else if (c == '\n') {
-			ret += "\\n";
-		} else if (c == '\t') {
-			ret += "\\t";
-		} else if (c == '"') {
-			ret += "\\\"";
-		} else if (c == '\\') {
-			ret += "\\\\";
-		} else {
-			// hex encode the rest
-			ret += fmt::format("\\x{:02x}", c);
-		}
-	}
-
-	return ret;
 }
 
 } // namespace angelsea::detail

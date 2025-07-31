@@ -115,7 +115,7 @@ class BytecodeToC {
 	void emit_cond_branch(BytecodeInstruction ins, std::size_t instruction_length, std::string_view test);
 	void emit_test(BytecodeInstruction ins, std::string_view op_with_rhs_0);
 	void emit_primitive_cast_var(BytecodeInstruction ins, VarType src, VarType dst, bool in_place);
-	void emit_arithmetic_simple_stack_unary_inplace(BytecodeInstruction ins, std::string_view op, VarType var);
+	void emit_unop_var_inplace(BytecodeInstruction ins, std::string_view op, VarType var);
 	void emit_binop_var_var(BytecodeInstruction ins, std::string_view op, VarType lhs, VarType rhs, VarType dst);
 	void emit_binop_var_imm(
 	    BytecodeInstruction ins,
@@ -142,8 +142,5 @@ class BytecodeToC {
 };
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset);
-
-bool        is_alpha_numerical(char c);
-std::string escape_c_literal(std::string_view str);
 
 } // namespace angelsea::detail
