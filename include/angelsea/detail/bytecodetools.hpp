@@ -8,7 +8,7 @@
 
 namespace angelsea::detail {
 
-void walk_bytecode(std::span<asDWORD> bytecode, std::invocable<BytecodeInstruction> auto&& walker) {
+inline void walk_bytecode(std::span<asDWORD> bytecode, std::invocable<BytecodeInstruction> auto&& walker) {
 	asDWORD* bytecode_current = bytecode.data();
 	asDWORD* bytecode_end     = bytecode.data() + bytecode.size();
 
