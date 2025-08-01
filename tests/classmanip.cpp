@@ -17,7 +17,7 @@ TEST_REQUIRE("simple array logic", "[array][factory]", run("scripts/arrays/simpl
 
 TEST_REQUIRE(
     "arrays with user class types",
-    "[array][factory]",
+    "[array][factory][arrayuser]",
     run("scripts/arrays/userclass.as") == "123\n456\n789\n"
 );
 

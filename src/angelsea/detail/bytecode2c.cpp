@@ -365,6 +365,23 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
+	case asBC_PshRPtr: {
+		emit(
+		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tASEA_STACK_TOP.as_asPWORD = regs->valueRegister.as_asPWORD;\n"
+		);
+		emit_auto_bc_inc(state);
+		break;
+	}
+	case asBC_PopRPtr: {
+		emit(
+		    "\t\tregs->valueRegister.as_asPWORD = ASEA_STACK_TOP.as_asPWORD;\n"
+		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, AS_PTR_SIZE);\n"
+		);
+		emit_auto_bc_inc(state);
+		break;
+	}
+
 	// V1/V2 are equivalent to V4
 	case asBC_SetV1:
 	case asBC_SetV2:
@@ -743,10 +760,11 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_ADDSi: {
+		// FIXME: concerning wtf: if we store &ASEA_STACK_TOP.as_asPWORD to a temporary and use it, then we get
+		// corruption with -O2 (not if disabling load GVN), again.
 		emit(
-		    "\t\tasPWORD *top = &ASEA_STACK_TOP.as_asPWORD;\n"
-		    "\t\tif (*top == 0) {{ goto err_null; }}\n"
-		    "\t\t*top += {SWORD0};\n",
+		    "\t\tif (ASEA_STACK_TOP.as_asPWORD == 0) {{ goto err_null; }}\n"
+		    "\t\tASEA_STACK_TOP.as_asPWORD += {SWORD0};\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		state.error_handlers.null = true;
@@ -882,8 +900,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CMPIf:
 	case asBC_CMPIu:
 	case asBC_JMPP:
-	case asBC_PopRPtr:
-	case asBC_PshRPtr:
 	case asBC_CALLSYS:
 	case asBC_CALLBND:
 	case asBC_ALLOC:
