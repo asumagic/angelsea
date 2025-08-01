@@ -511,6 +511,17 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_STOREOBJ: {
+		emit(
+		    "\t\tASEA_FRAME_VAR({SWORD0}).as_ptr = regs->objectRegister;\n"
+		    "\t\tregs->objectRegister = 0;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		emit_auto_bc_inc(ins);
+
+		break;
+	}
+
 	case asBC_RDR1: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
@@ -743,7 +754,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_ALLOC:
 	case asBC_FREE:
 	case asBC_LOADOBJ:
-	case asBC_STOREOBJ:
 	case asBC_GETOBJ:
 	case asBC_GETREF:
 	case asBC_PshNull:
