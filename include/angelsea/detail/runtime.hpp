@@ -23,4 +23,7 @@ void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
 /// \brief Wrapper for asCContext::SetInternalException. `text` should typically
 /// be use one of the TXT_* AngelScript macros for the relevant exception.
 void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text);
+
+float asea_fmodf(float a, float b);
+float asea_fmod(float a, float b);
 }

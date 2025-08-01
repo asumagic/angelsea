@@ -82,6 +82,8 @@ void MirJit::bind_runtime() {
 	ASEA_BIND_MIR(asea_call_script_function);
 	ASEA_BIND_MIR(asea_debug_message);
 	ASEA_BIND_MIR(asea_set_internal_exception);
+	ASEA_BIND_MIR(asea_fmodf);
+	ASEA_BIND_MIR(asea_fmod);
 #undef ASEA_BIND_MIR
 }
 

@@ -22,7 +22,8 @@ TEST_CASE("32-bit float math", "[floatmath32]") {
 	REQUIRE(run_string("float a = 10.0f; print(''+ ++a);") == "11\n");
 	REQUIRE(run_string("float a = 10.0f; print(''+ --a);") == "9\n");
 
-	run_string("float a = 10.0f; float b = 0.0f; print(''+ a/b);\n", asEXECUTION_EXCEPTION);
+	REQUIRE(run_string("float a = 10.0f; float b = 0.0f; print(''+ a/b);\n", asEXECUTION_EXCEPTION) == "");
+	REQUIRE(run_string("float a = 10.0f; float b = 0.0f; print(''+ a%b);\n", asEXECUTION_EXCEPTION) == "");
 }
 
 TEST_CASE("64-bit float math", "[floatmath64]") {
@@ -45,7 +46,8 @@ TEST_CASE("64-bit float math", "[floatmath64]") {
 	REQUIRE(run_string("double a = 10.0; print(''+ ++a);") == "11\n");
 	REQUIRE(run_string("double a = 10.0; print(''+ --a);") == "9\n");
 
-	run_string("double a = 10.0f; double b = 0.0f; print(''+ a/b);\n", asEXECUTION_EXCEPTION);
+	REQUIRE(run_string("double a = 10.0f; double b = 0.0f; print(''+ a/b);\n", asEXECUTION_EXCEPTION) == "");
+	REQUIRE(run_string("double a = 10.0f; double b = 0.0f; print(''+ a%b);\n", asEXECUTION_EXCEPTION) == "");
 }
 
 TEST_CASE("Floating-point to floating-point conversions", "[castfpfp]") {

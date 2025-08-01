@@ -2,13 +2,13 @@
 
 #include <angelsea/detail/runtime.hpp>
 
-#include <angelsea/detail/debug.hpp>
-
 #include <angelscript.h>
+#include <angelsea/detail/debug.hpp>
 #include <as_context.h>
 #include <as_objecttype.h>
 #include <as_scriptengine.h>
 #include <as_scriptfunction.h>
+#include <cmath>
 
 static asCContext&      asea_get_context(asSVMRegisters* regs) { return static_cast<asCContext&>(*regs->ctx); }
 static asCScriptEngine& asea_get_engine(asSVMRegisters* regs) {
@@ -27,4 +27,7 @@ void asea_debug_message(asSVMRegisters* vm_registers, const char* text) {
 void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text) {
 	asea_get_context(vm_registers).SetInternalException(text);
 }
+
+float asea_fmodf(float a, float b) { return fmodf(a, b); }
+float asea_fmod(float a, float b) { return fmod(a, b); }
 }

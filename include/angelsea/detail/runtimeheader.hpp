@@ -73,18 +73,9 @@ typedef __UINTPTR_TYPE__ asPWORD;
 
 #define asASSERT
 
-/* TODO: is this ever used in the VM other than AS_PTR_SIZE? */
 #if __SIZEOF_POINTER__ == 4
-	#define asBCTYPE_PTR_ARG    asBCTYPE_DW_ARG
-	#define asBCTYPE_PTR_DW_ARG asBCTYPE_DW_DW_ARG
-	#define asBCTYPE_wW_PTR_ARG asBCTYPE_wW_DW_ARG
-	#define asBCTYPE_rW_PTR_ARG asBCTYPE_rW_DW_ARG
 	#define AS_PTR_SIZE 1
 #else
-	#define asBCTYPE_PTR_ARG    asBCTYPE_QW_ARG
-	#define asBCTYPE_PTR_DW_ARG asBCTYPE_QW_DW_ARG
-	#define asBCTYPE_wW_PTR_ARG asBCTYPE_wW_QW_ARG
-	#define asBCTYPE_rW_PTR_ARG asBCTYPE_rW_QW_ARG
 	#define AS_PTR_SIZE 2
 #endif
 
@@ -159,6 +150,8 @@ typedef struct
 void asea_call_script_function(asSVMRegisters* vm_registers, void* function);
 void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
 void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text);
+float asea_fmodf(float a, float b);
+float asea_fmod(float a, float b);
 
 /*
     The following definitions are additional angelsea helpers
@@ -169,6 +162,10 @@ void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text)
 #define ASEA_STACK_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(l_sp, (dword_offset))))
 #define ASEA_STACK_TOP (*(asea_var*)(l_sp))
 #define ASEA_VALUEREG_DEREF() (*(asea_var*)(regs->valueRegister.as_ptr))
+
+#define ASEA_FDIV(lhs, rhs) lhs / rhs
+#define ASEA_FMOD32(lhs, rhs) asea_fmodf(lhs, rhs)
+#define ASEA_FMOD64(lhs, rhs) asea_fmod(lhs, rhs)
 
 /* end of angelsea static header */
 

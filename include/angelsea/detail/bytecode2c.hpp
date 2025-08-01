@@ -145,10 +145,10 @@ class BytecodeToC {
 	    VarType             dst
 	);
 
-	/// Emits the complete handler for a division operation between two float variables on the stack,
-	/// outputting to a third one. This is handled separately from regular binop because these instructions can raise
-	/// exceptions.
-	void emit_div_var_float_ins(BytecodeInstruction ins, VarType type);
+	/// Emits the complete handler for a division or modulus operation (where `op` is one of the `ASEA_FDIV`/`FMOD`
+	/// macros) between two float variables on the stack, outputting to a third one. This is handled separately from
+	/// regular binop because these instructions can raise exceptions.
+	void emit_divmod_var_float_ins(BytecodeInstruction ins, std::string_view op, VarType type);
 
 	const JitConfig& m_config;
 	asIScriptEngine& m_script_engine;

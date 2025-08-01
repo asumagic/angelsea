@@ -644,8 +644,10 @@ void BytecodeToC::translate_instruction(
 	case asBC_SUBd:         emit_binop_var_var_ins(ins, "-", f64, f64, f64); break;
 	case asBC_MULd:         emit_binop_var_var_ins(ins, "*", f64, f64, f64); break;
 
-	case asBC_DIVf:         emit_div_var_float_ins(ins, f32); break;
-	case asBC_DIVd:         emit_div_var_float_ins(ins, f64); break;
+	case asBC_DIVf:         emit_divmod_var_float_ins(ins, "ASEA_FDIV", f32); break;
+	case asBC_DIVd:         emit_divmod_var_float_ins(ins, "ASEA_FDIV", f64); break;
+	case asBC_MODf:         emit_divmod_var_float_ins(ins, "ASEA_FMOD32", f32); break;
+	case asBC_MODd:         emit_divmod_var_float_ins(ins, "ASEA_FMOD64", f64); break;
 
 	case asBC_BNOT64:       emit_unop_var_inplace_ins(ins, "~", u64); break;
 	case asBC_BAND64:       emit_binop_var_var_ins(ins, "&", u64, u64, u64); break;
@@ -738,8 +740,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_CmpPtr:
 	case asBC_DIVi:
 	case asBC_MODi:
-	case asBC_MODf:
-	case asBC_MODd:
 	case asBC_ADDIf:
 	case asBC_SUBIf:
 	case asBC_MULIf:
@@ -954,8 +954,7 @@ void BytecodeToC::emit_binop_var_imm_ins(
 	emit_auto_bc_inc(ins);
 }
 
-void BytecodeToC::emit_div_var_float_ins(BytecodeInstruction ins, VarType type) {
-	emit_auto_bc_inc(ins);
+void BytecodeToC::emit_divmod_var_float_ins(BytecodeInstruction ins, std::string_view op, VarType type) {
 	emit(
 	    "\t\t{TYPE} lhs = ASEA_FRAME_VAR({SWORD1}).as_{TYPE};\n"
 	    "\t\t{TYPE} divider = ASEA_FRAME_VAR({SWORD2}).as_{TYPE};\n"
@@ -965,13 +964,15 @@ void BytecodeToC::emit_div_var_float_ins(BytecodeInstruction ins, VarType type) 
 	    "\");\n"
 	    "\t\t\treturn;\n"
 	    "\t\t}}\n"
-	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = lhs / divider;\n",
+	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = {OP}(lhs, divider);\n",
 	    fmt::arg("TYPE", type.type),
 	    fmt::arg("SWORD0", ins.sword0()),
 	    fmt::arg("SWORD1", ins.sword1()),
 	    fmt::arg("SWORD2", ins.sword2()),
+	    fmt::arg("OP", op),
 	    fmt::arg("SAVE_REGS", save_registers_sequence)
 	);
+	emit_auto_bc_inc(ins);
 }
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset) {
