@@ -277,7 +277,8 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
-	case asBC_PshC4: {
+	case asBC_TYPEID:
+	case asBC_PshC4:  {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -1);\n"
 		    "\t\tASEA_STACK_TOP.as_asDWORD = {DWORD0};\n",
@@ -748,7 +749,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_PshNull:
 	case asBC_ClrVPtr:
 	case asBC_OBJTYPE:
-	case asBC_TYPEID:
 	case asBC_ADDSi:
 	case asBC_CpyVtoR8:
 	case asBC_CpyVtoG4:
