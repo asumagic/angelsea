@@ -485,6 +485,16 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
+	case asBC_PshNull: {
+		// TODO: simple but not tested! how can we get AS to emit it?
+		emit(
+		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tASEA_STACK_TOP.as_asPWORD = 0;\n"
+		);
+		emit_auto_bc_inc(state);
+		break;
+	}
+
 	case asBC_PopPtr: {
 		emit("\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, AS_PTR_SIZE);\n");
 		emit_auto_bc_inc(state);
@@ -896,7 +906,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_ALLOC:
 	case asBC_FREE:
 	case asBC_GETREF:
-	case asBC_PshNull:
 	case asBC_ClrVPtr:
 	case asBC_OBJTYPE:
 	case asBC_CpyVtoR8:
