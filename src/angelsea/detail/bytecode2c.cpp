@@ -472,6 +472,13 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
+	case asBC_SetG4: {
+		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), true);
+		emit("\t\t*(asDWORD*)&{OBJ} = {DWORD};\n", fmt::arg("OBJ", symbol), fmt::arg("DWORD", ins.dword0(AS_PTR_SIZE)));
+		emit_auto_bc_inc(state);
+		break;
+	}
+
 	case asBC_LDG: {
 		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), true);
 		emit("\t\tregs->valueRegister.as_asPWORD = (asPWORD)&{};\n", symbol);
@@ -950,7 +957,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CpyVtoR8:
 	case asBC_CpyVtoG4:
 	case asBC_CpyGtoV4:
-	case asBC_SetG4:
 	case asBC_ChkRefS:
 	case asBC_ChkNullV:
 	case asBC_CALLINTF:
