@@ -68,7 +68,7 @@ class BytecodeToC {
 
 	std::string entry_point_name(asIScriptFunction& fn) const;
 
-	std::string& source() { return m_state.buffer; }
+	std::string& source() { return m_module_state.buffer; }
 
 	/// Configure the callback to be invoked when a function is mapped to a C
 	/// function name. This is useful to track the generated entry points in
@@ -90,82 +90,84 @@ class BytecodeToC {
 	/// Returns the number of fallbacks to the VM generated since
 	/// `prepare_new_context`.
 	/// If `== 0`, then all translated functions were fully translated.
-	std::size_t get_fallback_count() const { return m_state.fallback_count; }
+	std::size_t get_fallback_count() const { return m_module_state.fallback_count; }
 
 	private:
-	struct FunctionTranslationState {};
+	struct FnState {
+		asIScriptFunction& fn;
+		/// Current instruction being translated (if in a callee of translate_instruction)
+		BytecodeInstruction ins;
+
+		struct {
+			bool null : 1            = false;
+			bool divide_by_zero : 1  = false;
+			bool divide_overflow : 1 = false;
+		} error_handlers;
+	};
 
 	bool is_instruction_blacklisted(asEBCInstr bc) const;
-	void translate_instruction(asIScriptFunction& fn, BytecodeInstruction instruction, FunctionTranslationState& state);
+	void translate_instruction(FnState& state);
 
 	template<class... Ts> void emit(fmt::format_string<Ts...> format, Ts&&... format_args) {
-		fmt::format_to(std::back_inserter(m_state.buffer), format, std::forward<Ts>(format_args)...);
+		fmt::format_to(std::back_inserter(m_module_state.buffer), format, std::forward<Ts>(format_args)...);
 	}
 
-	void emit_entry_dispatch(asIScriptFunction& fn);
-	void emit_vm_fallback(asIScriptFunction& fn, std::string_view reason);
+	void emit_entry_dispatch(FnState& state);
+	void emit_error_handlers(FnState& state);
 
-	void emit_auto_bc_inc(BytecodeInstruction ins);
+	void emit_vm_fallback(FnState& state, std::string_view reason);
 
-	std::string emit_global_lookup(asIScriptFunction& fn, void** pointer, bool global_var_only);
+	void emit_auto_bc_inc(FnState& state);
+
+	std::string emit_global_lookup(FnState& state, void** pointer, bool global_var_only);
 
 	/// Emits the complete handler for a conditional relative branching instruction.
 	/// If the condition provided by the expression in `test` is true, then perform a relative jump by the specified
 	/// amount.
-	void emit_cond_branch_ins(BytecodeInstruction ins, std::string_view test);
+	void emit_cond_branch_ins(FnState& state, std::string_view test);
 
 	/// Emits the complete handler for a test instruction.
 	/// Writes the boolean result of `valueRegister {op} 0` to `valueRegister`.
-	void emit_test_ins(BytecodeInstruction ins, std::string_view op_with_rhs_0);
+	void emit_test_ins(FnState& state, std::string_view op_with_rhs_0);
 
 	/// Emits the complete handler for a primitive cast of a variable on the stack to another.
 	/// Automatically determines whether the instruction takes two arguments (source and destination), or whether the
 	/// operation occurs in place in the same variable location.
-	void emit_primitive_cast_var_ins(BytecodeInstruction ins, VarType src, VarType dst);
+	void emit_primitive_cast_var_ins(FnState& state, VarType src, VarType dst);
 
 	/// Emits the complete handler for an in-place prefix operation on the valueRegister, that is,
 	/// `{op}valueRegister` (`op` normally being either `++` or `--`).
-	void emit_prefixop_valuereg_ins(BytecodeInstruction ins, std::string_view op, VarType var);
+	void emit_prefixop_valuereg_ins(FnState& state, std::string_view op, VarType var);
 
 	/// Emits the complete handler for an in-place unary operation on a variable on the stack, that is,
 	/// `var = {op} var`.
-	void emit_unop_var_inplace_ins(BytecodeInstruction ins, std::string_view op, VarType var);
+	void emit_unop_var_inplace_ins(FnState& state, std::string_view op, VarType var);
 
 	/// Emits the complete handler for a binary operation between two variables on the stack, outputting to a third
 	/// one, that is, `result = lhs {op} rhs`.
-	void emit_binop_var_var_ins(BytecodeInstruction ins, std::string_view op, VarType lhs, VarType rhs, VarType dst);
+	void emit_binop_var_var_ins(FnState& state, std::string_view op, VarType lhs, VarType rhs, VarType dst);
 
 	/// Emits the complete handler for a binary operation between a variable on the stack and an immediate value,
 	/// outputting to another variable, that is, `result = lhs {op} (rhs_expr)`.
-	void emit_binop_var_imm_ins(
-	    BytecodeInstruction ins,
-	    std::string_view    op,
-	    VarType             lhs,
-	    std::string_view    rhs_expr,
-	    VarType             dst
-	);
+	void
+	emit_binop_var_imm_ins(FnState& state, std::string_view op, VarType lhs, std::string_view rhs_expr, VarType dst);
 
 	/// Emits the complete handler for a division or modulus operation (where `op` is one of the `ASEA_FDIV`/`FMOD`
 	/// macros) between two float variables on the stack, outputting to a third one. This is handled separately from
 	/// regular binop because these instructions can raise exceptions.
-	void emit_divmod_var_float_ins(BytecodeInstruction ins, std::string_view op, VarType type);
+	void emit_divmod_var_float_ins(FnState& state, std::string_view op, VarType type);
 
 	/// Emits the complete handler for a division or modulus operation (where `op` is `/` or `%`) between two integral
 	/// variables on the stack, outputting to a third one. This is handled separately from regular binop because these
 	/// instructions can raise exceptions.
 	/// The `lhs_overflow_value` represents the value that should be checked for to match AS exception behaviour: If
 	/// divider == -1 && lhs == lhs_overflow_value, then a division overflow exception will be raised.
-	void emit_divmod_var_int_ins(
-	    BytecodeInstruction ins,
-	    std::string_view    op,
-	    std::uint64_t       lhs_overflow_value,
-	    VarType             type
-	);
+	void emit_divmod_var_int_ins(FnState& state, std::string_view op, std::uint64_t lhs_overflow_value, VarType type);
 
 	/// Emits the complete handler for a division or modulus operation (where `op` is `/` or `%`) between two unsigned
 	/// integral variables on the stack, outputting to a third one. Equivalent to `emit_divmod_var_int_ins`, except
 	/// there is no `lhs_overflow_value` logic.
-	void emit_divmod_var_unsigned_ins(BytecodeInstruction ins, std::string_view op, VarType type);
+	void emit_divmod_var_unsigned_ins(FnState& state, std::string_view op, VarType type);
 
 	const JitConfig& m_config;
 	asIScriptEngine& m_script_engine;
@@ -175,12 +177,12 @@ class BytecodeToC {
 	OnMapExternCallback   m_on_map_extern_callback;
 
 	/// State for the current `prepare_new_context` context.
-	struct ContextState {
+	struct ModuleState {
 		std::string buffer;
 		std::size_t fallback_count;
 		std::size_t string_constant_idx;
 	};
-	ContextState m_state;
+	ModuleState m_module_state;
 };
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset);
