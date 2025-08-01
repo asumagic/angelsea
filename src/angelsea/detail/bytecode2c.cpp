@@ -775,6 +775,18 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
+	case asBC_IncVi: {
+		emit("\t\t++ASEA_FRAME_VAR({SWORD0}).as_asINT32;\n", fmt::arg("SWORD0", ins.sword0()));
+		emit_auto_bc_inc(state);
+		break;
+	}
+
+	case asBC_DecVi: {
+		emit("\t\t--ASEA_FRAME_VAR({SWORD0}).as_asINT32;\n", fmt::arg("SWORD0", ins.sword0()));
+		emit_auto_bc_inc(state);
+		break;
+	}
+
 	case asBC_JZ:     emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 == 0"); break;
 	case asBC_JLowZ:  emit_cond_branch_ins(state, "regs->valueRegister.as_asBYTE == 0"); break;
 	case asBC_JNZ:    emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 != 0"); break;
@@ -916,8 +928,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_PshG4:
 	case asBC_LdGRdR4:
 	case asBC_RET:
-	case asBC_IncVi:
-	case asBC_DecVi:
 	case asBC_COPY:
 	case asBC_RDSPtr:
 	case asBC_JMPP:
