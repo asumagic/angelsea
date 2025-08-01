@@ -729,6 +729,18 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
+	case asBC_ADDSi: {
+		emit(
+		    "\t\tasPWORD *top = &ASEA_STACK_TOP.as_asPWORD;\n"
+		    "\t\tif (*top == 0) {{ goto err_null; }}\n"
+		    "\t\t*top += {SWORD0};\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		state.error_handlers.null = true;
+		emit_auto_bc_inc(state);
+		break;
+	}
+
 	case asBC_JZ:           emit_cond_branch_ins(state, "regs->valueRegister.as_asINT64 == 0"); break;
 	case asBC_JLowZ:        emit_cond_branch_ins(state, "regs->valueRegister.as_asBYTE == 0"); break;
 	case asBC_JNZ:          emit_cond_branch_ins(state, "regs->valueRegister.as_asINT64 != 0"); break;
@@ -864,7 +876,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_PshNull:
 	case asBC_ClrVPtr:
 	case asBC_OBJTYPE:
-	case asBC_ADDSi:
 	case asBC_CpyVtoR8:
 	case asBC_CpyVtoG4:
 	case asBC_CpyRtoV8:
