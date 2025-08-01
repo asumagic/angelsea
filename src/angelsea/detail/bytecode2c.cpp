@@ -465,7 +465,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_LDG: {
 		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), true);
-		emit("\t\tregs->valueRegister.as_asPWORD = &{};\n", symbol);
+		emit("\t\tregs->valueRegister.as_asPWORD = (asPWORD)&{};\n", symbol);
 		emit_auto_bc_inc(state);
 		break;
 	}
