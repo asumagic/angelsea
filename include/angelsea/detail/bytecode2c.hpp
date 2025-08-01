@@ -126,6 +126,13 @@ class BytecodeToC {
 	/// amount.
 	void emit_cond_branch_ins(FnState& state, std::string_view test);
 
+	/// Emits the complete handler for a compare instruction between two variables on the stack (whether integral or
+	/// floating-point).
+	/// - If var1 == var2 => *valueRegister =  0
+	/// - If var1 < var2  => *valueRegister = -1
+	/// - If var1 > var2  => *valueRegister =  1
+	void emit_compare_var_var_ins(FnState& state, VarType type);
+
 	/// Emits the complete handler for a test instruction.
 	/// Writes the boolean result of `valueRegister {op} 0` to `valueRegister`.
 	void emit_test_ins(FnState& state, std::string_view op_with_rhs_0);

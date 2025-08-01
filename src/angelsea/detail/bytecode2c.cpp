@@ -755,7 +755,14 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_TS:           emit_test_ins(state, "<"); break;
 	case asBC_TNS:          emit_test_ins(state, ">="); break;
 	case asBC_TP:           emit_test_ins(state, ">"); break;
-	case asBC_TNP:          emit_test_ins(state, "<"); break;
+	case asBC_TNP:          emit_test_ins(state, "<="); break;
+
+	case asBC_CMPi:         emit_compare_var_var_ins(state, s32); break;
+	case asBC_CMPu:         emit_compare_var_var_ins(state, u32); break;
+	case asBC_CMPd:         emit_compare_var_var_ins(state, f64); break;
+	case asBC_CMPf:         emit_compare_var_var_ins(state, f32); break;
+	case asBC_CMPi64:       emit_compare_var_var_ins(state, s64); break;
+	case asBC_CMPu64:       emit_compare_var_var_ins(state, u64); break;
 
 	case asBC_INCi8:        emit_prefixop_valuereg_ins(state, "++", u8); break;
 	case asBC_DECi8:        emit_prefixop_valuereg_ins(state, "--", u8); break;
@@ -858,10 +865,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_DecVi:
 	case asBC_COPY:
 	case asBC_RDSPtr:
-	case asBC_CMPd:
-	case asBC_CMPu:
-	case asBC_CMPf:
-	case asBC_CMPi:
 	case asBC_CMPIf:
 	case asBC_CMPIu:
 	case asBC_JMPP:
@@ -890,8 +893,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_ChkNullV:
 	case asBC_CALLINTF:
 	case asBC_Cast:
-	case asBC_CMPi64:
-	case asBC_CMPu64:
 	case asBC_ChkNullS:
 	case asBC_ClrHi:
 	case asBC_CallPtr:
@@ -1022,8 +1023,22 @@ void BytecodeToC::emit_cond_branch_ins(FnState& state, std::string_view test) {
 	);
 }
 
-void BytecodeToC::emit_test_ins(FnState& state, std::string_view op_with_rhs_0) {
+void BytecodeToC::emit_compare_var_var_ins(FnState& state, VarType type) {
 	BytecodeInstruction& ins = state.ins;
+	emit(
+	    "\t\t{TYPE} lhs = ASEA_FRAME_VAR({SWORD0}).as_{TYPE};\n"
+	    "\t\t{TYPE} rhs = ASEA_FRAME_VAR({SWORD1}).as_{TYPE};\n"
+	    "\t\tif      (lhs == rhs) regs->valueRegister.as_asINT32 = 0;\n"
+	    "\t\telse if (lhs < rhs)  regs->valueRegister.as_asINT32 = -1;\n"
+	    "\t\telse                 regs->valueRegister.as_asINT32 = 1;\n",
+	    fmt::arg("SWORD0", ins.sword0()),
+	    fmt::arg("SWORD1", ins.sword1()),
+	    fmt::arg("TYPE", type.type)
+	);
+	emit_auto_bc_inc(state);
+}
+
+void BytecodeToC::emit_test_ins(FnState& state, std::string_view op_with_rhs_0) {
 	emit(
 	    "\t\tasINT32 value = regs->valueRegister.as_asINT32;\n"
 	    "\t\tregs->valueRegister.as_asQWORD = 0;\n"
