@@ -109,3 +109,14 @@ void null_test()
     Foo @f = null;
     by_ref(f);
 }
+
+void is_test()
+{
+    Foo f1, f2;
+    Foo@ f1_alias = @f1;
+
+    if (f1 is f1_alias) { print("ok"); }
+    if (f1 is f2) { print("not ok"); }
+    if (f1 !is f2) { print("ok"); }
+    if (f1_alias is f1_alias) { print("ok"); }
+}

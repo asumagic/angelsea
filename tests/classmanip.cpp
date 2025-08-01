@@ -39,6 +39,8 @@ TEST_CASE("user classes", "[userclass][simpleuserclass]") {
 	REQUIRE(
 	    run("scripts/userclasses.as", "void pass_by_value_test()") == "hello\n10\n20\n30\n40\n50\n60\n70\n80\n90\n100\n"
 	);
+
+	REQUIRE(run("scripts/userclasses.as", "void is_test()") == "hello\nhello\nok\nok\nok\n");
 }
 
 TEST_CASE("user class chkref", "[chkref][userclass]") {

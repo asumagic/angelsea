@@ -32,7 +32,8 @@ struct VarType {
 
 namespace var_types {
 static constexpr VarType s8{"asINT8", 1}, s16{"asINT16", 2}, s32{"asINT32", 4}, s64{"asINT64", 8}, u8{"asBYTE", 1},
-    u16{"asWORD", 2}, u32{"asDWORD", 4}, u64{"asQWORD", 8}, f32{"float", 4}, f64{"double", 8};
+    u16{"asWORD", 2}, u32{"asDWORD", 4}, u64{"asQWORD", 8},
+    pword{"asPWORD", 8 /* should never be used for this type anyway */}, f32{"float", 4}, f64{"double", 8};
 } // namespace var_types
 
 class BytecodeToC {
