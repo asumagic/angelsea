@@ -443,6 +443,20 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_CHKREF: {
+		emit(
+		    "\t\tif (ASEA_STACK_TOP.as_asPWORD == 0) {{\n"
+		    "{SAVE_REGS}"
+		    "\t\t\tasea_set_internal_exception(_regs, \"" TXT_NULL_POINTER_ACCESS
+		    "\");\n"
+		    "\t\t\treturn;\n"
+		    "\t\t}}\n",
+		    fmt::arg("SAVE_REGS", save_registers_sequence)
+		);
+		emit_auto_bc_inc(ins);
+		break;
+	}
+
 	case asBC_GETOBJREF: {
 		emit(
 		    "\t\tasPWORD *dst = &ASEA_STACK_VAR({WORD0}).as_asPWORD;\n"
@@ -730,7 +744,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_LOADOBJ:
 	case asBC_STOREOBJ:
 	case asBC_GETOBJ:
-	case asBC_CHKREF:
 	case asBC_GETREF:
 	case asBC_PshNull:
 	case asBC_ClrVPtr:

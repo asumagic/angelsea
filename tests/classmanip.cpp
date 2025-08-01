@@ -41,6 +41,10 @@ TEST_CASE("user classes", "[userclass][simpleuserclass]") {
 	);
 }
 
+TEST_CASE("user class chkref", "[chkref][userclass]") {
+	REQUIRE(run("scripts/userclasses.as", "void null_test()", asEXECUTION_EXCEPTION) == "");
+}
+
 TEST_CASE("globals with user classes", "[userclass][globals][globalswithclasses]") {
 	REQUIRE(run("scripts/globalswithclasses.as", "void global_test()") == "123\n456\n789\n");
 }
