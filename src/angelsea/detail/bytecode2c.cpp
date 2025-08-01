@@ -534,6 +534,25 @@ void BytecodeToC::translate_instruction(
 		break;
 	}
 
+	case asBC_LoadRObjR: {
+		emit(
+		    "\t\tasPWORD base = ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n"
+		    "\t\tif (base == 0) {{\n"
+		    "{SAVE_REGS}"
+		    "\t\t\tasea_set_internal_exception(_regs, \"" TXT_NULL_POINTER_ACCESS
+		    "\");\n"
+		    "\t\t\treturn;\n"
+		    "\t\t}}\n"
+		    "\t\tregs->valueRegister.as_asPWORD = base + {SWORD1};\n",
+		    fmt::arg("SWORD0", ins.sword0()),
+		    fmt::arg("SWORD1", ins.sword0()),
+		    fmt::arg("SAVE_REGS", save_registers_sequence)
+		);
+
+		emit_auto_bc_inc(ins);
+		break;
+	}
+
 	case asBC_RDR1: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
@@ -796,7 +815,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_CallPtr:
 	case asBC_FuncPtr:
 	case asBC_LoadThisR:
-	case asBC_LoadRObjR:
 	case asBC_LoadVObjR:
 	case asBC_AllocMem:
 	case asBC_SetListSize:
