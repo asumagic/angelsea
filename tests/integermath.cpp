@@ -39,6 +39,9 @@ TEST_CASE("32-bit signed math", "[signedmath32]") {
 
 	REQUIRE(run_string("int a = 10; print(++a)") == "11\n");
 	REQUIRE(run_string("int a = 10; print(--a)") == "9\n");
+
+	REQUIRE(run_string("int a = 10, b = 0; print(''+ a/b);\n", asEXECUTION_EXCEPTION) == "");
+	REQUIRE(run_string("int a = 10, b = 0; print(''+ a%b);\n", asEXECUTION_EXCEPTION) == "");
 }
 
 TEST_CASE("64-bit signed math", "[signedmath64]") {
@@ -52,6 +55,10 @@ TEST_CASE("64-bit signed math", "[signedmath64]") {
 
 	REQUIRE(run_string("int64 a = 10; print(++a)") == "11\n");
 	REQUIRE(run_string("int64 a = 10; print(--a)") == "9\n");
+
+	REQUIRE(run_string("int64 a = 10, b = 0; print(''+ a/b);\n", asEXECUTION_EXCEPTION) == "");
+	REQUIRE(run_string("int64 a = int64(1) << 63, b = -1; print(''+ a/b);\n", asEXECUTION_EXCEPTION) == "");
+	REQUIRE(run_string("int64 a = 10, b = 0; print(''+ a%b);\n", asEXECUTION_EXCEPTION) == "");
 }
 
 TEST_CASE("unsigned overflow logic", "[unsignedmathoverflow]") {
@@ -64,11 +71,17 @@ TEST_CASE("unsigned overflow logic", "[unsignedmathoverflow]") {
 TEST_CASE("32-bit unsigned division math", "[unsignedmathdiv32]") {
 	REQUIRE(run_string("uint32 a = 10, b = 4; print(a / b)") == "2\n");
 	REQUIRE(run_string("uint32 a = 10, b = 4; print(a % b)") == "2\n");
+
+	REQUIRE(run_string("uint32 a = 10, b = 0; print(''+ a/b);\n", asEXECUTION_EXCEPTION) == "");
+	REQUIRE(run_string("uint32 a = 10, b = 0; print(''+ a%b);\n", asEXECUTION_EXCEPTION) == "");
 }
 
 TEST_CASE("64-bit unsigned division math", "[unsignedmathdiv64]") {
 	REQUIRE(run_string("uint64 a = 10, b = 4; print(a / b)") == "2\n");
 	REQUIRE(run_string("uint64 a = 10, b = 4; print(a % b)") == "2\n");
+
+	REQUIRE(run_string("uint64 a = 10, b = 0; print(''+ a/b);\n", asEXECUTION_EXCEPTION) == "");
+	REQUIRE(run_string("uint64 a = 10, b = 0; print(''+ a%b);\n", asEXECUTION_EXCEPTION) == "");
 }
 
 TEST_CASE("32-bit bitwise logic", "[bitwise32]") {

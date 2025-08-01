@@ -150,6 +150,23 @@ class BytecodeToC {
 	/// regular binop because these instructions can raise exceptions.
 	void emit_divmod_var_float_ins(BytecodeInstruction ins, std::string_view op, VarType type);
 
+	/// Emits the complete handler for a division or modulus operation (where `op` is `/` or `%`) between two integral
+	/// variables on the stack, outputting to a third one. This is handled separately from regular binop because these
+	/// instructions can raise exceptions.
+	/// The `lhs_overflow_value` represents the value that should be checked for to match AS exception behaviour: If
+	/// divider == -1 && lhs == lhs_overflow_value, then a division overflow exception will be raised.
+	void emit_divmod_var_int_ins(
+	    BytecodeInstruction ins,
+	    std::string_view    op,
+	    std::uint64_t       lhs_overflow_value,
+	    VarType             type
+	);
+
+	/// Emits the complete handler for a division or modulus operation (where `op` is `/` or `%`) between two unsigned
+	/// integral variables on the stack, outputting to a third one. Equivalent to `emit_divmod_var_int_ins`, except
+	/// there is no `lhs_overflow_value` logic.
+	void emit_divmod_var_unsigned_ins(BytecodeInstruction ins, std::string_view op, VarType type);
+
 	const JitConfig& m_config;
 	asIScriptEngine& m_script_engine;
 	std::string      m_jit_fn_prefix;

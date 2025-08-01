@@ -644,6 +644,15 @@ void BytecodeToC::translate_instruction(
 	case asBC_SUBd:         emit_binop_var_var_ins(ins, "-", f64, f64, f64); break;
 	case asBC_MULd:         emit_binop_var_var_ins(ins, "*", f64, f64, f64); break;
 
+	case asBC_DIVi:         emit_divmod_var_int_ins(ins, "/", 0x80000000, s32); break;
+	case asBC_MODi:         emit_divmod_var_int_ins(ins, "%", 0x80000000, s32); break;
+	case asBC_DIVu:         emit_divmod_var_unsigned_ins(ins, "/", u32); break;
+	case asBC_MODu:         emit_divmod_var_unsigned_ins(ins, "%", u32); break;
+	case asBC_DIVi64:       emit_divmod_var_int_ins(ins, "/", asINT64(1) << 63, s64); break;
+	case asBC_MODi64:       emit_divmod_var_int_ins(ins, "%", asINT64(1) << 63, s64); break;
+	case asBC_DIVu64:       emit_divmod_var_unsigned_ins(ins, "/", u64); break;
+	case asBC_MODu64:       emit_divmod_var_unsigned_ins(ins, "%", u64); break;
+
 	case asBC_DIVf:         emit_divmod_var_float_ins(ins, "ASEA_FDIV", f32); break;
 	case asBC_DIVd:         emit_divmod_var_float_ins(ins, "ASEA_FDIV", f64); break;
 	case asBC_MODf:         emit_divmod_var_float_ins(ins, "ASEA_FMOD32", f32); break;
@@ -738,8 +747,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_WRTV8:
 	case asBC_LDG:
 	case asBC_CmpPtr:
-	case asBC_DIVi:
-	case asBC_MODi:
 	case asBC_ADDIf:
 	case asBC_SUBIf:
 	case asBC_MULIf:
@@ -748,8 +755,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_ChkNullV:
 	case asBC_CALLINTF:
 	case asBC_Cast:
-	case asBC_DIVi64:
-	case asBC_MODi64:
 	case asBC_CMPi64:
 	case asBC_CMPu64:
 	case asBC_ChkNullS:
@@ -757,10 +762,6 @@ void BytecodeToC::translate_instruction(
 	case asBC_CallPtr:
 	case asBC_FuncPtr:
 	case asBC_LoadThisR:
-	case asBC_DIVu:
-	case asBC_MODu:
-	case asBC_DIVu64:
-	case asBC_MODu64:
 	case asBC_LoadRObjR:
 	case asBC_LoadVObjR:
 	case asBC_AllocMem:
@@ -965,6 +966,59 @@ void BytecodeToC::emit_divmod_var_float_ins(BytecodeInstruction ins, std::string
 	    "\t\t\treturn;\n"
 	    "\t\t}}\n"
 	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = {OP}(lhs, divider);\n",
+	    fmt::arg("TYPE", type.type),
+	    fmt::arg("SWORD0", ins.sword0()),
+	    fmt::arg("SWORD1", ins.sword1()),
+	    fmt::arg("SWORD2", ins.sword2()),
+	    fmt::arg("OP", op),
+	    fmt::arg("SAVE_REGS", save_registers_sequence)
+	);
+	emit_auto_bc_inc(ins);
+}
+
+void BytecodeToC::emit_divmod_var_int_ins(
+    BytecodeInstruction ins,
+    std::string_view    op,
+    std::uint64_t       lhs_overflow_value,
+    VarType             type
+) {
+	emit(
+	    "\t\t{TYPE} lhs = ASEA_FRAME_VAR({SWORD1}).as_{TYPE};\n"
+	    "\t\t{TYPE} divider = ASEA_FRAME_VAR({SWORD2}).as_{TYPE};\n"
+	    "\t\tif (divider == 0) {{\n"
+	    "{SAVE_REGS}"
+	    "\t\t\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_BY_ZERO
+	    "\");\n"
+	    "\t\t\treturn;\n"
+	    "\t\t}} else if (divider == -1 && lhs == ({TYPE}){LHS_OVERFLOW}) {{\n"
+	    "{SAVE_REGS}"
+	    "\t\t\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_OVERFLOW
+	    "\");\n"
+	    "\t\t\treturn;\n"
+	    "\t\t}}\n"
+	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = lhs {OP} divider;\n",
+	    fmt::arg("TYPE", type.type),
+	    fmt::arg("SWORD0", ins.sword0()),
+	    fmt::arg("SWORD1", ins.sword1()),
+	    fmt::arg("SWORD2", ins.sword2()),
+	    fmt::arg("OP", op),
+	    fmt::arg("LHS_OVERFLOW", lhs_overflow_value),
+	    fmt::arg("SAVE_REGS", save_registers_sequence)
+	);
+	emit_auto_bc_inc(ins);
+}
+
+void BytecodeToC::emit_divmod_var_unsigned_ins(BytecodeInstruction ins, std::string_view op, VarType type) {
+	emit(
+	    "\t\t{TYPE} lhs = ASEA_FRAME_VAR({SWORD1}).as_{TYPE};\n"
+	    "\t\t{TYPE} divider = ASEA_FRAME_VAR({SWORD2}).as_{TYPE};\n"
+	    "\t\tif (divider == 0) {{\n"
+	    "{SAVE_REGS}"
+	    "\t\t\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_BY_ZERO
+	    "\");\n"
+	    "\t\t\treturn;\n"
+	    "\t\t}}\n"
+	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = lhs {OP} divider;\n",
 	    fmt::arg("TYPE", type.type),
 	    fmt::arg("SWORD0", ins.sword0()),
 	    fmt::arg("SWORD1", ins.sword1()),
