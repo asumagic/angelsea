@@ -806,98 +806,111 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit_compare_var_imm_ins(state, f32, "rhs_i2f.f");
 		break;
 
-	case asBC_INCi8:        emit_prefixop_valuereg_ins(state, "++", u8); break;
-	case asBC_DECi8:        emit_prefixop_valuereg_ins(state, "--", u8); break;
-	case asBC_INCi16:       emit_prefixop_valuereg_ins(state, "++", u16); break;
-	case asBC_DECi16:       emit_prefixop_valuereg_ins(state, "--", u16); break;
-	case asBC_INCi:         emit_prefixop_valuereg_ins(state, "++", u32); break;
-	case asBC_DECi:         emit_prefixop_valuereg_ins(state, "--", u32); break;
-	case asBC_INCi64:       emit_prefixop_valuereg_ins(state, "++", u64); break;
-	case asBC_DECi64:       emit_prefixop_valuereg_ins(state, "--", u64); break;
-	case asBC_INCf:         emit_prefixop_valuereg_ins(state, "++", f32); break;
-	case asBC_DECf:         emit_prefixop_valuereg_ins(state, "--", f32); break;
-	case asBC_INCd:         emit_prefixop_valuereg_ins(state, "++", f64); break;
-	case asBC_DECd:         emit_prefixop_valuereg_ins(state, "--", f64); break;
+	case asBC_INCi8:  emit_prefixop_valuereg_ins(state, "++", u8); break;
+	case asBC_DECi8:  emit_prefixop_valuereg_ins(state, "--", u8); break;
+	case asBC_INCi16: emit_prefixop_valuereg_ins(state, "++", u16); break;
+	case asBC_DECi16: emit_prefixop_valuereg_ins(state, "--", u16); break;
+	case asBC_INCi:   emit_prefixop_valuereg_ins(state, "++", u32); break;
+	case asBC_DECi:   emit_prefixop_valuereg_ins(state, "--", u32); break;
+	case asBC_INCi64: emit_prefixop_valuereg_ins(state, "++", u64); break;
+	case asBC_DECi64: emit_prefixop_valuereg_ins(state, "--", u64); break;
+	case asBC_INCf:   emit_prefixop_valuereg_ins(state, "++", f32); break;
+	case asBC_DECf:   emit_prefixop_valuereg_ins(state, "--", f32); break;
+	case asBC_INCd:   emit_prefixop_valuereg_ins(state, "++", f64); break;
+	case asBC_DECd:   emit_prefixop_valuereg_ins(state, "--", f64); break;
 
-	case asBC_NEGi:         emit_unop_var_inplace_ins(state, "-", s32); break;
-	case asBC_NEGi64:       emit_unop_var_inplace_ins(state, "-", s64); break;
-	case asBC_NEGf:         emit_unop_var_inplace_ins(state, "-", f32); break;
-	case asBC_NEGd:         emit_unop_var_inplace_ins(state, "-", f64); break;
+	case asBC_NEGi:   emit_unop_var_inplace_ins(state, "-", s32); break;
+	case asBC_NEGi64: emit_unop_var_inplace_ins(state, "-", s64); break;
+	case asBC_NEGf:   emit_unop_var_inplace_ins(state, "-", f32); break;
+	case asBC_NEGd:   emit_unop_var_inplace_ins(state, "-", f64); break;
 
-	case asBC_ADDi:         emit_binop_var_var_ins(state, "+", s32, s32, s32); break;
-	case asBC_SUBi:         emit_binop_var_var_ins(state, "-", s32, s32, s32); break;
-	case asBC_MULi:         emit_binop_var_var_ins(state, "*", s32, s32, s32); break;
-	case asBC_ADDi64:       emit_binop_var_var_ins(state, "+", s64, s64, s64); break;
-	case asBC_SUBi64:       emit_binop_var_var_ins(state, "-", s64, s64, s64); break;
-	case asBC_MULi64:       emit_binop_var_var_ins(state, "*", s64, s64, s64); break;
-	case asBC_ADDf:         emit_binop_var_var_ins(state, "+", f32, f32, f32); break;
-	case asBC_SUBf:         emit_binop_var_var_ins(state, "-", f32, f32, f32); break;
-	case asBC_MULf:         emit_binop_var_var_ins(state, "*", f32, f32, f32); break;
-	case asBC_ADDd:         emit_binop_var_var_ins(state, "+", f64, f64, f64); break;
-	case asBC_SUBd:         emit_binop_var_var_ins(state, "-", f64, f64, f64); break;
-	case asBC_MULd:         emit_binop_var_var_ins(state, "*", f64, f64, f64); break;
+	case asBC_ADDi:   emit_binop_var_var_ins(state, "+", s32, s32, s32); break;
+	case asBC_SUBi:   emit_binop_var_var_ins(state, "-", s32, s32, s32); break;
+	case asBC_MULi:   emit_binop_var_var_ins(state, "*", s32, s32, s32); break;
+	case asBC_ADDi64: emit_binop_var_var_ins(state, "+", s64, s64, s64); break;
+	case asBC_SUBi64: emit_binop_var_var_ins(state, "-", s64, s64, s64); break;
+	case asBC_MULi64: emit_binop_var_var_ins(state, "*", s64, s64, s64); break;
+	case asBC_ADDf:   emit_binop_var_var_ins(state, "+", f32, f32, f32); break;
+	case asBC_SUBf:   emit_binop_var_var_ins(state, "-", f32, f32, f32); break;
+	case asBC_MULf:   emit_binop_var_var_ins(state, "*", f32, f32, f32); break;
+	case asBC_ADDd:   emit_binop_var_var_ins(state, "+", f64, f64, f64); break;
+	case asBC_SUBd:   emit_binop_var_var_ins(state, "-", f64, f64, f64); break;
+	case asBC_MULd:   emit_binop_var_var_ins(state, "*", f64, f64, f64); break;
 
-	case asBC_DIVi:         emit_divmod_var_int_ins(state, "/", 0x80000000, s32); break;
-	case asBC_MODi:         emit_divmod_var_int_ins(state, "%", 0x80000000, s32); break;
-	case asBC_DIVu:         emit_divmod_var_unsigned_ins(state, "/", u32); break;
-	case asBC_MODu:         emit_divmod_var_unsigned_ins(state, "%", u32); break;
-	case asBC_DIVi64:       emit_divmod_var_int_ins(state, "/", asINT64(1) << 63, s64); break;
-	case asBC_MODi64:       emit_divmod_var_int_ins(state, "%", asINT64(1) << 63, s64); break;
-	case asBC_DIVu64:       emit_divmod_var_unsigned_ins(state, "/", u64); break;
-	case asBC_MODu64:       emit_divmod_var_unsigned_ins(state, "%", u64); break;
+	case asBC_DIVi:   emit_divmod_var_int_ins(state, "/", 0x80000000, s32); break;
+	case asBC_MODi:   emit_divmod_var_int_ins(state, "%", 0x80000000, s32); break;
+	case asBC_DIVu:   emit_divmod_var_unsigned_ins(state, "/", u32); break;
+	case asBC_MODu:   emit_divmod_var_unsigned_ins(state, "%", u32); break;
+	case asBC_DIVi64: emit_divmod_var_int_ins(state, "/", asINT64(1) << 63, s64); break;
+	case asBC_MODi64: emit_divmod_var_int_ins(state, "%", asINT64(1) << 63, s64); break;
+	case asBC_DIVu64: emit_divmod_var_unsigned_ins(state, "/", u64); break;
+	case asBC_MODu64: emit_divmod_var_unsigned_ins(state, "%", u64); break;
 
-	case asBC_DIVf:         emit_divmod_var_float_ins(state, "ASEA_FDIV", f32); break;
-	case asBC_DIVd:         emit_divmod_var_float_ins(state, "ASEA_FDIV", f64); break;
-	case asBC_MODf:         emit_divmod_var_float_ins(state, "ASEA_FMOD32", f32); break;
-	case asBC_MODd:         emit_divmod_var_float_ins(state, "ASEA_FMOD64", f64); break;
+	case asBC_DIVf:   emit_divmod_var_float_ins(state, "ASEA_FDIV", f32); break;
+	case asBC_DIVd:   emit_divmod_var_float_ins(state, "ASEA_FDIV", f64); break;
+	case asBC_MODf:   emit_divmod_var_float_ins(state, "ASEA_FMOD32", f32); break;
+	case asBC_MODd:   emit_divmod_var_float_ins(state, "ASEA_FMOD64", f64); break;
 
-	case asBC_BNOT64:       emit_unop_var_inplace_ins(state, "~", u64); break;
-	case asBC_BAND64:       emit_binop_var_var_ins(state, "&", u64, u64, u64); break;
-	case asBC_BXOR64:       emit_binop_var_var_ins(state, "^", u64, u64, u64); break;
-	case asBC_BOR64:        emit_binop_var_var_ins(state, "|", u64, u64, u64); break;
-	case asBC_BSLL64:       emit_binop_var_var_ins(state, "<<", u64, u32, u64); break;
-	case asBC_BSRL64:       emit_binop_var_var_ins(state, ">>", u64, u32, u64); break;
-	case asBC_BSRA64:       emit_binop_var_var_ins(state, ">>", s64, u32, s64); break;
+	case asBC_BNOT64: emit_unop_var_inplace_ins(state, "~", u64); break;
+	case asBC_BAND64: emit_binop_var_var_ins(state, "&", u64, u64, u64); break;
+	case asBC_BXOR64: emit_binop_var_var_ins(state, "^", u64, u64, u64); break;
+	case asBC_BOR64:  emit_binop_var_var_ins(state, "|", u64, u64, u64); break;
+	case asBC_BSLL64: emit_binop_var_var_ins(state, "<<", u64, u32, u64); break;
+	case asBC_BSRL64: emit_binop_var_var_ins(state, ">>", u64, u32, u64); break;
+	case asBC_BSRA64: emit_binop_var_var_ins(state, ">>", s64, u32, s64); break;
 
-	case asBC_BNOT:         emit_unop_var_inplace_ins(state, "~", u32); break;
-	case asBC_BAND:         emit_binop_var_var_ins(state, "&", u32, u32, u32); break;
-	case asBC_BXOR:         emit_binop_var_var_ins(state, "^", u32, u32, u32); break;
-	case asBC_BOR:          emit_binop_var_var_ins(state, "|", u32, u32, u32); break;
-	case asBC_BSLL:         emit_binop_var_var_ins(state, "<<", u32, u32, u32); break;
-	case asBC_BSRL:         emit_binop_var_var_ins(state, ">>", u32, u32, u32); break;
-	case asBC_BSRA:         emit_binop_var_var_ins(state, ">>", s32, u32, s32); break;
+	case asBC_BNOT:   emit_unop_var_inplace_ins(state, "~", u32); break;
+	case asBC_BAND:   emit_binop_var_var_ins(state, "&", u32, u32, u32); break;
+	case asBC_BXOR:   emit_binop_var_var_ins(state, "^", u32, u32, u32); break;
+	case asBC_BOR:    emit_binop_var_var_ins(state, "|", u32, u32, u32); break;
+	case asBC_BSLL:   emit_binop_var_var_ins(state, "<<", u32, u32, u32); break;
+	case asBC_BSRL:   emit_binop_var_var_ins(state, ">>", u32, u32, u32); break;
+	case asBC_BSRA:   emit_binop_var_var_ins(state, ">>", s32, u32, s32); break;
 
-	case asBC_ADDIi:        emit_binop_var_imm_ins(state, "+", s32, fmt::to_string(ins.int0(1)), s32); break;
-	case asBC_SUBIi:        emit_binop_var_imm_ins(state, "-", s32, fmt::to_string(ins.int0(1)), s32); break;
-	case asBC_MULIi:        emit_binop_var_imm_ins(state, "*", s32, fmt::to_string(ins.int0(1)), s32); break;
+	case asBC_iTOf:   emit_primitive_cast_var_ins(state, s32, f32); break;
+	case asBC_fTOi:   emit_primitive_cast_var_ins(state, f32, s32); break;
+	case asBC_uTOf:   emit_primitive_cast_var_ins(state, u32, f32); break;
+	case asBC_fTOu:   emit_primitive_cast_var_ins(state, f32, u32); break;
+	case asBC_sbTOi:  emit_primitive_cast_var_ins(state, s8, s32); break;
+	case asBC_swTOi:  emit_primitive_cast_var_ins(state, s16, s32); break;
+	case asBC_ubTOi:  emit_primitive_cast_var_ins(state, u8, s32); break;
+	case asBC_uwTOi:  emit_primitive_cast_var_ins(state, u16, s32); break;
+	case asBC_iTOb:   emit_primitive_cast_var_ins(state, u32, s8); break;
+	case asBC_iTOw:   emit_primitive_cast_var_ins(state, u32, s16); break;
+	case asBC_i64TOi: emit_primitive_cast_var_ins(state, s64, s32); break;
+	case asBC_uTOi64: emit_primitive_cast_var_ins(state, u32, s64); break;
+	case asBC_iTOi64: emit_primitive_cast_var_ins(state, s32, s64); break;
+	case asBC_fTOd:   emit_primitive_cast_var_ins(state, f32, f64); break;
+	case asBC_dTOf:   emit_primitive_cast_var_ins(state, f64, f32); break;
+	case asBC_fTOi64: emit_primitive_cast_var_ins(state, f32, s64); break;
+	case asBC_dTOi64: emit_primitive_cast_var_ins(state, f64, s64); break;
+	case asBC_fTOu64: emit_primitive_cast_var_ins(state, f32, u64); break;
+	case asBC_dTOu64: emit_primitive_cast_var_ins(state, f64, u64); break;
+	case asBC_i64TOf: emit_primitive_cast_var_ins(state, s64, f32); break;
+	case asBC_u64TOf: emit_primitive_cast_var_ins(state, u64, f32); break;
+	case asBC_i64TOd: emit_primitive_cast_var_ins(state, s64, f64); break;
+	case asBC_u64TOd: emit_primitive_cast_var_ins(state, u64, f64); break;
+	case asBC_dTOi:   emit_primitive_cast_var_ins(state, f64, s32); break;
+	case asBC_dTOu:   emit_primitive_cast_var_ins(state, f64, u32); break;
+	case asBC_iTOd:   emit_primitive_cast_var_ins(state, s32, f64); break;
+	case asBC_uTOd:   emit_primitive_cast_var_ins(state, u32, f64); break;
 
-	case asBC_iTOf:         emit_primitive_cast_var_ins(state, s32, f32); break;
-	case asBC_fTOi:         emit_primitive_cast_var_ins(state, f32, s32); break;
-	case asBC_uTOf:         emit_primitive_cast_var_ins(state, u32, f32); break;
-	case asBC_fTOu:         emit_primitive_cast_var_ins(state, f32, u32); break;
-	case asBC_sbTOi:        emit_primitive_cast_var_ins(state, s8, s32); break;
-	case asBC_swTOi:        emit_primitive_cast_var_ins(state, s16, s32); break;
-	case asBC_ubTOi:        emit_primitive_cast_var_ins(state, u8, s32); break;
-	case asBC_uwTOi:        emit_primitive_cast_var_ins(state, u16, s32); break;
-	case asBC_iTOb:         emit_primitive_cast_var_ins(state, u32, s8); break;
-	case asBC_iTOw:         emit_primitive_cast_var_ins(state, u32, s16); break;
-	case asBC_i64TOi:       emit_primitive_cast_var_ins(state, s64, s32); break;
-	case asBC_uTOi64:       emit_primitive_cast_var_ins(state, u32, s64); break;
-	case asBC_iTOi64:       emit_primitive_cast_var_ins(state, s32, s64); break;
-	case asBC_fTOd:         emit_primitive_cast_var_ins(state, f32, f64); break;
-	case asBC_dTOf:         emit_primitive_cast_var_ins(state, f64, f32); break;
-	case asBC_fTOi64:       emit_primitive_cast_var_ins(state, f32, s64); break;
-	case asBC_dTOi64:       emit_primitive_cast_var_ins(state, f64, s64); break;
-	case asBC_fTOu64:       emit_primitive_cast_var_ins(state, f32, u64); break;
-	case asBC_dTOu64:       emit_primitive_cast_var_ins(state, f64, u64); break;
-	case asBC_i64TOf:       emit_primitive_cast_var_ins(state, s64, f32); break;
-	case asBC_u64TOf:       emit_primitive_cast_var_ins(state, u64, f32); break;
-	case asBC_i64TOd:       emit_primitive_cast_var_ins(state, s64, f64); break;
-	case asBC_u64TOd:       emit_primitive_cast_var_ins(state, u64, f64); break;
-	case asBC_dTOi:         emit_primitive_cast_var_ins(state, f64, s32); break;
-	case asBC_dTOu:         emit_primitive_cast_var_ins(state, f64, u32); break;
-	case asBC_iTOd:         emit_primitive_cast_var_ins(state, s32, f64); break;
-	case asBC_uTOd:         emit_primitive_cast_var_ins(state, u32, f64); break;
+	case asBC_ADDIi:  emit_binop_var_imm_ins(state, "+", s32, fmt::to_string(ins.int0(1)), s32); break;
+	case asBC_SUBIi:  emit_binop_var_imm_ins(state, "-", s32, fmt::to_string(ins.int0(1)), s32); break;
+	case asBC_MULIi:  emit_binop_var_imm_ins(state, "*", s32, fmt::to_string(ins.int0(1)), s32); break;
+
+	case asBC_ADDIf:
+		emit("\t\tasea_i2f rhs_i2f = {{.i={}}};\n", ins.dword0(1));
+		emit_binop_var_imm_ins(state, "+", f32, "rhs_i2f.f", f32);
+		break;
+	case asBC_SUBIf:
+		emit("\t\tasea_i2f rhs_i2f = {{.i={}}};\n", ins.dword0(1));
+		emit_binop_var_imm_ins(state, "-", f32, "rhs_i2f.f", f32);
+		break;
+	case asBC_MULIf:
+		emit("\t\tasea_i2f rhs_i2f = {{.i={}}};\n", ins.dword0(1));
+		emit_binop_var_imm_ins(state, "*", f32, "rhs_i2f.f", f32);
+		break;
 
 	case asBC_SwapPtr:
 	case asBC_PshG4:
@@ -919,9 +932,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CpyVtoG4:
 	case asBC_CpyRtoV8:
 	case asBC_CpyGtoV4:
-	case asBC_ADDIf:
-	case asBC_SUBIf:
-	case asBC_MULIf:
 	case asBC_SetG4:
 	case asBC_ChkRefS:
 	case asBC_ChkNullV:
