@@ -463,23 +463,30 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
+	case asBC_LDG: {
+		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), true);
+		emit("\t\tregs->valueRegister.as_asPWORD = &{};\n", symbol);
+		emit_auto_bc_inc(state);
+		break;
+	}
+
 	case asBC_PGA: {
-		std::string fn_symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), false);
+		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), false);
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
 		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD)&{OBJ};\n",
-		    fmt::arg("OBJ", fn_symbol)
+		    fmt::arg("OBJ", symbol)
 		);
 		emit_auto_bc_inc(state);
 		break;
 	}
 
 	case asBC_PshGPtr: {
-		std::string fn_symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), false);
+		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), false);
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
 		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD){OBJ};\n",
-		    fmt::arg("OBJ", fn_symbol)
+		    fmt::arg("OBJ", symbol)
 		);
 		emit_auto_bc_inc(state);
 		break;
@@ -912,7 +919,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CpyVtoG4:
 	case asBC_CpyRtoV8:
 	case asBC_CpyGtoV4:
-	case asBC_LDG:
 	case asBC_ADDIf:
 	case asBC_SUBIf:
 	case asBC_MULIf:
