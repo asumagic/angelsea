@@ -567,6 +567,19 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
+	case asBC_GETOBJ: {
+		emit(
+		    "\t\tasPWORD *a = &ASEA_STACK_VAR({WORD0}).as_asPWORD;\n"
+		    "\t\tasPWORD offset = *a;\n"
+		    "\t\tasPWORD *v = &ASEA_FRAME_VAR(offset).as_asPWORD;\n"
+		    "\t\t*a = *v;\n"
+		    "\t\t*v = 0;\n",
+		    fmt::arg("WORD0", ins.word0())
+		);
+		emit_auto_bc_inc(state);
+		break;
+	}
+
 	case asBC_LoadRObjR: {
 		emit(
 		    "\t\tasPWORD base = ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n"
@@ -875,7 +888,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CALLBND:
 	case asBC_ALLOC:
 	case asBC_FREE:
-	case asBC_GETOBJ:
 	case asBC_GETREF:
 	case asBC_PshNull:
 	case asBC_ClrVPtr:
