@@ -12,6 +12,7 @@
 #include <angelsea/detail/stringutil.hpp>
 #include <as_property.h>
 #include <as_scriptengine.h>
+#include <as_texts.h>
 #include <fmt/format.h>
 
 namespace angelsea::detail {
@@ -954,11 +955,14 @@ void BytecodeToC::emit_binop_var_imm_ins(
 }
 
 void BytecodeToC::emit_div_var_float_ins(BytecodeInstruction ins, VarType type) {
+	emit_auto_bc_inc(ins);
 	emit(
 	    "\t\t{TYPE} lhs = ASEA_FRAME_VAR({SWORD1}).as_{TYPE};\n"
 	    "\t\t{TYPE} divider = ASEA_FRAME_VAR({SWORD2}).as_{TYPE};\n"
 	    "\t\tif (divider == 0) {{\n"
 	    "{SAVE_REGS}"
+	    "\t\t\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_BY_ZERO
+	    "\");\n"
 	    "\t\t\treturn;\n"
 	    "\t\t}}\n"
 	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = lhs / divider;\n",
@@ -968,7 +972,6 @@ void BytecodeToC::emit_div_var_float_ins(BytecodeInstruction ins, VarType type) 
 	    fmt::arg("SWORD2", ins.sword2()),
 	    fmt::arg("SAVE_REGS", save_registers_sequence)
 	);
-	emit_auto_bc_inc(ins);
 }
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset) {
