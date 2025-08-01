@@ -111,6 +111,11 @@ TEST_CASE("f32 comparisons", "[fpcmp]") {
 	REQUIRE(run_string("float a = 15, b = 15; print(''+bool(a > b))") == "false\n");
 	REQUIRE(run_string("float a = 15, b = 14; print(''+bool(a > b))") == "true\n");
 
+	// same but immediates i.e. CMPIf
+	REQUIRE(run_string("float a = 15; print(''+bool(a > 16))") == "false\n");
+	REQUIRE(run_string("float a = 15; print(''+bool(a > 15))") == "false\n");
+	REQUIRE(run_string("float a = 15; print(''+bool(a > 14))") == "true\n");
+
 	REQUIRE(run_string("float a = 15, b = 16; print(''+bool(a >= b))") == "false\n");
 	REQUIRE(run_string("float a = 15, b = 15; print(''+bool(a >= b))") == "true\n");
 	REQUIRE(run_string("float a = 15, b = 14; print(''+bool(a >= b))") == "true\n");

@@ -123,6 +123,8 @@ typedef struct asCScriptFunction asCScriptFunction;
 typedef struct asCObjectType asCObjectType;
 typedef struct asSTypeBehaviour asSTypeBehaviour;
 
+#endif
+
 /* Layout exactly mimics asSVMRegisters */
 typedef struct
 {
@@ -141,7 +143,7 @@ typedef struct
 	asIScriptContext *ctx;                /* the active context */
 } asea_vm_registers;
 
-#endif
+typedef union { float f; asDWORD i; } asea_i2f;
 
 /*
     The following definitions are part of the angelsea runtime.hpp

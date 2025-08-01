@@ -723,20 +723,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
-	case asBC_CMPIi: {
-		emit(
-		    "\t\tint i1 = ASEA_FRAME_VAR({SWORD0}).as_asINT32;\n"
-		    "\t\tint i2 = {INT0};\n"
-		    "\t\tif( i1 == i2 )     regs->valueRegister.as_asINT32 = 0;\n"
-		    "\t\telse if( i1 < i2 ) regs->valueRegister.as_asINT32 = -1;\n"
-		    "\t\telse               regs->valueRegister.as_asINT32 = 1;\n",
-		    fmt::arg("SWORD0", ins.sword0()),
-		    fmt::arg("INT0", ins.int0())
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
-
 	case asBC_JMP: {
 		emit(
 		    "\t\tl_bc += {BRANCH_OFFSET};\n"
@@ -772,29 +758,36 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
-	case asBC_JZ:           emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 == 0"); break;
-	case asBC_JLowZ:        emit_cond_branch_ins(state, "regs->valueRegister.as_asBYTE == 0"); break;
-	case asBC_JNZ:          emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 != 0"); break;
-	case asBC_JLowNZ:       emit_cond_branch_ins(state, "regs->valueRegister.as_asBYTE != 0"); break;
-	case asBC_JS:           emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 < 0"); break;
-	case asBC_JNS:          emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 >= 0"); break;
-	case asBC_JP:           emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 > 0"); break;
-	case asBC_JNP:          emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 <= 0"); break;
+	case asBC_JZ:     emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 == 0"); break;
+	case asBC_JLowZ:  emit_cond_branch_ins(state, "regs->valueRegister.as_asBYTE == 0"); break;
+	case asBC_JNZ:    emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 != 0"); break;
+	case asBC_JLowNZ: emit_cond_branch_ins(state, "regs->valueRegister.as_asBYTE != 0"); break;
+	case asBC_JS:     emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 < 0"); break;
+	case asBC_JNS:    emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 >= 0"); break;
+	case asBC_JP:     emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 > 0"); break;
+	case asBC_JNP:    emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 <= 0"); break;
 
-	case asBC_TZ:           emit_test_ins(state, "=="); break;
-	case asBC_TNZ:          emit_test_ins(state, "!="); break;
-	case asBC_TS:           emit_test_ins(state, "<"); break;
-	case asBC_TNS:          emit_test_ins(state, ">="); break;
-	case asBC_TP:           emit_test_ins(state, ">"); break;
-	case asBC_TNP:          emit_test_ins(state, "<="); break;
+	case asBC_TZ:     emit_test_ins(state, "=="); break;
+	case asBC_TNZ:    emit_test_ins(state, "!="); break;
+	case asBC_TS:     emit_test_ins(state, "<"); break;
+	case asBC_TNS:    emit_test_ins(state, ">="); break;
+	case asBC_TP:     emit_test_ins(state, ">"); break;
+	case asBC_TNP:    emit_test_ins(state, "<="); break;
 
-	case asBC_CMPi:         emit_compare_var_var_ins(state, s32); break;
-	case asBC_CMPu:         emit_compare_var_var_ins(state, u32); break;
-	case asBC_CMPd:         emit_compare_var_var_ins(state, f64); break;
-	case asBC_CMPf:         emit_compare_var_var_ins(state, f32); break;
-	case asBC_CMPi64:       emit_compare_var_var_ins(state, s64); break;
-	case asBC_CMPu64:       emit_compare_var_var_ins(state, u64); break;
-	case asBC_CmpPtr:       emit_compare_var_var_ins(state, pword); break;
+	case asBC_CMPi:   emit_compare_var_var_ins(state, s32); break;
+	case asBC_CMPu:   emit_compare_var_var_ins(state, u32); break;
+	case asBC_CMPd:   emit_compare_var_var_ins(state, f64); break;
+	case asBC_CMPf:   emit_compare_var_var_ins(state, f32); break;
+	case asBC_CMPi64: emit_compare_var_var_ins(state, s64); break;
+	case asBC_CMPu64: emit_compare_var_var_ins(state, u64); break;
+	case asBC_CmpPtr: emit_compare_var_var_ins(state, pword); break;
+
+	case asBC_CMPIi:  emit_compare_var_imm_ins(state, s32, fmt::to_string(ins.int0())); break;
+	case asBC_CMPIu:  emit_compare_var_imm_ins(state, u32, fmt::to_string(ins.dword0())); break;
+	case asBC_CMPIf:
+		emit("\t\tasea_i2f rhs_i2f = {{.i={}}};\n", ins.dword0());
+		emit_compare_var_imm_ins(state, f32, "rhs_i2f.f");
+		break;
 
 	case asBC_INCi8:        emit_prefixop_valuereg_ins(state, "++", u8); break;
 	case asBC_DECi8:        emit_prefixop_valuereg_ins(state, "--", u8); break;
@@ -897,8 +890,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_DecVi:
 	case asBC_COPY:
 	case asBC_RDSPtr:
-	case asBC_CMPIf:
-	case asBC_CMPIu:
 	case asBC_JMPP:
 	case asBC_CALLSYS:
 	case asBC_CALLBND:
@@ -1061,6 +1052,20 @@ void BytecodeToC::emit_compare_var_var_ins(FnState& state, VarType type) {
 	    "\t\telse                 regs->valueRegister.as_asINT32 = 1;\n",
 	    fmt::arg("SWORD0", ins.sword0()),
 	    fmt::arg("SWORD1", ins.sword1()),
+	    fmt::arg("TYPE", type.type)
+	);
+	emit_auto_bc_inc(state);
+}
+
+void BytecodeToC::emit_compare_var_imm_ins(FnState& state, VarType type, std::string_view rhs_expr) {
+	emit(
+	    "\t\t{TYPE} lhs = ASEA_FRAME_VAR({SWORD0}).as_{TYPE};\n"
+	    "\t\t{TYPE} rhs = {RHS};\n"
+	    "\t\tif      (lhs == rhs) regs->valueRegister.as_asINT32 = 0;\n"
+	    "\t\telse if (lhs < rhs)  regs->valueRegister.as_asINT32 = -1;\n"
+	    "\t\telse                 regs->valueRegister.as_asINT32 = 1;\n",
+	    fmt::arg("SWORD0", state.ins.sword0()),
+	    fmt::arg("RHS", rhs_expr),
 	    fmt::arg("TYPE", type.type)
 	);
 	emit_auto_bc_inc(state);
