@@ -592,6 +592,42 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
+	case asBC_WRTV1: {
+		emit(
+		    "\t\tASEA_VALUEREG_DEREF().as_asBYTE = ASEA_FRAME_VAR({SWORD0}).as_asBYTE;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		emit_auto_bc_inc(state);
+		break;
+	}
+
+	case asBC_WRTV2: {
+		emit(
+		    "\t\tASEA_VALUEREG_DEREF().as_asWORD = ASEA_FRAME_VAR({SWORD0}).as_asWORD;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		emit_auto_bc_inc(state);
+		break;
+	}
+
+	case asBC_WRTV4: {
+		emit(
+		    "\t\tASEA_VALUEREG_DEREF().as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		emit_auto_bc_inc(state);
+		break;
+	}
+
+	case asBC_WRTV8: {
+		emit(
+		    "\t\tASEA_VALUEREG_DEREF().as_asQWORD = ASEA_FRAME_VAR({SWORD0}).as_asQWORD;\n",
+		    fmt::arg("SWORD0", ins.sword0())
+		);
+		emit_auto_bc_inc(state);
+		break;
+	}
+
 	case asBC_RDR1: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
@@ -833,10 +869,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CpyVtoG4:
 	case asBC_CpyRtoV8:
 	case asBC_CpyGtoV4:
-	case asBC_WRTV1:
-	case asBC_WRTV2:
-	case asBC_WRTV4:
-	case asBC_WRTV8:
 	case asBC_LDG:
 	case asBC_CmpPtr:
 	case asBC_ADDIf:
