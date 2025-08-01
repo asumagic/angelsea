@@ -940,44 +940,45 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit_binop_var_imm_ins(state, "*", f32, "rhs_i2f.f", f32);
 		break;
 
-	case asBC_SwapPtr:
-	case asBC_PshG4:
-	case asBC_LdGRdR4:
-	case asBC_RET:
-	case asBC_COPY:
-	case asBC_RDSPtr:
-	case asBC_JMPP:
-	case asBC_CALLSYS:
-	case asBC_CALLBND:
-	case asBC_ALLOC:
-	case asBC_FREE:
-	case asBC_GETREF:
-	case asBC_ClrVPtr:
-	case asBC_OBJTYPE:
-	case asBC_CpyVtoR8:
-	case asBC_CpyVtoG4:
-	case asBC_CpyGtoV4:
-	case asBC_ChkRefS:
-	case asBC_ChkNullV:
-	case asBC_CALLINTF:
-	case asBC_Cast:
-	case asBC_ChkNullS:
-	case asBC_ClrHi:
-	case asBC_CallPtr:
-	case asBC_FuncPtr:
-	case asBC_LoadVObjR:
-	case asBC_AllocMem:
-	case asBC_SetListSize:
-	case asBC_PshListElmnt:
-	case asBC_SetListType:
-	case asBC_POWi:
-	case asBC_POWu:
-	case asBC_POWf:
-	case asBC_POWd:
-	case asBC_POWdi:
-	case asBC_POWi64:
-	case asBC_POWu64:
-	case asBC_Thiscall1:    {
+	case asBC_SwapPtr:      // TODO: find way to emit
+	case asBC_PshG4:        // TODO: find way to emit
+	case asBC_LdGRdR4:      // TODO: find way to emit
+	case asBC_RET:          // TODO: implement (probably?)
+	case asBC_COPY:         // TODO: find way to emit
+	case asBC_RDSPtr:       // TODO: implement
+	case asBC_JMPP:         // TODO: implement (will need a switch pre-pass)
+	case asBC_CALLSYS:      // TODO: implement (calls & syscalls)
+	case asBC_CALLBND:      // TODO: find way to emit & implement (calls & syscalls)
+	case asBC_CALLINTF:     // TODO: implement (calls & syscalls)
+	case asBC_Thiscall1:    // TODO: implement (calls & syscalls) -- can probably just do callsys directly?
+	case asBC_CallPtr:      // TODO: find way to emit & implement (calls & syscalls) -- probably just functors
+	case asBC_ALLOC:        // TODO: implement
+	case asBC_FREE:         // TODO: implement
+	case asBC_GETREF:       // TODO: implement
+	case asBC_ClrVPtr:      // TODO: find way to emit (maybe asOBJ_SCOPED?)
+	case asBC_OBJTYPE:      // TODO: implement (seems used in factories)
+	case asBC_CpyVtoR8:     // TODO: find way to emit (probably easy and similar to CpyVtoR4)
+	case asBC_CpyVtoG4:     // TODO: find way to emit
+	case asBC_CpyGtoV4:     // TODO: implement
+	case asBC_ChkRefS:      // TODO: find way to emit
+	case asBC_ChkNullV:     // TODO: implement
+	case asBC_Cast:         // TODO: find way to emit (well. not the hardest to imagine)
+	case asBC_ChkNullS:     // TODO: find way to emit
+	case asBC_ClrHi:        // TODO: find way to emit
+	case asBC_FuncPtr:      // TODO: find way to emit
+	case asBC_LoadVObjR:    // TODO: find way to emit
+	case asBC_AllocMem:     // TODO: implement (seems used in list factories)
+	case asBC_SetListSize:  // TODO: implement
+	case asBC_PshListElmnt: // TODO: implement
+	case asBC_SetListType:  // TODO: find way to emit
+	case asBC_POWi:         // TODO: write tests and implement
+	case asBC_POWu:         // TODO: write tests and implement
+	case asBC_POWf:         // TODO: write tests and implement
+	case asBC_POWd:         // TODO: write tests and implement
+	case asBC_POWdi:        // TODO: write tests and implement
+	case asBC_POWi64:       // TODO: write tests and implement
+	case asBC_POWu64:       // TODO: write tests and implement
+	{
 		emit_vm_fallback(state, "unsupported instruction");
 		break;
 	}
