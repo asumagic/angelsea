@@ -38,8 +38,6 @@ static constexpr VarType s8{"asINT8", 1}, s16{"asINT16", 2}, s32{"asINT32", 4}, 
 
 class BytecodeToC {
 	public:
-	using OnMapFunctionCallback = std::function<void(asIScriptFunction&, const std::string& name)>;
-
 	struct ExternScriptFunction {
 		int id;
 	};
@@ -52,8 +50,10 @@ class BytecodeToC {
 	struct ExternStringConstant {
 		void* ptr;
 	};
-	using ExternMapping       = std::variant<ExternGlobalVariable, ExternStringConstant, ExternScriptFunction>;
-	using OnMapExternCallback = std::function<void(const char* c_name, const ExternMapping& kind, void* raw_value)>;
+	using ExternMapping = std::variant<ExternGlobalVariable, ExternStringConstant, ExternScriptFunction>;
+
+	using OnMapFunctionCallback = std::function<void(asIScriptFunction&, const std::string& name)>;
+	using OnMapExternCallback   = std::function<void(const char* c_name, const ExternMapping& kind, void* raw_value)>;
 
 	BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string jit_fn_prefix = "asea_jit");
 

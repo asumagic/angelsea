@@ -221,6 +221,9 @@ void BytecodeToC::emit_entry_dispatch(FnState& state) {
 			continue; // skip to the next
 		}
 
+		// always clear pword0 as there may be trash data
+		ins.pword0() = 0;
+
 		if (last_was_jit_entry) {
 			// ignore successive JIT entries
 			continue;

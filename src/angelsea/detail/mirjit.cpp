@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-#include "mir-gen.h"
-#include "mir.h"
 #include <angelscript.h>
 #include <angelsea/detail/bytecode2c.hpp>
+#include <angelsea/detail/bytecodeinstruction.hpp>
+#include <angelsea/detail/bytecodetools.hpp>
 #include <angelsea/detail/debug.hpp>
 #include <angelsea/detail/log.hpp>
 #include <angelsea/detail/mirjit.hpp>
 #include <angelsea/detail/runtime.hpp>
+#include <mir-gen.h>
+#include <mir.h>
 #include <string>
 #include <unordered_map>
 
@@ -19,76 +21,117 @@ Mir::~Mir() { MIR_finish(m_ctx); }
 C2Mir::C2Mir(Mir& mir) : m_ctx(mir) { c2mir_init(m_ctx); }
 C2Mir::~C2Mir() { c2mir_finish(m_ctx); }
 
-void jit_release_workaround(asSVMRegisters* regs, asPWORD) { regs->programPointer += 1 + AS_PTR_SIZE; }
+void jit_entry_module_counter(asSVMRegisters* regs, asPWORD module_candidate_raw) {
+	reinterpret_cast<LazyCModule*>(module_candidate_raw)->hit();
+	regs->programPointer += 1 + AS_PTR_SIZE;
+}
+
+void jit_entry_function_counter(asSVMRegisters* regs, asPWORD function_candidate_raw) {
+	reinterpret_cast<LazyMirFunction*>(function_candidate_raw)->hit();
+	regs->programPointer += 1 + AS_PTR_SIZE;
+}
+
+void LazyCModule::hit() {
+	if (hits_before_compile == 0) {
+		jit_engine->compile_lazy_module(*this); // `this` destroyed after this!
+		return;
+	}
+
+	--hits_before_compile;
+}
+
+void LazyMirFunction::hit() {
+	if (hits_before_compile == 0) {
+		jit_engine->codegen_lazy_function(*this); // `this` destroyed after this!
+		return;
+	}
+
+	--hits_before_compile;
+}
+
+MirJit::MirJit(const JitConfig& config, asIScriptEngine& engine) :
+    m_config(config), m_engine(&engine), m_mir{}, m_c_generator{m_config, *m_engine}, m_ignore_unregister{nullptr} {}
 
 void MirJit::register_function(asIScriptFunction& script_function) {
-	m_functions.emplace(&script_function);
-	script_function.SetJITFunction(static_cast<asJITFunction>(jit_release_workaround));
+	log(config(), engine(), LogSeverity::VERBOSE, "lazy step 1: {}: registering for step 2", script_function.GetId());
+
+	auto lazy_module_it = m_lazy_module_functions.find(&script_function);
+	if (lazy_module_it != m_lazy_module_functions.end()) {
+		// candidate function already known and registered
+		// this might happen should we choose to call register_function() to link against other modules' script
+		// functions
+		return;
+	}
+
+	std::shared_ptr<LazyCModule> lazy_module;
+
+	// check if there is an associated MirModuleCandidate with this function's module
+	// if the function has no module (e.g. factory functions) then we're not looking up one
+	asIScriptModule* module = script_function.GetModule();
+	if (module != nullptr) {
+		auto weak_module_it = m_lazy_modules.find(module);
+		if (weak_module_it != m_lazy_modules.end()) {
+			lazy_module = weak_module_it->second.lock();
+		}
+	}
+
+	// if no candidate exists for this function's module
+	if (lazy_module == nullptr) {
+		lazy_module = std::make_shared<LazyCModule>(LazyCModule{
+		    .jit_engine          = this,
+		    .hits_before_compile = config().triggers.hits_before_module_compile,
+		    .functions           = {},
+		    .module              = script_function.GetModule()
+		});
+	}
+
+	lazy_module->functions.emplace_back(&script_function);
+
+	// configure bytecode callbacks so that candidate->hit() will be called back on JitEntry
+	for (BytecodeInstruction ins : get_bytecode(script_function)) {
+		if (ins.info->bc == asBC_JitEntry) {
+			ins.pword0() = std::bit_cast<asPWORD>(lazy_module.get());
+		}
+	}
+
+	script_function.SetJITFunction(static_cast<asJITFunction>(jit_entry_module_counter));
+
+	// associate the script function with the candidate
+	m_lazy_module_functions.emplace(&script_function, std::move(lazy_module));
 }
 
 void MirJit::unregister_function(asIScriptFunction& script_function) {
-	const auto it = m_functions.find(&script_function);
-	if (it != m_functions.end()) {
-		m_functions.erase(it);
+	if (&script_function == m_ignore_unregister) {
+		return;
 	}
+
+	log(config(), engine(), LogSeverity::VERBOSE, "lazy step -: {}: deregistering!", script_function.GetId());
+
+	m_lazy_module_functions.erase(&script_function);
+
+	// garbage collect m_candidate_modules if required
+	asIScriptModule* module = script_function.GetModule();
+	if (module != nullptr) {
+		auto module_it = m_lazy_modules.find(module);
+		if (module_it != m_lazy_modules.end() && module_it->second.expired()) {
+			m_lazy_modules.erase(module_it);
+		}
+	}
+
+	m_lazy_codegen_functions.erase(&script_function);
+
+	// TODO: deallocate from MIR somehow? is it possible?
 }
 
-bool MirJit::compile_all() {
-	detail::log(
-	    config(),
-	    engine(),
-	    LogSeverity::VERBOSE,
-	    "Requesting compilation for {} functions",
-	    m_functions.size()
-	);
-
-	bool success = true;
-
+void MirJit::compile_lazy_module(LazyCModule& lazy_module) {
 	// TODO: do away with the unordered_map for this lookup; we could get
 	// sufficiently deterministic names by querying the module and function IDs
 	// from AngelScript
 
 	std::unordered_map<std::string, asIScriptFunction*> c_name_to_func;
-
-	BytecodeToC c_generator{config(), engine()};
-	c_generator.set_map_function_callback([&](asIScriptFunction& fn, const std::string& name) {
+	m_c_generator.set_map_function_callback([&](asIScriptFunction& fn, const std::string& name) {
 		c_name_to_func.emplace(name, &fn);
 	});
-
-	success &= compile_c_to_mir(c_generator);
-
-	MIR_gen_init(m_mir);
-
-	MIR_gen_set_debug_file(m_mir, config().debug.mir_diagnostic_file);
-	MIR_gen_set_debug_level(m_mir, config().debug.mir_debug_level);
-
-	MIR_gen_set_optimize_level(m_mir, config().mir_optimization_level);
-
-	bind_runtime();
-	success &= link_compiled_functions(c_name_to_func);
-
-	if (config().debug.dump_mir_code) {
-		angelsea_assert(config().debug.dump_mir_code_file != nullptr);
-		MIR_output(m_mir, config().debug.dump_mir_code_file);
-	}
-
-	MIR_gen_finish(m_mir);
-
-	return success;
-}
-
-void MirJit::bind_runtime() {
-#define ASEA_BIND_MIR(name) MIR_load_external(m_mir, #name, reinterpret_cast<void*>(name))
-	ASEA_BIND_MIR(asea_call_script_function);
-	ASEA_BIND_MIR(asea_debug_message);
-	ASEA_BIND_MIR(asea_set_internal_exception);
-	ASEA_BIND_MIR(asea_fmodf);
-	ASEA_BIND_MIR(asea_fmod);
-#undef ASEA_BIND_MIR
-}
-
-bool MirJit::compile_c_to_mir(BytecodeToC& c_generator) {
-	bool success = true;
 
 	// no include dir
 	std::array<const char*, 1> include_dirs{nullptr};
@@ -118,44 +161,133 @@ bool MirJit::compile_c_to_mir(BytecodeToC& c_generator) {
 	    .include_dirs       = include_dirs.data(),
 	};
 
-	auto modules = compute_module_map();
+	// TODO: error handling
+	bool success = compile_c_module(
+	    m_c_generator,
+	    c_options,
+	    lazy_module.module != nullptr ? lazy_module.module->GetName() : "<anon>",
+	    lazy_module.module,
+	    std::span{lazy_module.functions}
+	);
 
-	// NOTE: I don't think there is fundamentally something that makes it
-	// impossible or impractical to generate all modules within the same C
-	// source file other than maybe compile time overhead.
-	// bytecode2c was written explicitly not to care -- simply don't call
-	// `prepare_new_context`, and you should be able to emit multiple modules at
-	// once.
-	// Not sure if MIR maybe does some form of link-time optimization of its own
-	// (see MIR_link lazy generation), but this would be relevant only once we
-	// can natively do calls across JIT script functions anyway...
+	// set up lazy functions for lazy codegen
 
-	// TODO: Investigate if partial recompiles work, and make them more
-	// efficient
+	// FIXME: slow: how do we get the module generated by the last pass for c2mir?
+	// TODO: break up this function
 
-	// TODO: Freeing functions
-
-	for (auto& [script_module, functions] : modules) {
-		if (script_module == nullptr) {
-			// in the "anonymous" module?
-			for (std::size_t i = 0; i < functions.size(); ++i) {
-				// convert each function as their own virtual module
-				// TODO: is this useful? should reconsider
-				success
-				    &= compile_c_module(c_generator, c_options, "<anon>", nullptr, std::span{functions}.subspan(i, 1));
-			}
-		} else {
-			success &= compile_c_module(
-			    c_generator,
-			    c_options,
-			    script_module->GetName(),
-			    script_module,
-			    std::span{functions}
-			);
-		}
+	if (lazy_module.module != nullptr) {
+		m_lazy_modules.erase(lazy_module.module);
 	}
 
-	return success;
+	MIR_module_t module = DLIST_TAIL(MIR_module_t, *MIR_get_module_list(m_mir));
+
+	// load module and configure linking
+	MIR_load_module(m_mir, module);
+
+	// TODO: lazy runtime lookup?
+	bind_runtime();
+
+	void (*jit_interface)(MIR_context_t ctx, MIR_item_t item);
+	switch (config().mir_compilation_mode) {
+	case JitConfig::MirCompilationMode::Lazy:   jit_interface = MIR_set_lazy_gen_interface; break;
+	case JitConfig::MirCompilationMode::LazyBB: jit_interface = MIR_set_lazy_bb_gen_interface; break;
+	case JitConfig::MirCompilationMode::Normal:
+	default:                                    jit_interface = MIR_set_gen_interface;
+	}
+	MIR_link(m_mir, jit_interface, nullptr);
+
+	for (MIR_item_t mir_func = DLIST_HEAD(MIR_item_t, module->items); mir_func != nullptr;
+	     mir_func            = DLIST_NEXT(MIR_item_t, mir_func)) {
+		if (mir_func->item_type != MIR_func_item) {
+			continue;
+		}
+
+		const auto symbol = std::string_view{mir_func->u.func->name};
+
+		// TODO: pointless string allocation but heterogeneous lookup is
+		// annoying in C++ unordered_map
+		auto it = c_name_to_func.find(std::string{symbol});
+		if (it == c_name_to_func.end()) {
+			continue;
+		}
+
+		asIScriptFunction& script_function = *it->second;
+		log(config(),
+		    engine(),
+		    LogSeverity::VERBOSE,
+		    "lazy step 2: {}: C generated, promoting to step 3",
+		    script_function.GetId());
+
+		auto [lazy_mir_it, success] = m_lazy_codegen_functions.emplace(
+		    &script_function,
+		    LazyMirFunction{
+		        .jit_engine          = this,
+		        .script_function     = &script_function,
+		        .hits_before_compile = config().triggers.hits_before_func_compile,
+		        .mir_fn              = mir_func,
+		        .jit_entry_patches   = {}
+		    }
+		);
+
+		// configure bytecode callbacks so that candidate->hit() will be called back on JitEntry
+		LazyMirFunction& lazy_mir = lazy_mir_it->second;
+
+		for (BytecodeInstruction ins : get_bytecode(script_function)) {
+			if (ins.info->bc == asBC_JitEntry) {
+				// back up the entry asPWORD args as they are meaningful for the C module
+				lazy_mir.jit_entry_patches.emplace_back(&ins.pword0(), ins.pword0());
+				ins.pword0() = std::bit_cast<asPWORD>(&lazy_mir);
+			}
+		}
+
+		m_ignore_unregister = &script_function;
+		const auto err      = script_function.SetJITFunction(static_cast<asJITFunction>(jit_entry_function_counter));
+		angelsea_assert(err == asSUCCESS);
+		m_ignore_unregister = nullptr;
+
+		m_lazy_module_functions.erase(&script_function);
+	}
+}
+
+void MirJit::codegen_lazy_function(LazyMirFunction& fn) {
+	MIR_gen_init(m_mir);
+
+	MIR_gen_set_debug_file(m_mir, config().debug.mir_diagnostic_file);
+	MIR_gen_set_debug_level(m_mir, config().debug.mir_debug_level);
+
+	MIR_gen_set_optimize_level(m_mir, config().mir_optimization_level);
+
+	for (auto [location, value] : fn.jit_entry_patches) {
+		*location = value;
+	}
+
+	log(config(), engine(), LogSeverity::VERBOSE, "lazy step 3: {}: MIR_gen", fn.script_function->GetId());
+	auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(m_mir, fn.mir_fn));
+
+	m_ignore_unregister = fn.script_function;
+	const auto err      = fn.script_function->SetJITFunction(entry_point);
+	angelsea_assert(err == asSUCCESS);
+	m_ignore_unregister = nullptr;
+
+	if (config().debug.dump_mir_code) {
+		angelsea_assert(config().debug.dump_mir_code_file != nullptr);
+		MIR_output(m_mir, config().debug.dump_mir_code_file);
+	}
+
+	MIR_gen_finish(m_mir);
+
+	log(config(), engine(), LogSeverity::VERBOSE, "lazy step 3: {}: compiled!", fn.script_function->GetId());
+	m_lazy_codegen_functions.erase(fn.script_function);
+}
+
+void MirJit::bind_runtime() {
+#define ASEA_BIND_MIR(name) MIR_load_external(m_mir, #name, reinterpret_cast<void*>(name))
+	ASEA_BIND_MIR(asea_call_script_function);
+	ASEA_BIND_MIR(asea_debug_message);
+	ASEA_BIND_MIR(asea_set_internal_exception);
+	ASEA_BIND_MIR(asea_fmodf);
+	ASEA_BIND_MIR(asea_fmod);
+#undef ASEA_BIND_MIR
 }
 
 struct InputData {
@@ -215,78 +347,6 @@ bool MirJit::compile_c_module(
 	}
 
 	return true;
-}
-
-bool MirJit::link_compiled_functions(const std::unordered_map<std::string, asIScriptFunction*>& c_name_to_func) {
-	bool success = true;
-
-	for (MIR_module_t module = DLIST_HEAD(MIR_module_t, *MIR_get_module_list(m_mir)); module != nullptr;
-	     module              = DLIST_NEXT(MIR_module_t, module)) {
-		MIR_load_module(m_mir, module);
-
-		void (*jit_interface)(MIR_context_t ctx, MIR_item_t item);
-		switch (config().mir_compilation_mode) {
-		case JitConfig::MirCompilationMode::Lazy:   jit_interface = MIR_set_lazy_gen_interface; break;
-		case JitConfig::MirCompilationMode::LazyBB: jit_interface = MIR_set_lazy_bb_gen_interface; break;
-		case JitConfig::MirCompilationMode::Normal:
-		default:                                    jit_interface = MIR_set_gen_interface;
-		}
-		MIR_link(m_mir, jit_interface, nullptr);
-
-		for (MIR_item_t mir_func = DLIST_HEAD(MIR_item_t, module->items); mir_func != nullptr;
-		     mir_func            = DLIST_NEXT(MIR_item_t, mir_func)) {
-			if (mir_func->item_type != MIR_func_item) {
-				continue;
-			}
-
-			const auto symbol = std::string_view{mir_func->u.func->name};
-
-			// TODO: pointless string allocation but heterogeneous lookup is
-			// annoying in C++ unordered_map
-			auto it = c_name_to_func.find(std::string{symbol});
-			if (it == c_name_to_func.end()) {
-				continue;
-			}
-
-			asIScriptFunction& fn = *it->second;
-
-			auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(m_mir, mir_func));
-
-			log(config(),
-			    engine(),
-			    fn,
-			    LogSeverity::VERBOSE,
-			    "Hooking function `{}` as `{}`!",
-			    fn.GetDeclaration(true, true, true),
-			    fmt::ptr(entry_point));
-
-			if (entry_point == nullptr) {
-				log(config(),
-				    engine(),
-				    fn,
-				    LogSeverity::ERROR,
-				    "Failed to compile function `{}`",
-				    fn.GetDeclaration(true, true, true));
-
-				success = false;
-			}
-
-			const auto err = fn.SetJITFunction(entry_point);
-			angelsea_assert(err == asSUCCESS);
-		}
-	}
-
-	return success;
-}
-
-std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> MirJit::compute_module_map() {
-	std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> ret;
-
-	for (auto& fn : m_functions) {
-		ret[fn->GetModule()].push_back(fn);
-	}
-
-	return ret;
 }
 
 } // namespace angelsea::detail

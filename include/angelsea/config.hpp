@@ -69,15 +69,28 @@ struct JitConfig {
 	};
 	Debug debug;
 
+	struct CompileTriggers {
+		/// How many times should a module have any of its JIT entry points for any function hit before it is compiled
+		/// from bytecode, to C, to unoptimized MIR. Afterwards, `hits_before_func_compile` is used for all functions in
+		/// that module, to determine which should have code generated for it.
+		std::size_t hits_before_module_compile = 0;
+
+		/// How many times should a function has any of its JIT entry points (usually many times per function,
+		/// especially hot ones) be hit before it triggers code optimization and generation.
+		/// This avoids compiling cold functions unnecessarily, or even functions that are never called, which can be
+		/// surprisingly common for code that relies a lot on `#include`.
+		std::size_t hits_before_func_compile = 0;
+	};
+	CompileTriggers triggers;
+
 	/// MIR optimization level, as passed to `MIR_gen_set_optimize_level`, to
 	/// balance between runtime speed and compile times (higher improves
 	/// codegen).
 	/// MIR default is `2`. Meaningful values are 0 through 3.
 	int mir_optimization_level = 3;
 
-	// TODO: determine performance consequences for typical AS code
-	// in quick testing it doesn't change any insn count? are we supposed to do
-	// anything special?
+	// TODO: determine what exactly the compilation mode does -- AFAIK it is when MIR functions call other MIR functions
+	// that have not be codegen'd yet.
 	enum class MirCompilationMode {
 		/// Regular compilation mode
 		Normal,
@@ -88,7 +101,7 @@ struct JitConfig {
 		/// the BB
 		LazyBB,
 	};
-	MirCompilationMode mir_compilation_mode = MirCompilationMode::Normal;
+	MirCompilationMode mir_compilation_mode = MirCompilationMode::Lazy;
 
 	struct CGeneratorConfig {
 		// bool use_gnuc_label_as_address_extension = true;

@@ -6,9 +6,9 @@
 #include <angelsea/config.hpp>
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/debug.hpp>
+#include <memory>
 #include <span>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 extern "C" {
@@ -46,9 +46,34 @@ class C2Mir {
 	MIR_context_t m_ctx;
 };
 
+class MirJit;
+
+struct LazyCModule {
+	MirJit*                         jit_engine;
+	std::size_t                     hits_before_compile;
+	std::vector<asIScriptFunction*> functions;
+	asIScriptModule*                module; // maybe null
+
+	void hit();
+};
+
+struct LazyMirFunction {
+	MirJit*                                   jit_engine;
+	asIScriptFunction*                        script_function;
+	std::size_t                               hits_before_compile;
+	MIR_item_t                                mir_fn;
+	std::vector<std::pair<asPWORD*, asPWORD>> jit_entry_patches;
+
+	void hit();
+};
+
 class MirJit {
 	public:
-	MirJit(const JitConfig& config, asIScriptEngine& engine) : m_config(config), m_engine(&engine), m_mir{} {}
+	MirJit(const JitConfig& config, asIScriptEngine& engine);
+	// TODO: unregister all methods on shutdown, or provide a method to do so at least
+
+	MirJit(const MirJit&)            = delete;
+	MirJit& operator=(const MirJit&) = delete;
 
 	const JitConfig& config() const { return m_config; }
 	asIScriptEngine& engine() { return *m_engine; }
@@ -56,7 +81,8 @@ class MirJit {
 	void register_function(asIScriptFunction& script_function);
 	void unregister_function(asIScriptFunction& script_function);
 
-	[[nodiscard]] bool compile_all();
+	void compile_lazy_module(LazyCModule& module);
+	void codegen_lazy_function(LazyMirFunction& fn);
 
 	std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> compute_module_map();
 
@@ -70,15 +96,26 @@ class MirJit {
 	    asIScriptModule*              script_module,
 	    std::span<asIScriptFunction*> functions
 	);
-	[[nodiscard]] bool
-	link_compiled_functions(const std::unordered_map<std::string, asIScriptFunction*>& c_name_to_func);
 
 	JitConfig        m_config;
 	asIScriptEngine* m_engine;
 
 	Mir m_mir;
 
-	std::unordered_set<asIScriptFunction*> m_functions;
+	BytecodeToC m_c_generator;
+
+	// first tier of laziness: trigger C gen of module lazily
+	std::unordered_map<asIScriptFunction*, std::shared_ptr<LazyCModule>> m_lazy_module_functions;
+	std::unordered_map<asIScriptModule*, std::weak_ptr<LazyCModule>>     m_lazy_modules;
+
+	// second tier of laziness: trigger MIR gen lazily
+	std::unordered_map<asIScriptFunction*, LazyMirFunction> m_lazy_codegen_functions;
+
+	/// slight hack: when we SetJITFunction, AS calls our CleanFunction; but we do *not* want this to happen, because we
+	/// use several temporary JIT functions, and we don't want to destroy any of our references to it during that time!
+	asIScriptFunction* m_ignore_unregister;
+
+	// std::unordered_map<asIScriptFunction*, MirFunction> m_jit_functions;
 };
 
 } // namespace angelsea::detail

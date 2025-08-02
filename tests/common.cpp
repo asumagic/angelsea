@@ -2,6 +2,7 @@
 
 #include "common.hpp"
 #include "angelscript.h"
+#include "angelsea/config.hpp"
 
 #include <iostream>
 #include <scriptarray/scriptarray.h>
@@ -61,7 +62,9 @@ bool set_env_int_variable(const char* env, int& target) {
 
 angelsea::JitConfig get_test_jit_config() {
 	angelsea::JitConfig config{
-	    .log_targets = {},
+	    .log_targets = {
+			.verbose = is_env_set("ASEA_VERBOSE") ? asMSGTYPE_INFORMATION : (asEMsgType)-1,
+		},
 	    .debug       = {
 	              .dump_c_code   = is_env_set("ASEA_DUMP_C"),
 	              .dump_mir_code = is_env_set("ASEA_DUMP_MIR"),
@@ -114,11 +117,7 @@ asIScriptModule& EngineContext::build(const char* name, const char* script_path)
 	return *engine->GetModule(name);
 }
 
-void EngineContext::prepare_execution() {
-#ifndef DEBUG_DISABLE_JIT
-	ANGELSEA_TEST_CHECK(jit.CompileModules());
-#endif
-}
+void EngineContext::prepare_execution() {}
 
 void EngineContext::run(asIScriptModule& module, const char* entry_point, asEContextState desired_state) {
 	prepare_execution();
