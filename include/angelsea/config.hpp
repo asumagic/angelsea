@@ -92,7 +92,8 @@ struct JitConfig {
 
 	struct CGeneratorConfig {
 		// bool use_gnuc_label_as_address_extension = true;
-		bool human_readable = true;
+		bool human_readable   = true;
+		bool copyright_header = false;
 	};
 	CGeneratorConfig c;
 };

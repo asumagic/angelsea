@@ -4,9 +4,7 @@
 
 namespace angelsea::detail {
 
-constexpr std::string_view angelsea_c_header = R"___(/* start of angelsea static header */
-
-/*
+constexpr std::string_view angelsea_c_header_copyright = R"___(/*
     This generated source file contains macro definitions and references to
     internal structures extracted from the AngelScript scripting library, which
     are licensed under the zlib license (license provided below).
@@ -54,11 +52,11 @@ constexpr std::string_view angelsea_c_header = R"___(/* start of angelsea static
    andreas@angelcode.com
 */
 
-/*
-    Definitions normally provided by <angelscript.h>, but that in case of JIT we
-    override them with definitions provided by c2mir.
-*/
-#ifdef ANGELSEA_SUPPORT
+)___";
+
+constexpr std::string_view angelsea_c_header =
+    // JIT-only definitions that don't depend on angelscript.h
+    R"___(#ifdef ASEA_SUPPORT
 
 typedef __INT8_TYPE__    asINT8;
 typedef __INT16_TYPE__   asINT16;
@@ -93,14 +91,12 @@ typedef enum
 	asEXECUTION_ERROR           = 7,
 	asEXECUTION_DESERIALIZATION = 8
 } asEContextState;
+)___"
 
-/*
-	Union to provide safe type punning with various AngelScript variables (as
-	far as C aliasing rules allow, but not C++'s)
-	This is only _fully_ legal and could theoretically break if the compiler can
-	see beyond its compile unit (e.g. with LTO) but it should be otherwise
-	unproblematic (and AS itself does worse, anyway).
-*/
+    // Union to provide safe type punning with various AngelScript variables (as far as C aliasing rules allow, but
+    // not C++'s) This is only _fully_ legal and could theoretically break if the compiler can  see beyond its compile
+    // unit (e.g. with LTO) but it should be otherwise unproblematic (and AS itself does worse, anyway).
+    R"___(
 typedef union {
 	asINT8 as_asINT8;
 	asINT16 as_asINT16;
@@ -125,40 +121,37 @@ typedef struct asSTypeBehaviour asSTypeBehaviour;
 
 #endif
 
-/* Layout exactly mimics asSVMRegisters */
-typedef struct
-{
-	/*
-		We rewrite some of the asDWORD* pointers to be void* instead; this is
-		across the compile boundary in the case of JIT.
-	*/
-	asDWORD          *programPointer;     /* points to current bytecode instruction */
-	void             *stackFramePointer;  /* function stack frame */
-	void             *stackPointer;       /* top of stack (grows downward) */
-	asea_var          valueRegister;      /* temp register for primitives */
-	void             *objectRegister;     /* temp register for objects and handles */
-	asITypeInfo      *objectType;         /* type of object held in object register */
-	/* HACK: doProcessSuspend is normally defined as bool in C++; assume int equivalent */
-	int              doProcessSuspend;    /* whether or not the JIT should break out when it encounters a suspend instruction */
-	asIScriptContext *ctx;                /* the active context */
-} asea_vm_registers;
+typedef struct {)___"
+    // The layout must be compatible with asSVMRegisters.
+    // We rewrite some of the asDWORD* pointers to be void* instead; this is across the compile boundary in the case of
+    // JIT.
+    "\tasDWORD *programPointer;\n" // points to current bytecode instruction
+    "\tvoid *stackFramePointer;\n" // function stack frame
+    "\tvoid *stackPointer;\n"      // top of stack (grows downward)
+    "\tasea_var valueRegister;\n"  // temp register for primitives
+    "\tvoid *objectRegister;\n"    // temp register for objects and handles
+    "\tasITypeInfo *objectType;\n" // type of object held in object register
+    // HACK: doProcessSuspend is normally defined as bool in C++; assume char equivalent
+    "\tchar doProcessSuspend;\n" // whether or the JIT should break out when it encounters asBC_SUSPEND
+    "\tasIScriptContext *ctx;\n" // active script context
 
-typedef union { float f; asDWORD i; } asea_i2f;
+    R"___(} asea_vm_registers;
 
-/*
-    The following definitions are part of the angelsea runtime.hpp
-*/
+typedef union { float f; asDWORD i; } asea_i2f;)___"
 
+    // Angelsea runtime functions, see runtime.hpp
+
+    R"___(
 void asea_call_script_function(asSVMRegisters* vm_registers, void* function);
 void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
 void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text);
 float asea_fmodf(float a, float b);
 float asea_fmod(float a, float b);
+)___"
 
-/*
-    The following definitions are additional angelsea helpers
-*/
+    // Helper macros
 
+    R"___(
 #define ASEA_STACK_DWORD_OFFSET(base, dword_offset) (void*)((char*)(base) + ((dword_offset) * 4))
 #define ASEA_FRAME_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(l_fp, -(dword_offset))))
 #define ASEA_STACK_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(l_sp, (dword_offset))))
@@ -169,9 +162,7 @@ float asea_fmod(float a, float b);
 #define ASEA_FMOD32(lhs, rhs) asea_fmodf(lhs, rhs)
 #define ASEA_FMOD64(lhs, rhs) asea_fmod(lhs, rhs)
 
-/* end of angelsea static header */
-
 /* start of code generated by angelsea bytecode2c */
 )___";
 
-}
+} // namespace angelsea::detail

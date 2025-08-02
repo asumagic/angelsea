@@ -95,7 +95,7 @@ bool MirJit::compile_c_to_mir(BytecodeToC& c_generator) {
 
 	// TODO: what the hell is clang-format doing to this
 	std::array<c2mir_macro_command, 1> macros{{// Trigger the various definitions and macros of the generated header
-	                                           {.def_p = true, .name = "ANGELSEA_SUPPORT", .def = "1"}
+	                                           {.def_p = true, .name = "ASEA_SUPPORT", .def = "1"}
 	}};
 
 	c2mir_options c_options{

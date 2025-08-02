@@ -39,6 +39,9 @@ void BytecodeToC::prepare_new_context() {
 	m_module_state.string_constant_idx = 0;
 
 	m_module_state.buffer.clear();
+	if (m_config.c.copyright_header) {
+		m_module_state.buffer += angelsea_c_header_copyright;
+	}
 	m_module_state.buffer += angelsea_c_header;
 }
 
