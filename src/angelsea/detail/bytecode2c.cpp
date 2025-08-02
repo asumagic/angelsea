@@ -524,6 +524,17 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
+	case asBC_RDSPtr: {
+		emit(
+		    "\t\tasPWORD* a = (asPWORD*)ASEA_STACK_TOP.as_ptr;\n"
+		    "\t\tif (a == 0) {{ goto err_null; }}\n"
+		    "\t\tASEA_STACK_TOP.as_asPWORD = *a;\n"
+		);
+		state.error_handlers.null = true;
+		emit_auto_bc_inc(state);
+		break;
+	}
+
 	case asBC_VAR: {
 		emit(
 		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
@@ -945,7 +956,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_LdGRdR4:      // TODO: find way to emit
 	case asBC_RET:          // TODO: implement (probably?)
 	case asBC_COPY:         // TODO: find way to emit
-	case asBC_RDSPtr:       // TODO: implement
 	case asBC_JMPP:         // TODO: implement (will need a switch pre-pass)
 	case asBC_CALLSYS:      // TODO: implement (calls & syscalls)
 	case asBC_CALLBND:      // TODO: find way to emit & implement (calls & syscalls)
