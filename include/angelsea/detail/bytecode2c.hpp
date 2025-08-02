@@ -55,7 +55,7 @@ class BytecodeToC {
 	using OnMapFunctionCallback = std::function<void(asIScriptFunction&, const std::string& name)>;
 	using OnMapExternCallback   = std::function<void(const char* c_name, const ExternMapping& kind, void* raw_value)>;
 
-	BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string jit_fn_prefix = "asea_jit");
+	BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix = "asea_jit");
 
 	void prepare_new_context();
 
@@ -66,8 +66,6 @@ class BytecodeToC {
 	);
 
 	void translate_function(std::string_view internal_module_name, asIScriptFunction& function);
-
-	std::string entry_point_name(asIScriptFunction& fn) const;
 
 	std::string& source() { return m_module_state.buffer; }
 
@@ -105,6 +103,8 @@ class BytecodeToC {
 			bool divide_overflow : 1 = false;
 		} error_handlers;
 	};
+
+	std::string create_new_entry_point_name(asIScriptFunction& fn);
 
 	bool is_instruction_blacklisted(asEBCInstr bc) const;
 	void translate_instruction(FnState& state);
@@ -186,7 +186,7 @@ class BytecodeToC {
 
 	const JitConfig& m_config;
 	asIScriptEngine& m_script_engine;
-	std::string      m_jit_fn_prefix;
+	std::string      m_c_symbol_prefix;
 
 	OnMapFunctionCallback m_on_map_function_callback;
 	OnMapExternCallback   m_on_map_extern_callback;
@@ -196,8 +196,12 @@ class BytecodeToC {
 		std::string buffer;
 		std::size_t fallback_count;
 		std::size_t string_constant_idx;
+		std::size_t fn_idx;
+		std::string fn_name;
 	};
 	ModuleState m_module_state;
+
+	std::size_t m_module_idx;
 };
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset);

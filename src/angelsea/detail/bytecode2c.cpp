@@ -29,14 +29,16 @@ static constexpr std::string_view load_registers_sequence
       "\t\tl_sp = regs->stackPointer;\n"
       "\t\tl_fp = regs->stackFramePointer;\n";
 
-BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string jit_fn_prefix) :
-    m_config(config), m_script_engine(engine), m_jit_fn_prefix(std::move(jit_fn_prefix)) {
+BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix) :
+    m_config(config), m_script_engine(engine), m_c_symbol_prefix(std::move(c_symbol_prefix)), m_module_idx(-1) {
 	m_module_state.buffer.reserve(1024 * 64);
 }
 
 void BytecodeToC::prepare_new_context() {
+	++m_module_idx;
 	m_module_state.fallback_count      = 0;
 	m_module_state.string_constant_idx = 0;
+	m_module_state.fn_idx              = 0;
 
 	m_module_state.buffer.clear();
 	if (m_config.c.copyright_header) {
@@ -65,9 +67,10 @@ void BytecodeToC::translate_module(
 }
 
 void BytecodeToC::translate_function(std::string_view internal_module_name, asIScriptFunction& fn) {
-	const auto func_name = entry_point_name(fn);
+	m_module_state.fn_name = create_new_entry_point_name(fn);
+
 	if (m_on_map_function_callback) {
-		m_on_map_function_callback(fn, func_name);
+		m_on_map_function_callback(fn, m_module_state.fn_name);
 	}
 
 	if (m_config.c.human_readable) {
@@ -84,7 +87,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	}
 
 	// JIT entry signature is `void(asSVMRegisters *regs, asPWORD jitArg)`
-	emit("void {name}(asSVMRegisters *_regs, asPWORD entryLabel) {{\n", fmt::arg("name", func_name));
+	emit("void {name}(asSVMRegisters *_regs, asPWORD entryLabel) {{\n", fmt::arg("name", m_module_state.fn_name));
 
 	// HACK: which we would prefer not to do; but accessing valueRegister is
 	// going to be pain with strict aliasing either way
@@ -187,23 +190,12 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	emit("}}\n");
 }
 
-std::string BytecodeToC::entry_point_name(asIScriptFunction& fn) const {
+std::string BytecodeToC::create_new_entry_point_name(asIScriptFunction& fn) {
 	angelsea_assert(fn.GetId() != 0 && "Did not expect a delegate function");
 
-	std::string mangled_module = "anon";
-
-	if (const char* module_name = fn.GetModuleName(); module_name != nullptr) {
-		mangled_module = "module_";
-		for (char c : std::string_view{module_name}) {
-			if (is_alpha_numerical(c)) {
-				mangled_module += c;
-			} else {
-				mangled_module += fmt::format("_{:02X}_", c);
-			}
-		}
-	}
-
-	return fmt::format("{}{}_{}", m_jit_fn_prefix, fn.GetId(), mangled_module);
+	const auto str = fmt::format("{}_mod{}_fn{}", m_c_symbol_prefix, m_module_state.fn_idx, m_module_idx);
+	++m_module_state.fn_idx;
+	return str;
 }
 
 void BytecodeToC::emit_entry_dispatch(FnState& state) {
@@ -1063,7 +1055,7 @@ std::string BytecodeToC::emit_global_lookup(FnState& state, void** pointer, bool
 		asCGlobalProperty* property = engine.varAddressMap.GetValue(var_cursor);
 		angelsea_assert(property != nullptr);
 
-		fn_symbol = fmt::format("asea_global{}", property->id);
+		fn_symbol = fmt::format("{}_g{}", m_c_symbol_prefix, property->id);
 
 		if (m_on_map_extern_callback) {
 			m_on_map_extern_callback(
@@ -1079,7 +1071,7 @@ std::string BytecodeToC::emit_global_lookup(FnState& state, void** pointer, bool
 
 		angelsea_assert(!global_var_only);
 
-		fn_symbol = fmt::format("asea_strobj{}_{}", m_module_state.string_constant_idx, entry_point_name(state.fn));
+		fn_symbol = fmt::format("{}_mod{}_str{}", m_c_symbol_prefix, m_module_idx, m_module_state.string_constant_idx);
 
 		if (m_on_map_extern_callback) {
 			m_on_map_extern_callback(fn_symbol.c_str(), ExternStringConstant{*pointer}, pointer);
