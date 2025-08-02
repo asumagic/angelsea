@@ -60,8 +60,6 @@ int main() {
 	builder.AddSectionFromMemory("str", (std::string("void main() { print(\"hello, world!\"); }").c_str()));
 	builder.BuildModule();
 
-	jit.CompileModules();
-
 	asIScriptModule* module = builder.GetModule();
 	assert(module != nullptr);
 

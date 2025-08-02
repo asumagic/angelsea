@@ -203,13 +203,15 @@ engine->SetEngineProperty(asEP_JIT_INTERFACE_VERSION, 2);
 // optional, but recommended
 engine->SetEngineProperty(asEP_BUILD_WITHOUT_LINE_CUES, true);
 
-angelsea::JitConfig config;
+angelsea::JitConfig config {
+    .triggers = {
+        .hits_before_module_compile = 10000,
+        .hits_before_func_compile   = 10000,
+    }
+};
 angelsea::Jit jit(config, *engine);
 assert(engine->SetJITCompiler(&jit) >= 0);
 ```
-
-**angelsea requires you to explicitly trigger native compilation.**
-This is done by calling `jit.CompileModules();`.
 
 ### License notice
 
