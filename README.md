@@ -109,6 +109,8 @@ don't want to rely on Angelsea building it), see the optional step.
 > We provide a downstream fork of MIR to work around the following issues:
 > - [Integer sign-extension miscompile](https://github.com/vnmakarov/mir/issues/423)
 > (workaround if using upstream: set `config.mir_optimization_level = 1;`)
+> - [Jump optimization can cause use-after-free when using label references](https://github.com/vnmakarov/mir/issues/424)
+> (workaround if using upstream: set `config.mir_optimization_level = 1;`)
 
 ```bash
 git submodule update --init --recursive vendor/angelscript
