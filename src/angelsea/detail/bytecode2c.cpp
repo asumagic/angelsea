@@ -180,10 +180,14 @@ std::string BytecodeToC::create_new_entry_point_name(asIScriptFunction& fn) {
 }
 
 void BytecodeToC::emit_entry_dispatch(FnState& state) {
-	emit(
-	    "\tswitch(entryLabel) {{\n"
-	    "\tdefault:\n"
-	);
+	if (m_config.c.use_gnu_label_as_value) {
+		emit(
+		    "\tstatic const void *const entry[] = {{\n"
+		    "\t\t&&bc0,\n" // because index 0 is meaningless
+		);
+	} else {
+		emit("\tswitch(entryLabel) {{\n");
+	}
 
 	bool    last_was_jit_entry = false;
 	asPWORD jit_entry_id       = 1;
@@ -204,13 +208,25 @@ void BytecodeToC::emit_entry_dispatch(FnState& state) {
 
 		ins.pword0() = jit_entry_id;
 
-		emit("\tcase {}: goto bc{};\n", jit_entry_id, ins.offset);
+		if (m_config.c.use_gnu_label_as_value) {
+			emit("\t\t&&bc{},\n", ins.offset);
+		} else {
+			emit("\tcase {}: goto bc{};\n", jit_entry_id, ins.offset);
+		}
+
 		last_was_jit_entry = true;
 
 		++jit_entry_id;
 	}
 
-	emit("\t}}\n\n");
+	if (m_config.c.use_gnu_label_as_value) {
+		emit(
+		    "\t}};\n"
+		    "\tgoto *entry[entryLabel];\n\n"
+		);
+	} else {
+		emit("\t}};\n");
+	}
 }
 
 void BytecodeToC::emit_error_handlers(FnState& state) {
