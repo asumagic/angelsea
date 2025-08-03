@@ -48,21 +48,10 @@ class C2Mir {
 
 class MirJit;
 
-struct LazyCModule {
-	MirJit*                         jit_engine;
-	std::size_t                     hits_before_compile;
-	std::vector<asIScriptFunction*> functions;
-	asIScriptModule*                module; // maybe null
-
-	void hit();
-};
-
 struct LazyMirFunction {
-	MirJit*                                   jit_engine;
-	asIScriptFunction*                        script_function;
-	std::size_t                               hits_before_compile;
-	MIR_item_t                                mir_fn;
-	std::vector<std::pair<asPWORD*, asPWORD>> jit_entry_patches;
+	MirJit*            jit_engine;
+	asIScriptFunction* script_function;
+	std::size_t        hits_before_compile;
 
 	void hit();
 };
@@ -81,10 +70,7 @@ class MirJit {
 	void register_function(asIScriptFunction& script_function);
 	void unregister_function(asIScriptFunction& script_function);
 
-	void compile_lazy_module(LazyCModule& module);
-	void codegen_lazy_function(LazyMirFunction& fn);
-
-	std::unordered_map<asIScriptModule*, std::vector<asIScriptFunction*>> compute_module_map();
+	void compile_lazy_function(LazyMirFunction& fn);
 
 	private:
 	void               bind_runtime();
@@ -104,11 +90,6 @@ class MirJit {
 
 	BytecodeToC m_c_generator;
 
-	// first tier of laziness: trigger C gen of module lazily
-	std::unordered_map<asIScriptFunction*, std::shared_ptr<LazyCModule>> m_lazy_module_functions;
-	std::unordered_map<asIScriptModule*, std::weak_ptr<LazyCModule>>     m_lazy_modules;
-
-	// second tier of laziness: trigger MIR gen lazily
 	std::unordered_map<asIScriptFunction*, LazyMirFunction> m_lazy_codegen_functions;
 
 	/// slight hack: when we SetJITFunction, AS calls our CleanFunction; but we do *not* want this to happen, because we
