@@ -1057,7 +1057,7 @@ std::string BytecodeToC::emit_global_lookup(FnState& state, void** pointer, bool
 		if (m_on_map_extern_callback) {
 			m_on_map_extern_callback(
 			    fn_symbol.c_str(),
-			    ExternGlobalVariable{.ptr = *pointer, .property = property},
+			    ExternGlobalVariable{.ptr = pointer, .property = property},
 			    pointer
 			);
 		}
