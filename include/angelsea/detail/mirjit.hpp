@@ -6,13 +6,13 @@
 #include <angelsea/config.hpp>
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/debug.hpp>
-#include <memory>
 #include <span>
 #include <unordered_map>
-#include <vector>
 
 extern "C" {
 #include <c2mir/c2mir.h>
+#include <mir-alloc.h>
+#include <mir-code-alloc.h>
 #include <mir-gen.h>
 #include <mir.h>
 }
@@ -22,7 +22,7 @@ namespace angelsea::detail {
 class Mir {
 	public:
 	explicit Mir(MIR_context_t ctx) : m_ctx{ctx} {}
-	Mir();
+	Mir(MIR_alloc_t alloc = nullptr, MIR_code_alloc_t code_alloc = nullptr);
 	~Mir();
 
 	Mir(const Mir&)            = delete;

@@ -15,7 +15,7 @@
 
 namespace angelsea::detail {
 
-Mir::Mir() { m_ctx = MIR_init(); }
+Mir::Mir(MIR_alloc_t alloc, MIR_code_alloc_t code_alloc) { m_ctx = MIR_init2(alloc, code_alloc); }
 Mir::~Mir() { MIR_finish(m_ctx); }
 
 C2Mir::C2Mir(Mir& mir) : m_ctx(mir) { c2mir_init(m_ctx); }
