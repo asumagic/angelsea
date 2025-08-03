@@ -277,6 +277,8 @@ void MirJit::transfer_and_destroy(AsyncMirFunction& fn) {
 	}
 
 	MIR_gen_finish(m_mir);
+
+	m_async_codegen_functions.erase(fn.script_function);
 }
 
 void MirJit::setup_jit_callback(asIScriptFunction& function, asJITFunction callback, void* ud, bool ignore_unregister) {
