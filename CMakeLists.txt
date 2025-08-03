@@ -47,6 +47,7 @@ option(ASEA_MIR_SYSTEM "Disable building of vendored MIR. Make sure to provide -
 # Disable textual format scanning
 add_compile_definitions(MIR_NO_SCAN=1)
 add_compile_definitions(MIR_NO_BIN_COMPRESSION=1)
+# add_compile_definitions(MIR_NO_IO=1)  # FIXME: broken build because of c2mir
 
 set(
     ASEA_MIR_ROOT

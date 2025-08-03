@@ -6,7 +6,6 @@
 #include <angelsea/config.hpp>
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/debug.hpp>
-#include <span>
 #include <unordered_map>
 
 extern "C" {
@@ -52,8 +51,6 @@ struct LazyMirFunction {
 	MirJit*            jit_engine;
 	asIScriptFunction* script_function;
 	std::size_t        hits_before_compile;
-
-	void hit();
 };
 
 class MirJit {
@@ -73,16 +70,6 @@ class MirJit {
 	void compile_lazy_function(LazyMirFunction& fn);
 
 	private:
-	void               bind_runtime();
-	[[nodiscard]] bool compile_c_to_mir(BytecodeToC& c_generator);
-	[[nodiscard]] bool compile_c_module(
-	    BytecodeToC&                  c_generator,
-	    c2mir_options&                c_options,
-	    const char*                   internal_module_name,
-	    asIScriptModule*              script_module,
-	    std::span<asIScriptFunction*> functions
-	);
-
 	JitConfig        m_config;
 	asIScriptEngine* m_engine;
 
