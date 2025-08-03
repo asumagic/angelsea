@@ -104,6 +104,10 @@ struct JitConfig {
 	MirCompilationMode mir_compilation_mode = MirCompilationMode::Lazy;
 
 	struct CGeneratorConfig {
+		/// Enables C generation that uses the GNU C "label as values" extension, see:
+		/// https://gcc.gnu.org/onlinedocs/gcc-4.3.4/gcc/Labels-as-Values.html
+		/// This enables slightly more efficient generated code.
+		/// Requires compiler support (includes: C2MIR, gcc, clang, but not MSVC).
 		bool use_gnu_label_as_value = true;
 		bool human_readable         = true;
 		bool copyright_header       = false;
