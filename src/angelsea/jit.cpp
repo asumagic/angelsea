@@ -17,4 +17,8 @@ void Jit::CleanFunction(asIScriptFunction* scriptFunc, asJITFunction jitFunc) {
 	std::ignore = jitFunc;
 }
 
+void Jit::SetCompileCallback(std::function<void(CompileFunc*, void*)> callback) {
+	m_compiler->set_compile_callback(std::move(callback));
+}
+
 } // namespace angelsea

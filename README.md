@@ -215,7 +215,7 @@ angelsea::Jit jit(config, *engine);
 assert(engine->SetJITCompiler(&jit) >= 0);
 ```
 
-TODO: document async compile
+Some of the compile process can be run asynchronously/in a multi-threaded fashion. You only have to provide a function that will invoke compiler tasks as they are requested by the JIT engine (`Jit::SetCompileCallback`).
 
 NOTE: The JIT compiler is not thread-safe yet; you will likely face issues if
 there are several AngelScript contexts running concurrently.

@@ -6,7 +6,11 @@
 #include <angelsea/config.hpp>
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/debug.hpp>
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <unordered_map>
+#include <utility>
 
 extern "C" {
 #include <c2mir/c2mir.h>
@@ -26,6 +30,12 @@ class Mir {
 
 	Mir(const Mir&)            = delete;
 	Mir& operator=(const Mir&) = delete;
+
+	Mir(Mir&& other) : m_ctx(std::exchange(other.m_ctx, nullptr)) {}
+	Mir& operator=(Mir&& other) {
+		std::swap(m_ctx, other.m_ctx);
+		return *this;
+	}
 
 	operator MIR_context_t() { return m_ctx; }
 
@@ -53,9 +63,26 @@ struct LazyMirFunction {
 	std::size_t        hits_before_compile;
 };
 
+struct TransferableModule {
+	Mir          mir;
+	MIR_module_t module;
+};
+
+struct AsyncMirFunction {
+	MirJit*                                   jit_engine;
+	asIScriptFunction*                        script_function;
+	std::atomic<bool>                         ready;
+	TransferableModule                        compiled;
+	std::vector<std::pair<asPWORD*, asPWORD>> jit_entry_args;
+	std::string                               c_name;
+	std::string                               c_source;
+	std::string                               pretty_name;
+};
+
 class MirJit {
 	public:
 	MirJit(const JitConfig& config, asIScriptEngine& engine);
+	~MirJit();
 	// TODO: unregister all methods on shutdown, or provide a method to do so at least
 
 	MirJit(const MirJit&)            = delete;
@@ -67,7 +94,17 @@ class MirJit {
 	void register_function(asIScriptFunction& script_function);
 	void unregister_function(asIScriptFunction& script_function);
 
-	void compile_lazy_function(LazyMirFunction& fn);
+	void translate_lazy_function(LazyMirFunction& fn);
+	void codegen_async_function(AsyncMirFunction& fn);
+	void transfer_and_destroy(AsyncMirFunction& fn);
+
+	/// Configure a JIT entry callback to a function, where the asPWORD arg will be equal to `ud`
+	void setup_jit_callback(asIScriptFunction& function, asJITFunction callback, void* ud, bool ignore_unregister);
+
+	using CompileFunc = void(void* ud);
+	void set_compile_callback(std::function<void(CompileFunc*, void*)> callback) {
+		m_compile_callback = std::move(callback);
+	}
 
 	private:
 	JitConfig        m_config;
@@ -77,7 +114,14 @@ class MirJit {
 
 	BytecodeToC m_c_generator;
 
-	std::unordered_map<asIScriptFunction*, LazyMirFunction> m_lazy_codegen_functions;
+	std::unordered_map<asIScriptFunction*, LazyMirFunction>  m_lazy_functions;
+	std::unordered_map<asIScriptFunction*, AsyncMirFunction> m_async_codegen_functions;
+
+	std::mutex              m_termination_mutex;
+	std::condition_variable m_termination_cv;
+	std::atomic<int>        m_terminating_threads;
+
+	std::function<void(CompileFunc*, void*)> m_compile_callback;
 
 	/// slight hack: when we SetJITFunction, AS calls our CleanFunction; but we do *not* want this to happen, because we
 	/// use several temporary JIT functions, and we don't want to destroy any of our references to it during that time!
