@@ -314,13 +314,16 @@ bool MirJit::compile_c_module(
     asIScriptModule*              script_module,
     std::span<asIScriptFunction*> functions
 ) {
-	C2Mir c2mir{m_mir};
+	Mir   compile_mir;
+	C2Mir c2mir{compile_mir};
 
 	c_generator.prepare_new_context();
 	c_generator.set_map_extern_callback([&](const char*                       c_name,
 	                                        const BytecodeToC::ExternMapping& mapping,
 	                                        void* raw_value) { MIR_load_external(m_mir, c_name, raw_value); });
-	c_generator.translate_module(internal_module_name, script_module, functions);
+	for (asIScriptFunction* function : functions) {
+		c_generator.translate_function(internal_module_name, *function);
+	}
 
 	if (config().debug.dump_c_code) {
 		angelsea_assert(config().debug.dump_c_code_file != nullptr);
@@ -328,7 +331,7 @@ bool MirJit::compile_c_module(
 	}
 
 	InputData input_data(c_generator.source());
-	if (!c2mir_compile(m_mir, &c_options, c2mir_getc_callback, &input_data, internal_module_name, nullptr)) {
+	if (!c2mir_compile(compile_mir, &c_options, c2mir_getc_callback, &input_data, internal_module_name, nullptr)) {
 		log(config(),
 		    engine(),
 		    LogSeverity::ERROR,
@@ -345,6 +348,8 @@ bool MirJit::compile_c_module(
 		    internal_module_name,
 		    c_generator.get_fallback_count());
 	}
+
+	MIR_change_module_ctx(compile_mir, DLIST_TAIL(MIR_module_t, *MIR_get_module_list(compile_mir)), m_mir);
 
 	return true;
 }

@@ -44,6 +44,10 @@ endif()
 # Upstream CMakeLists doesn't allow us from excluding tests and such
 option(ASEA_MIR_SYSTEM "Disable building of vendored MIR. Make sure to provide -DASEA_MIR_ROOT" OFF)
 
+# Disable textual format scanning
+add_compile_definitions(MIR_NO_SCAN=1)
+add_compile_definitions(MIR_NO_BIN_COMPRESSION=1)
+
 set(
     ASEA_MIR_ROOT
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/mir/"

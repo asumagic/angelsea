@@ -36,7 +36,7 @@ the project is more functional):
 - macOS x86-64
 - MSVC x86-64
 
-32-bit x86 is not planned as it is not supported by MIR (and kind of can't be).
+32-bit x86 is not planned as it is not supported by MIR.
 
 ## Current status
 
@@ -213,6 +213,11 @@ angelsea::Jit jit(config, *engine);
 assert(engine->SetJITCompiler(&jit) >= 0);
 ```
 
+TODO: document async compile
+
+NOTE: The JIT compiler is not thread-safe yet; you will likely face issues if
+there are several AngelScript contexts running concurrently.
+
 ### License notice
 
 As of writing:
@@ -286,9 +291,10 @@ often (in our usecase), and contains subtle bugs.
 It was a functional proof-of-concept (in fact some of angelsea's infrastructure
 originates from it), but it was way too large in scope. It more or less intended
 to take over the entire interpreter, which meant total coverage of *all* of AS'
-low-level semantics before it was any useful. Besides, LLVM is _huge_, breaks on
-almost every major update, and is rather unreasonable for an embeddable
-language.
+low-level semantics before it was any useful. This is doubly a problem, because
+to speak the C ABI -- let alone the C++ ABI -- you basically need to do it
+yourself AFAIK. Besides, LLVM is _huge_, breaks on almost every major update,
+and is rather unreasonable for an embeddable language.
 - Hazelight's UnrealEngine-AngelScript is way more involved than I thought and
 includes a [C++ AOT transpiler](https://github.com/Hazelight/UnrealEngine-Angelscript/tree/e1bdb40e97da880ae907030dda65639d5a4b7b3d/Engine/Plugins/Angelscript/Source/AngelscriptCode/Private/StaticJIT).
 To my understanding it is tightly coupled to that project and its fork of AS,

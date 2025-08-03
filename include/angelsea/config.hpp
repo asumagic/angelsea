@@ -104,6 +104,7 @@ struct JitConfig {
 	MirCompilationMode mir_compilation_mode = MirCompilationMode::Lazy;
 
 	struct CGeneratorConfig {
+		// TODO: i couldn't get it to work except there is advertised support; what gives?
 		// bool use_gnuc_label_as_address_extension = true;
 		bool human_readable   = true;
 		bool copyright_header = false;

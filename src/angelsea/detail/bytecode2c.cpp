@@ -47,25 +47,6 @@ void BytecodeToC::prepare_new_context() {
 	m_module_state.buffer += angelsea_c_header;
 }
 
-void BytecodeToC::translate_module(
-    std::string_view              internal_module_name,
-    asIScriptModule*              script_module,
-    std::span<asIScriptFunction*> functions
-) {
-	// NOTE: module name and section names are separate concepts, and there may
-	// be several script sections in a module
-	emit(
-	    R"___(
-/* MODULE: {module_name} */ 
-)___",
-	    fmt::arg("module_name", internal_module_name)
-	);
-
-	for (asIScriptFunction* fn : functions) {
-		translate_function(internal_module_name, *fn);
-	}
-}
-
 void BytecodeToC::translate_function(std::string_view internal_module_name, asIScriptFunction& fn) {
 	m_module_state.fn_name = create_new_entry_point_name(fn);
 

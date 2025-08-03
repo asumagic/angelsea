@@ -8,16 +8,11 @@
 #include <as_property.h>
 #include <fmt/format.h>
 #include <functional>
-#include <span>
 #include <string>
 #include <string_view>
 #include <variant>
 
 namespace angelsea::detail {
-
-/// Access granularity of a stack frame access, required to do aliasing-safe
-/// loads and stores. This means zero-extension as required.
-enum class AccessGranularity { DWORD, QWORD };
 
 /// Describes the type of a value on the stack, which is useful to abstract its
 /// loading and storing.
@@ -58,12 +53,6 @@ class BytecodeToC {
 	BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix = "asea_jit");
 
 	void prepare_new_context();
-
-	void translate_module(
-	    std::string_view              internal_module_name,
-	    asIScriptModule*              script_module,
-	    std::span<asIScriptFunction*> functions
-	);
 
 	void translate_function(std::string_view internal_module_name, asIScriptFunction& function);
 
