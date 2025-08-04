@@ -35,8 +35,8 @@ The process has three steps:
 The last point hurts performance-wise for real-time apps. The following issues
 may be showstoppers for you:
 
-- #5
-- #6
+- https://github.com/asumagic/angelsea/issues/5
+- https://github.com/asumagic/angelsea/issues/6
 
 ## Supported platforms
 
