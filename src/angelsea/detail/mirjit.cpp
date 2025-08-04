@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include <algorithm>
 #include <angelscript.h>
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/bytecodeinstruction.hpp>
@@ -90,6 +91,21 @@ void MirJit::unregister_function(asIScriptFunction& script_function) {
 	}
 
 	m_lazy_functions.erase(&script_function);
+
+	auto async_it = m_async_codegen_functions.find(&script_function);
+	if (async_it != m_async_codegen_functions.end()) {
+		std::lock_guard lk{m_async_destruct_mutex};
+		auto            async_fn = std::move(async_it->second);
+		m_async_codegen_functions.erase(&script_function);
+
+		// is the async callback still running?
+		// (we're locking m_async_destruct_mutex, so this is safe)
+		if (async_fn->ready.load()) {
+			m_pending_async_destructions.emplace_back(std::move(async_fn));
+		}
+		// if not, let the async_fn die
+	}
+
 	// can't unload modules from MIR AFAIK
 }
 
@@ -142,9 +158,10 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 		fputs(m_c_generator.source().c_str(), config().debug.dump_c_code_file);
 	}
 
-	auto [async_fn_it, success] = m_async_codegen_functions.try_emplace(fn.script_function);
+	auto [async_fn_it, success]
+	    = m_async_codegen_functions.try_emplace(fn.script_function, std::make_unique<AsyncMirFunction>());
 	angelsea_assert(success);
-	AsyncMirFunction& async_fn = async_fn_it->second;
+	AsyncMirFunction& async_fn = *async_fn_it->second;
 	async_fn.jit_engine        = this;
 	async_fn.script_function   = fn.script_function;
 	async_fn.c_name            = c_name;
@@ -221,8 +238,20 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 			angelsea_assert(false); // FIXME: error handling
 		}
 
-		fn.compiled.module = DLIST_TAIL(MIR_module_t, *MIR_get_module_list(compile_mir));
-		fn.ready.store(true);
+		{
+			std::unique_lock lk{m_async_destruct_mutex};
+			if (auto destruct_it = std::find_if(
+			        m_pending_async_destructions.begin(),
+			        m_pending_async_destructions.end(),
+			        [&](const auto& ptr) { return ptr.get() == &fn; }
+			    );
+			    destruct_it != m_pending_async_destructions.end()) {
+				m_pending_async_destructions.erase(destruct_it);
+			} else {
+				fn.compiled.module = DLIST_TAIL(MIR_module_t, *MIR_get_module_list(compile_mir));
+				fn.ready.store(true);
+			}
+		}
 	} // must destroy C2Mir before MirJit potentially gets destroyed
 
 	std::unique_lock lk{m_termination_mutex};
@@ -253,7 +282,8 @@ void MirJit::transfer_and_destroy(AsyncMirFunction& fn) {
 
 	if (!found) {
 		log(config(), engine(), LogSeverity::ERROR, "Function compile failed!");
-		m_lazy_functions.erase(fn.script_function);
+		setup_jit_callback(*fn.script_function, nullptr, nullptr, true);
+		m_async_codegen_functions.erase(fn.script_function);
 		return;
 	}
 

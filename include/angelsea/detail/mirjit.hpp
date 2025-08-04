@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 extern "C" {
@@ -114,8 +115,15 @@ class MirJit {
 
 	BytecodeToC m_c_generator;
 
-	std::unordered_map<asIScriptFunction*, LazyMirFunction>  m_lazy_functions;
-	std::unordered_map<asIScriptFunction*, AsyncMirFunction> m_async_codegen_functions;
+	std::unordered_map<asIScriptFunction*, LazyMirFunction> m_lazy_functions;
+
+	// because the AS engine may unregister a function at any time, during the time the compile thread is working, it is
+	// possible that the asIScriptFunction* will be dangling and reallocating, causing a host of issues. since the
+	// compile thread is not manipulating any of those structures directly, when a function being compiled is being
+	// unregistered, we migrate it to the pending destructions list.
+	std::unordered_map<asIScriptFunction*, std::unique_ptr<AsyncMirFunction>> m_async_codegen_functions;
+	std::vector<std::unique_ptr<AsyncMirFunction>>                            m_pending_async_destructions;
+	std::mutex                                                                m_async_destruct_mutex;
 
 	std::mutex              m_termination_mutex;
 	std::condition_variable m_termination_cv;
