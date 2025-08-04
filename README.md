@@ -17,6 +17,27 @@ AngelScript behavior.
 It can fallback to the interpreter at any point, and may be invoked from any JIT
 entry point (e.g. inserted by AS at the start of the function or after calls).
 
+## Current status
+
+The JIT compiler can already be used, but it is limited: Instruction support is
+still very partial and will only improve.
+
+Performance _may_ be better similar or better than the interpreter at the
+moment. However, there are still more fallbacks to the VM than I would like, and
+system calls are not implemented, and that's a massive one for performance.
+
+The process has three steps:
+
+- Bytecode to C
+- C to MIR (can be async)
+- MIR optimization and codegen (can't be async; investigating.)
+
+The last point hurts performance-wise for real-time apps. The following issues
+may be showstoppers for you:
+
+- #5
+- #6
+
 ## Supported platforms
 
 Currently, only x86-64 Linux is being developed on and tested. However, MIR
@@ -37,17 +58,6 @@ the project is more functional):
 - MSVC x86-64
 
 32-bit x86 is not planned as it is not supported by MIR.
-
-## Current status
-
-The JIT compiler can already be used, but it is limited: Instruction support is
-still very partial and will only improve.
-
-Performance is likely not an improvement over the interpreter for the time
-being.
-
-The JIT compilation is currently rather slow (say 10-20x script compile
-time...), but it is single-threaded and synchronous _for now_.
 
 ## Clone & Build
 
