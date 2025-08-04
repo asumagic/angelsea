@@ -48,7 +48,7 @@ void jit_entry_await_async(asSVMRegisters* regs, asPWORD pending_fn_raw) {
 	auto& lazy_fn = *reinterpret_cast<AsyncMirFunction*>(pending_fn_raw);
 
 	if (lazy_fn.ready.load()) {
-		lazy_fn.jit_engine->transfer_and_destroy(lazy_fn);
+		lazy_fn.jit_engine->transfer_compiled_modules();
 		return; // let jitentry rerun
 	}
 
@@ -101,7 +101,7 @@ void MirJit::unregister_function(asIScriptFunction& script_function) {
 		// is the async callback still running?
 		// (we're locking m_async_destruct_mutex, so this is safe)
 		if (async_fn->ready.load()) {
-			m_pending_async_destructions.emplace_back(std::move(async_fn));
+			m_async_cancelled_functions.emplace_back(std::move(async_fn));
 		}
 		// if not, let the async_fn die
 	}
@@ -241,15 +241,20 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 		{
 			std::unique_lock lk{m_async_destruct_mutex};
 			if (auto destruct_it = std::find_if(
-			        m_pending_async_destructions.begin(),
-			        m_pending_async_destructions.end(),
+			        m_async_cancelled_functions.begin(),
+			        m_async_cancelled_functions.end(),
 			        [&](const auto& ptr) { return ptr.get() == &fn; }
 			    );
-			    destruct_it != m_pending_async_destructions.end()) {
-				m_pending_async_destructions.erase(destruct_it);
+			    destruct_it != m_async_cancelled_functions.end()) {
+				m_async_cancelled_functions.erase(destruct_it);
 			} else {
 				fn.compiled.module = DLIST_TAIL(MIR_module_t, *MIR_get_module_list(compile_mir));
 				fn.ready.store(true);
+
+				// move self to finished list
+				auto it = m_async_codegen_functions.find(fn.script_function);
+				m_async_finished_functions.emplace_back(std::move(it->second));
+				m_async_codegen_functions.erase(it);
 			}
 		}
 	} // must destroy C2Mir before MirJit potentially gets destroyed
@@ -257,6 +262,15 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 	std::unique_lock lk{m_termination_mutex};
 	--m_terminating_threads;
 	m_termination_cv.notify_one();
+}
+
+void MirJit::transfer_compiled_modules() {
+	// FIXME: locking more than necessary
+	std::lock_guard lk{m_async_destruct_mutex};
+	for (auto& finished_function : m_async_finished_functions) {
+		transfer_and_destroy(*finished_function);
+	}
+	m_async_finished_functions.clear();
 }
 
 void MirJit::transfer_and_destroy(AsyncMirFunction& fn) {
@@ -307,8 +321,6 @@ void MirJit::transfer_and_destroy(AsyncMirFunction& fn) {
 	}
 
 	MIR_gen_finish(m_mir);
-
-	m_async_codegen_functions.erase(fn.script_function);
 }
 
 void MirJit::setup_jit_callback(asIScriptFunction& function, asJITFunction callback, void* ud, bool ignore_unregister) {

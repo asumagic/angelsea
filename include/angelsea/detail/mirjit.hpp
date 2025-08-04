@@ -97,6 +97,7 @@ class MirJit {
 
 	void translate_lazy_function(LazyMirFunction& fn);
 	void codegen_async_function(AsyncMirFunction& fn);
+	void transfer_compiled_modules();
 	void transfer_and_destroy(AsyncMirFunction& fn);
 
 	/// Configure a JIT entry callback to a function, where the asPWORD arg will be equal to `ud`
@@ -122,7 +123,8 @@ class MirJit {
 	// compile thread is not manipulating any of those structures directly, when a function being compiled is being
 	// unregistered, we migrate it to the pending destructions list.
 	std::unordered_map<asIScriptFunction*, std::unique_ptr<AsyncMirFunction>> m_async_codegen_functions;
-	std::vector<std::unique_ptr<AsyncMirFunction>>                            m_pending_async_destructions;
+	std::vector<std::unique_ptr<AsyncMirFunction>>                            m_async_finished_functions;
+	std::vector<std::unique_ptr<AsyncMirFunction>>                            m_async_cancelled_functions;
 	std::mutex                                                                m_async_destruct_mutex;
 
 	std::mutex              m_termination_mutex;
