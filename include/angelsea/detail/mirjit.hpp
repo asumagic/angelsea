@@ -123,7 +123,7 @@ class MirJit {
 	// compile thread is not manipulating any of those structures directly, when a function being compiled is being
 	// unregistered, we migrate it to the pending destructions list.
 	std::unordered_map<asIScriptFunction*, std::unique_ptr<AsyncMirFunction>> m_async_codegen_functions;
-	std::vector<std::unique_ptr<AsyncMirFunction>>                            m_async_finished_functions;
+	std::unordered_map<asIScriptFunction*, std::unique_ptr<AsyncMirFunction>> m_async_finished_functions;
 	std::vector<std::unique_ptr<AsyncMirFunction>>                            m_async_cancelled_functions;
 	std::mutex                                                                m_async_destruct_mutex;
 

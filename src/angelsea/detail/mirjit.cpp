@@ -106,6 +106,11 @@ void MirJit::unregister_function(asIScriptFunction& script_function) {
 		// if not, let the async_fn die
 	}
 
+	{
+		std::lock_guard lk{m_async_destruct_mutex};
+		m_async_finished_functions.erase(&script_function);
+	}
+
 	// can't unload modules from MIR AFAIK
 }
 
@@ -253,7 +258,7 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 
 				// move self to finished list
 				auto it = m_async_codegen_functions.find(fn.script_function);
-				m_async_finished_functions.emplace_back(std::move(it->second));
+				m_async_finished_functions.emplace(fn.script_function, std::move(it->second));
 				m_async_codegen_functions.erase(it);
 			}
 		}
@@ -267,8 +272,8 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 void MirJit::transfer_compiled_modules() {
 	// FIXME: locking more than necessary
 	std::lock_guard lk{m_async_destruct_mutex};
-	for (auto& finished_function : m_async_finished_functions) {
-		transfer_and_destroy(*finished_function);
+	for (auto& [script_fn, finished_fn] : m_async_finished_functions) {
+		transfer_and_destroy(*finished_fn);
 	}
 	m_async_finished_functions.clear();
 }
