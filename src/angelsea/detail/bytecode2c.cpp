@@ -174,7 +174,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 std::string BytecodeToC::create_new_entry_point_name(asIScriptFunction& fn) {
 	angelsea_assert(fn.GetId() != 0 && "Did not expect a delegate function");
 
-	const auto str = fmt::format("{}_mod{}_fn{}", m_c_symbol_prefix, m_module_state.fn_idx, m_module_idx);
+	const auto str = fmt::format("{}_mod{}_fn{}", m_c_symbol_prefix, m_module_idx, m_module_state.fn_idx);
 	++m_module_state.fn_idx;
 	return str;
 }
