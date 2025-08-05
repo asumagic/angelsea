@@ -128,14 +128,14 @@ typedef struct {)___"
     // The layout must be compatible with asSVMRegisters.
     // We rewrite some of the asDWORD* pointers to be void* instead; this is across the compile boundary in the case of
     // JIT.
-    "\tasDWORD *programPointer;\n" // points to current bytecode instruction
-    "\tvoid *stackFramePointer;\n" // function stack frame
-    "\tvoid *stackPointer;\n"      // top of stack (grows downward)
-    "\tasea_var valueRegister;\n"  // temp register for primitives
-    "\tvoid *objectRegister;\n"    // temp register for objects and handles
-    "\tasITypeInfo *objectType;\n" // type of object held in object register
+    "\tasDWORD *pc;\n"           // points to current bytecode instruction
+    "\tvoid *fp;\n"              // function stack frame
+    "\tvoid *sp;\n"              // top of stack (grows downward)
+    "\tasea_var value;\n"        // temp register for primitives
+    "\tvoid *obj;\n"             // temp register for objects and handles
+    "\tasITypeInfo *obj_type;\n" // type of object held in object register
     // HACK: doProcessSuspend is normally defined as bool in C++; assume char equivalent
-    "\tchar doProcessSuspend;\n" // whether or the JIT should break out when it encounters asBC_SUSPEND
+    "\tchar do_suspend;\n"       // whether or the JIT should break out when it encounters asBC_SUSPEND
     "\tasIScriptContext *ctx;\n" // active script context
 
     R"___(} asea_vm_registers;

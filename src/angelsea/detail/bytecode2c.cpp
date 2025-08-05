@@ -20,14 +20,14 @@ namespace angelsea::detail {
 // TODO: fix indent level for all of those that use this...
 
 static constexpr std::string_view save_registers_sequence
-    = "\t\tregs->programPointer = pc;\n"
-      "\t\tregs->stackPointer = sp;\n"
-      "\t\tregs->stackFramePointer = fp;\n";
+    = "\t\tregs->pc = pc;\n"
+      "\t\tregs->sp = sp;\n"
+      "\t\tregs->fp = fp;\n";
 
 static constexpr std::string_view load_registers_sequence
-    = "\t\tpc = regs->programPointer;\n"
-      "\t\tsp = regs->stackPointer;\n"
-      "\t\tfp = regs->stackFramePointer;\n";
+    = "\t\tpc = regs->pc;\n"
+      "\t\tsp = regs->sp;\n"
+      "\t\tfp = regs->fp;\n";
 
 BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix) :
     m_config(config), m_script_engine(engine), m_c_symbol_prefix(std::move(c_symbol_prefix)), m_module_idx(-1) {
@@ -70,7 +70,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	// JIT entry signature is `void(asSVMRegisters *regs, asPWORD jitArg)`
 	emit("void {name}(asSVMRegisters *_regs, asPWORD entryLabel) {{\n", fmt::arg("name", m_module_state.fn_name));
 
-	// HACK: which we would prefer not to do; but accessing valueRegister is
+	// HACK: which we would prefer not to do; but accessing value is
 	// going to be pain with strict aliasing either way
 	emit("\tasea_vm_registers *regs = (asea_vm_registers *)_regs;\n");
 
@@ -326,10 +326,10 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_PshV8:   emit_stack_push_ins(state, frame_var_expr(ins.sword0(), u64), u64); break;
 	case asBC_PshNull: emit_stack_push_ins(state, "0", pword); break; // TODO: not tested, how to emit?
 	case asBC_PshVPtr: emit_stack_push_ins(state, frame_var_expr(ins.sword0(), pword), pword); break;
-	case asBC_PshRPtr: emit_stack_push_ins(state, "regs->valueRegister.as_asPWORD", pword); break;
+	case asBC_PshRPtr: emit_stack_push_ins(state, "regs->value.as_asPWORD", pword); break;
 	case asBC_PopRPtr: {
 		emit(
-		    "\t\tregs->valueRegister.as_asPWORD = sp->as_asPWORD;\n"
+		    "\t\tregs->value.as_asPWORD = sp->as_asPWORD;\n"
 		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, AS_PTR_SIZE);\n"
 		);
 		emit_auto_bc_inc(state);
@@ -399,28 +399,19 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_CpyVtoR4: {
-		emit(
-		    "\t\tregs->valueRegister.as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
-		    fmt::arg("SWORD0", ins.sword0())
-		);
+		emit("\t\tregs->value.as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n", fmt::arg("SWORD0", ins.sword0()));
 		emit_auto_bc_inc(state);
 		break;
 	}
 
 	case asBC_CpyRtoV4: {
-		emit(
-		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asDWORD = regs->valueRegister.as_asDWORD;\n",
-		    fmt::arg("SWORD0", ins.sword0())
-		);
+		emit("\t\tASEA_FRAME_VAR({SWORD0}).as_asDWORD = regs->value.as_asDWORD;\n", fmt::arg("SWORD0", ins.sword0()));
 		emit_auto_bc_inc(state);
 		break;
 	}
 
 	case asBC_CpyRtoV8: {
-		emit(
-		    "\t\tASEA_FRAME_VAR({SWORD0}).as_asQWORD = regs->valueRegister.as_asQWORD;\n",
-		    fmt::arg("SWORD0", ins.sword0())
-		);
+		emit("\t\tASEA_FRAME_VAR({SWORD0}).as_asQWORD = regs->value.as_asQWORD;\n", fmt::arg("SWORD0", ins.sword0()));
 		emit_auto_bc_inc(state);
 		break;
 	}
@@ -448,7 +439,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_LDV: {
 		emit(
-		    "\t\tregs->valueRegister.as_asPWORD = (asPWORD)&ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
+		    "\t\tregs->value.as_asPWORD = (asPWORD)&ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -464,7 +455,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_LDG: {
 		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), true);
-		emit("\t\tregs->valueRegister.as_asPWORD = (asPWORD)&{};\n", symbol);
+		emit("\t\tregs->value.as_asPWORD = (asPWORD)&{};\n", symbol);
 		emit_auto_bc_inc(state);
 		break;
 	}
@@ -525,8 +516,8 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_LOADOBJ: {
 		emit(
 		    "\t\tvoid **a = &ASEA_FRAME_VAR({SWORD0}).as_ptr;\n"
-		    "\t\tregs->objectType = 0;\n"
-		    "\t\tregs->objectRegister = *a;\n"
+		    "\t\tregs->obj_type = 0;\n"
+		    "\t\tregs->obj = *a;\n"
 		    "\t\t*a = 0;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -536,8 +527,8 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_STOREOBJ: {
 		emit(
-		    "\t\tASEA_FRAME_VAR({SWORD0}).as_ptr = regs->objectRegister;\n"
-		    "\t\tregs->objectRegister = 0;\n",
+		    "\t\tASEA_FRAME_VAR({SWORD0}).as_ptr = regs->obj;\n"
+		    "\t\tregs->obj = 0;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -562,7 +553,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit(
 		    "\t\tasPWORD base = ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n"
 		    "\t\tif (base == 0) {{ goto err_null; }}\n"
-		    "\t\tregs->valueRegister.as_asPWORD = base + {SWORD1};\n",
+		    "\t\tregs->value.as_asPWORD = base + {SWORD1};\n",
 		    fmt::arg("SWORD0", ins.sword0()),
 		    fmt::arg("SWORD1", ins.sword1())
 		);
@@ -575,7 +566,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit(
 		    "\t\tasPWORD base = ASEA_FRAME_VAR(0).as_asPWORD;\n"
 		    "\t\tif (base == 0) {{ goto err_null; }}\n"
-		    "\t\tregs->valueRegister.as_asPWORD = base + {SWORD0};\n",
+		    "\t\tregs->value.as_asPWORD = base + {SWORD0};\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		state.error_handlers.null = true;
@@ -585,7 +576,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_WRTV1: {
 		emit(
-		    "\t\tregs->valueRegister.as_var_ptr->as_asBYTE = ASEA_FRAME_VAR({SWORD0}).as_asBYTE;\n",
+		    "\t\tregs->value.as_var_ptr->as_asBYTE = ASEA_FRAME_VAR({SWORD0}).as_asBYTE;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -594,7 +585,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_WRTV2: {
 		emit(
-		    "\t\tregs->valueRegister.as_var_ptr->as_asWORD = ASEA_FRAME_VAR({SWORD0}).as_asWORD;\n",
+		    "\t\tregs->value.as_var_ptr->as_asWORD = ASEA_FRAME_VAR({SWORD0}).as_asWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -603,7 +594,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_WRTV4: {
 		emit(
-		    "\t\tregs->valueRegister.as_var_ptr->as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
+		    "\t\tregs->value.as_var_ptr->as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -612,7 +603,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_WRTV8: {
 		emit(
-		    "\t\tregs->valueRegister.as_var_ptr->as_asQWORD = ASEA_FRAME_VAR({SWORD0}).as_asQWORD;\n",
+		    "\t\tregs->value.as_var_ptr->as_asQWORD = ASEA_FRAME_VAR({SWORD0}).as_asQWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -623,7 +614,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
 		    "\t\tvar->as_asDWORD = 0;\n"
-		    "\t\tvar->as_asBYTE = regs->valueRegister.as_var_ptr->as_asBYTE;\n",
+		    "\t\tvar->as_asBYTE = regs->value.as_var_ptr->as_asBYTE;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -633,7 +624,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
 		    "\t\tvar->as_asDWORD = 0;\n"
-		    "\t\tvar->as_asWORD = regs->valueRegister.as_var_ptr->as_asWORD;\n",
+		    "\t\tvar->as_asWORD = regs->value.as_var_ptr->as_asWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -642,7 +633,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_RDR4: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
-		    "\t\tvar->as_asDWORD = regs->valueRegister.as_var_ptr->as_asDWORD;\n",
+		    "\t\tvar->as_asDWORD = regs->value.as_var_ptr->as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -651,7 +642,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_RDR8: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
-		    "\t\tvar->as_asQWORD = regs->valueRegister.as_var_ptr->as_asQWORD;\n",
+		    "\t\tvar->as_asQWORD = regs->value.as_var_ptr->as_asQWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -735,14 +726,14 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
-	case asBC_JZ:     emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 == 0"); break;
-	case asBC_JLowZ:  emit_cond_branch_ins(state, "regs->valueRegister.as_asBYTE == 0"); break;
-	case asBC_JNZ:    emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 != 0"); break;
-	case asBC_JLowNZ: emit_cond_branch_ins(state, "regs->valueRegister.as_asBYTE != 0"); break;
-	case asBC_JS:     emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 < 0"); break;
-	case asBC_JNS:    emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 >= 0"); break;
-	case asBC_JP:     emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 > 0"); break;
-	case asBC_JNP:    emit_cond_branch_ins(state, "regs->valueRegister.as_asINT32 <= 0"); break;
+	case asBC_JZ:     emit_cond_branch_ins(state, "regs->value.as_asINT32 == 0"); break;
+	case asBC_JLowZ:  emit_cond_branch_ins(state, "regs->value.as_asBYTE == 0"); break;
+	case asBC_JNZ:    emit_cond_branch_ins(state, "regs->value.as_asINT32 != 0"); break;
+	case asBC_JLowNZ: emit_cond_branch_ins(state, "regs->value.as_asBYTE != 0"); break;
+	case asBC_JS:     emit_cond_branch_ins(state, "regs->value.as_asINT32 < 0"); break;
+	case asBC_JNS:    emit_cond_branch_ins(state, "regs->value.as_asINT32 >= 0"); break;
+	case asBC_JP:     emit_cond_branch_ins(state, "regs->value.as_asINT32 > 0"); break;
+	case asBC_JNP:    emit_cond_branch_ins(state, "regs->value.as_asINT32 <= 0"); break;
 
 	case asBC_TZ:     emit_test_ins(state, "=="); break;
 	case asBC_TNZ:    emit_test_ins(state, "!="); break;
@@ -1037,9 +1028,9 @@ void BytecodeToC::emit_compare_var_var_ins(FnState& state, VarType type) {
 	emit(
 	    "\t\t{TYPE} lhs = ASEA_FRAME_VAR({SWORD0}).as_{TYPE};\n"
 	    "\t\t{TYPE} rhs = ASEA_FRAME_VAR({SWORD1}).as_{TYPE};\n"
-	    "\t\tif      (lhs == rhs) regs->valueRegister.as_asINT32 = 0;\n"
-	    "\t\telse if (lhs < rhs)  regs->valueRegister.as_asINT32 = -1;\n"
-	    "\t\telse                 regs->valueRegister.as_asINT32 = 1;\n",
+	    "\t\tif      (lhs == rhs) regs->value.as_asINT32 = 0;\n"
+	    "\t\telse if (lhs < rhs)  regs->value.as_asINT32 = -1;\n"
+	    "\t\telse                 regs->value.as_asINT32 = 1;\n",
 	    fmt::arg("SWORD0", ins.sword0()),
 	    fmt::arg("SWORD1", ins.sword1()),
 	    fmt::arg("TYPE", type.type)
@@ -1051,9 +1042,9 @@ void BytecodeToC::emit_compare_var_imm_ins(FnState& state, VarType type, std::st
 	emit(
 	    "\t\t{TYPE} lhs = ASEA_FRAME_VAR({SWORD0}).as_{TYPE};\n"
 	    "\t\t{TYPE} rhs = {RHS};\n"
-	    "\t\tif      (lhs == rhs) regs->valueRegister.as_asINT32 = 0;\n"
-	    "\t\telse if (lhs < rhs)  regs->valueRegister.as_asINT32 = -1;\n"
-	    "\t\telse                 regs->valueRegister.as_asINT32 = 1;\n",
+	    "\t\tif      (lhs == rhs) regs->value.as_asINT32 = 0;\n"
+	    "\t\telse if (lhs < rhs)  regs->value.as_asINT32 = -1;\n"
+	    "\t\telse                 regs->value.as_asINT32 = 1;\n",
 	    fmt::arg("SWORD0", state.ins.sword0()),
 	    fmt::arg("RHS", rhs_expr),
 	    fmt::arg("TYPE", type.type)
@@ -1063,9 +1054,9 @@ void BytecodeToC::emit_compare_var_imm_ins(FnState& state, VarType type, std::st
 
 void BytecodeToC::emit_test_ins(FnState& state, std::string_view op_with_rhs_0) {
 	emit(
-	    "\t\tasINT32 value = regs->valueRegister.as_asINT32;\n"
-	    "\t\tregs->valueRegister.as_asQWORD = 0;\n"
-	    "\t\tregs->valueRegister.as_asBYTE = (value {OP} 0) ? "
+	    "\t\tasINT32 value = regs->value.as_asINT32;\n"
+	    "\t\tregs->value.as_asQWORD = 0;\n"
+	    "\t\tregs->value.as_asBYTE = (value {OP} 0) ? "
 	    "VALUE_OF_BOOLEAN_TRUE : 0;\n",
 	    fmt::arg("OP", op_with_rhs_0)
 	);
@@ -1073,7 +1064,7 @@ void BytecodeToC::emit_test_ins(FnState& state, std::string_view op_with_rhs_0) 
 }
 
 void BytecodeToC::emit_prefixop_valuereg_ins(FnState& state, std::string_view op, VarType var) {
-	emit("\t\t{OP}regs->valueRegister.as_var_ptr->as_{TYPE};\n", fmt::arg("OP", op), fmt::arg("TYPE", var.type));
+	emit("\t\t{OP}regs->value.as_var_ptr->as_{TYPE};\n", fmt::arg("OP", op), fmt::arg("TYPE", var.type));
 	emit_auto_bc_inc(state);
 }
 
