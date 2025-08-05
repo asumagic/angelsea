@@ -199,7 +199,7 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 			BytecodeInstruction prev_ins    = *prev;
 			bool                should_skip = false;
 
-			// TODO: check what are the conditions for AS to insert jit entries
+			// TODO: check what are the conditions for AS to insert jit entries to validate below claims
 
 			// check previous instruction
 			switch (prev_ins.info->bc) {
