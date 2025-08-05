@@ -131,12 +131,12 @@ class BytecodeToC {
 	/// - If var1 > var2  => *valueRegister =  1
 	void emit_compare_var_var_ins(FnState& state, VarType type);
 
-	/// Emits the complete handler for a compare instruction between a variable on the stack and an immediate value
-	/// (whether integral or floating-point).
+	/// Emits the complete handler for a compare instruction between a variable on the stack and the result of an
+	/// expression (whether integral or floating-point).
 	/// - If var1 == imm => *valueRegister =  0
 	/// - If var1 < imm  => *valueRegister = -1
 	/// - If var1 > imm  => *valueRegister =  1
-	void emit_compare_var_imm_ins(FnState& state, VarType type, std::string_view rhs_expr);
+	void emit_compare_var_expr_ins(FnState& state, VarType type, std::string_view rhs_expr);
 
 	/// Emits the complete handler for a test instruction.
 	/// Writes the boolean result of `valueRegister {op} 0` to `valueRegister`.
@@ -149,11 +149,11 @@ class BytecodeToC {
 
 	/// Emits the complete handler for an in-place prefix operation on the valueRegister, that is,
 	/// `{op}valueRegister` (`op` normally being either `++` or `--`).
-	void emit_prefixop_valuereg_ins(FnState& state, std::string_view op, VarType var);
+	void emit_prefixop_valuereg_ins(FnState& state, std::string_view op, VarType type);
 
 	/// Emits the complete handler for an in-place unary operation on a variable on the stack, that is,
 	/// `var = {op} var`.
-	void emit_unop_var_inplace_ins(FnState& state, std::string_view op, VarType var);
+	void emit_unop_var_inplace_ins(FnState& state, std::string_view op, VarType type);
 
 	/// Emits the complete handler for a binary operation between two variables on the stack, outputting to a third
 	/// one, that is, `result = lhs {op} rhs`.
@@ -181,10 +181,10 @@ class BytecodeToC {
 	/// there is no `lhs_overflow_value` logic.
 	void emit_divmod_var_unsigned_ins(FnState& state, std::string_view op, VarType type);
 
-	std::string frame_var_ptr_expr(std::string_view expr);
+	std::string frame_var_ptr(std::string_view expr);
 	std::string frame_ptr(int offset);
 
-	std::string frame_var_expr(std::string_view expr, VarType type);
+	std::string frame_var(std::string_view expr, VarType type);
 	std::string frame_var(int offset, VarType type);
 
 	const JitConfig& m_config;

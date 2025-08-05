@@ -403,10 +403,9 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_GETOBJREF: {
 		emit(
 		    "\t\tasPWORD *dst = &ASEA_STACK_VAR({WORD0}).as_asPWORD;\n"
-		    "\t\tasPWORD var_idx = *dst;\n"
-		    "\t\tasPWORD var_addr = ASEA_FRAME_VAR(var_idx).as_asPWORD;\n"
-		    "\t\tASEA_STACK_VAR({WORD0}).as_asPWORD = var_addr;\n",
-		    fmt::arg("WORD0", ins.word0())
+		    "\t\tASEA_STACK_VAR({WORD0}).as_asPWORD = {VAR};\n",
+		    fmt::arg("WORD0", ins.word0()),
+		    fmt::arg("VAR", frame_var("*dst", pword))
 		);
 		emit_auto_bc_inc(state);
 		break;
@@ -450,11 +449,11 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_LOADOBJ: {
 		emit(
-		    "\t\tvoid **a = &ASEA_FRAME_VAR({SWORD0}).as_ptr;\n"
+		    "\t\tvoid **a = &{VARPTR}->as_ptr;\n"
 		    "\t\tregs->obj_type = 0;\n"
 		    "\t\tregs->obj = *a;\n"
 		    "\t\t*a = 0;\n",
-		    fmt::arg("SWORD0", ins.sword0())
+		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
 		);
 		emit_auto_bc_inc(state);
 		break;
@@ -462,9 +461,9 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_STOREOBJ: {
 		emit(
-		    "\t\tASEA_FRAME_VAR({SWORD0}).as_ptr = regs->obj;\n"
+		    "\t\t{VARPTR}->as_ptr = regs->obj;\n"
 		    "\t\tregs->obj = 0;\n",
-		    fmt::arg("SWORD0", ins.sword0())
+		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
 		);
 		emit_auto_bc_inc(state);
 
@@ -475,10 +474,11 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit(
 		    "\t\tasPWORD *a = &ASEA_STACK_VAR({WORD0}).as_asPWORD;\n"
 		    "\t\tasPWORD offset = *a;\n"
-		    "\t\tasPWORD *v = &ASEA_FRAME_VAR(offset).as_asPWORD;\n"
+		    "\t\tasPWORD *v = &{OBJPTR};\n"
 		    "\t\t*a = *v;\n"
 		    "\t\t*v = 0;\n",
-		    fmt::arg("WORD0", ins.word0())
+		    fmt::arg("WORD0", ins.word0()),
+		    fmt::arg("OBJPTR", frame_var("offset", pword))
 		);
 		emit_auto_bc_inc(state);
 		break;
@@ -486,10 +486,10 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_LoadRObjR: {
 		emit(
-		    "\t\tasPWORD base = ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n"
+		    "\t\tasPWORD base = {VAR};\n"
 		    "\t\tif (base == 0) {{ goto err_null; }}\n"
 		    "\t\tregs->value.as_asPWORD = base + {SWORD1};\n",
-		    fmt::arg("SWORD0", ins.sword0()),
+		    fmt::arg("VAR", frame_var(ins.sword0(), pword)),
 		    fmt::arg("SWORD1", ins.sword1())
 		);
 		state.error_handlers.null = true;
@@ -499,9 +499,10 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_LoadThisR: {
 		emit(
-		    "\t\tasPWORD base = ASEA_FRAME_VAR(0).as_asPWORD;\n"
+		    "\t\tasPWORD base = {THIS};\n"
 		    "\t\tif (base == 0) {{ goto err_null; }}\n"
 		    "\t\tregs->value.as_asPWORD = base + {SWORD0};\n",
+		    fmt::arg("THIS", frame_var(0, pword)),
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		state.error_handlers.null = true;
@@ -516,42 +517,26 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_RDR1:  {
 		emit(
-		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
+		    "\t\tasea_var* var = {VARPTR};\n"
 		    "\t\tvar->as_asDWORD = 0;\n"
 		    "\t\tvar->as_asBYTE = regs->value.as_var_ptr->as_asBYTE;\n",
-		    fmt::arg("SWORD0", ins.sword0())
+		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
 		);
 		emit_auto_bc_inc(state);
 		break;
 	}
 	case asBC_RDR2: {
 		emit(
-		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
+		    "\t\tasea_var* var = {VARPTR};\n"
 		    "\t\tvar->as_asDWORD = 0;\n"
 		    "\t\tvar->as_asWORD = regs->value.as_var_ptr->as_asWORD;\n",
-		    fmt::arg("SWORD0", ins.sword0())
+		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
 		);
 		emit_auto_bc_inc(state);
 		break;
 	}
-	case asBC_RDR4: {
-		emit(
-		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
-		    "\t\tvar->as_asDWORD = regs->value.as_var_ptr->as_asDWORD;\n",
-		    fmt::arg("SWORD0", ins.sword0())
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
-	case asBC_RDR8: {
-		emit(
-		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
-		    "\t\tvar->as_asQWORD = regs->value.as_var_ptr->as_asQWORD;\n",
-		    fmt::arg("SWORD0", ins.sword0())
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
+	case asBC_RDR4: emit_assign_ins(state, frame_var(ins.sword0(), u32), "regs->value.as_var_ptr->as_asDWORD"); break;
+	case asBC_RDR8: emit_assign_ins(state, frame_var(ins.sword0(), u64), "regs->value.as_var_ptr->as_asQWORD"); break;
 
 	case asBC_CALL: {
 		// TODO: when possible, translate this to a JIT to JIT function call
@@ -654,11 +639,11 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CMPu64: emit_compare_var_var_ins(state, u64); break;
 	case asBC_CmpPtr: emit_compare_var_var_ins(state, pword); break;
 
-	case asBC_CMPIi:  emit_compare_var_imm_ins(state, s32, imm_int(ins.int0(), s32)); break;
-	case asBC_CMPIu:  emit_compare_var_imm_ins(state, u32, imm_int(ins.dword0(), u32)); break;
+	case asBC_CMPIi:  emit_compare_var_expr_ins(state, s32, imm_int(ins.int0(), s32)); break;
+	case asBC_CMPIu:  emit_compare_var_expr_ins(state, u32, imm_int(ins.dword0(), u32)); break;
 	case asBC_CMPIf:
 		emit("\t\tasea_i2f rhs_i2f = {{.i={}}};\n", ins.dword0());
-		emit_compare_var_imm_ins(state, f32, "rhs_i2f.f");
+		emit_compare_var_expr_ins(state, f32, "rhs_i2f.f");
 		break;
 
 	case asBC_INCi8:  emit_prefixop_valuereg_ins(state, "++", u8); break;
@@ -841,26 +826,18 @@ void BytecodeToC::emit_primitive_cast_var_ins(FnState& state, VarType src, VarTy
 
 	if (src.byte_count != dst.byte_count && dst.byte_count < 4) {
 		emit(
-		    "\t\t{DST_TYPE} value = ASEA_FRAME_VAR({SRC}).as_{SRC_TYPE};\n"
-		    "\t\tasea_var *dst = &ASEA_FRAME_VAR({DST});\n"
+		    "\t\t{DST_TYPE} value = {SRC};\n"
+		    "\t\tasea_var *dst = {DSTPTR};\n"
 		    "\t\tdst->as_asDWORD = 0;\n"
 		    "\t\tdst->as_{DST_TYPE} = value;\n",
 		    fmt::arg("DST_TYPE", dst.type),
-		    fmt::arg("SRC_TYPE", src.type),
-		    fmt::arg("DST", ins.sword0()),
-		    fmt::arg("SRC", in_place ? ins.sword0() : ins.sword1())
+		    fmt::arg("DSTPTR", frame_ptr(ins.sword0())),
+		    fmt::arg("SRC", frame_var(in_place ? ins.sword0() : ins.sword1(), src))
 		);
 		emit_auto_bc_inc(state);
 		return;
 	}
-	emit(
-	    "\t\tASEA_FRAME_VAR({DST}).as_{DST_TYPE} = ASEA_FRAME_VAR({SRC}).as_{SRC_TYPE};\n",
-	    fmt::arg("DST_TYPE", dst.type),
-	    fmt::arg("SRC_TYPE", src.type),
-	    fmt::arg("DST", ins.sword0()),
-	    fmt::arg("SRC", in_place ? ins.sword0() : ins.sword1())
-	);
-	emit_auto_bc_inc(state);
+	emit_assign_ins(state, frame_var(ins.sword0(), dst), frame_var(in_place ? ins.sword0() : ins.sword1(), src));
 }
 
 std::string BytecodeToC::emit_global_lookup(FnState& state, void** pointer, bool global_var_only) {
@@ -933,28 +910,17 @@ void BytecodeToC::emit_cond_branch_ins(FnState& state, std::string_view test) {
 }
 
 void BytecodeToC::emit_compare_var_var_ins(FnState& state, VarType type) {
-	BytecodeInstruction& ins = state.ins;
-	emit(
-	    "\t\t{TYPE} lhs = ASEA_FRAME_VAR({SWORD0}).as_{TYPE};\n"
-	    "\t\t{TYPE} rhs = ASEA_FRAME_VAR({SWORD1}).as_{TYPE};\n"
-	    "\t\tif      (lhs == rhs) regs->value.as_asINT32 = 0;\n"
-	    "\t\telse if (lhs < rhs)  regs->value.as_asINT32 = -1;\n"
-	    "\t\telse                 regs->value.as_asINT32 = 1;\n",
-	    fmt::arg("SWORD0", ins.sword0()),
-	    fmt::arg("SWORD1", ins.sword1()),
-	    fmt::arg("TYPE", type.type)
-	);
-	emit_auto_bc_inc(state);
+	emit_compare_var_expr_ins(state, type, frame_var(state.ins.sword1(), type));
 }
 
-void BytecodeToC::emit_compare_var_imm_ins(FnState& state, VarType type, std::string_view rhs_expr) {
+void BytecodeToC::emit_compare_var_expr_ins(FnState& state, VarType type, std::string_view rhs_expr) {
 	emit(
-	    "\t\t{TYPE} lhs = ASEA_FRAME_VAR({SWORD0}).as_{TYPE};\n"
+	    "\t\t{TYPE} lhs = {LHS};\n"
 	    "\t\t{TYPE} rhs = {RHS};\n"
 	    "\t\tif      (lhs == rhs) regs->value.as_asINT32 = 0;\n"
 	    "\t\telse if (lhs < rhs)  regs->value.as_asINT32 = -1;\n"
 	    "\t\telse                 regs->value.as_asINT32 = 1;\n",
-	    fmt::arg("SWORD0", state.ins.sword0()),
+	    fmt::arg("LHS", frame_var(state.ins.sword0(), type)),
 	    fmt::arg("RHS", rhs_expr),
 	    fmt::arg("TYPE", type.type)
 	);
@@ -972,35 +938,25 @@ void BytecodeToC::emit_test_ins(FnState& state, std::string_view op_with_rhs_0) 
 	emit_auto_bc_inc(state);
 }
 
-void BytecodeToC::emit_prefixop_valuereg_ins(FnState& state, std::string_view op, VarType var) {
-	emit("\t\t{OP}regs->value.as_var_ptr->as_{TYPE};\n", fmt::arg("OP", op), fmt::arg("TYPE", var.type));
+void BytecodeToC::emit_prefixop_valuereg_ins(FnState& state, std::string_view op, VarType type) {
+	emit("\t\t{OP}regs->value.as_var_ptr->as_{TYPE};\n", fmt::arg("OP", op), fmt::arg("TYPE", type.type));
 	emit_auto_bc_inc(state);
 }
 
-void BytecodeToC::emit_unop_var_inplace_ins(FnState& state, std::string_view op, VarType var) {
+void BytecodeToC::emit_unop_var_inplace_ins(FnState& state, std::string_view op, VarType type) {
 	BytecodeInstruction& ins = state.ins;
-	emit(
-	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = {OP} ASEA_FRAME_VAR({SWORD0}).as_{TYPE};\n",
-	    fmt::arg("TYPE", var.type),
-	    fmt::arg("OP", op),
-	    fmt::arg("SWORD0", ins.sword0())
-	);
+	emit("\t\t{VAR} = {OP} {VAR};\n", fmt::arg("OP", op), fmt::arg("VAR", frame_var(ins.sword0(), type)));
 	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::emit_binop_var_var_ins(FnState& state, std::string_view op, VarType lhs, VarType rhs, VarType dst) {
 	BytecodeInstruction& ins = state.ins;
 	emit(
-	    "\t\t{LHS_TYPE} lhs = ASEA_FRAME_VAR({SWORD1}).as_{LHS_TYPE};\n"
-	    "\t\t{RHS_TYPE} rhs = ASEA_FRAME_VAR({SWORD2}).as_{RHS_TYPE};\n"
-	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{RET_TYPE} = lhs {OP} rhs;\n",
-	    fmt::arg("LHS_TYPE", lhs.type),
-	    fmt::arg("RHS_TYPE", rhs.type),
-	    fmt::arg("RET_TYPE", dst.type),
+	    "\t\t{DST} = {LHS} {OP} {RHS};\n",
 	    fmt::arg("OP", op),
-	    fmt::arg("SWORD0", ins.sword0()),
-	    fmt::arg("SWORD1", ins.sword1()),
-	    fmt::arg("SWORD2", ins.sword2())
+	    fmt::arg("DST", frame_var(ins.sword0(), dst)),
+	    fmt::arg("LHS", frame_var(ins.sword1(), lhs)),
+	    fmt::arg("RHS", frame_var(ins.sword2(), rhs))
 	);
 	emit_auto_bc_inc(state);
 }
@@ -1014,14 +970,11 @@ void BytecodeToC::emit_binop_var_imm_ins(
 ) {
 	BytecodeInstruction& ins = state.ins;
 	emit(
-	    "\t\t{LHS_TYPE} lhs = ASEA_FRAME_VAR({SWORD1}).as_{LHS_TYPE};\n"
-	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{DST_TYPE} = lhs {OP} ({RHS_EXPR});\n",
-	    fmt::arg("LHS_TYPE", lhs.type),
-	    fmt::arg("DST_TYPE", dst.type),
+	    "\t\t{DST} = {LHS} {OP} {RHS};\n",
 	    fmt::arg("OP", op),
-	    fmt::arg("SWORD0", ins.sword0()),
-	    fmt::arg("SWORD1", ins.sword1()),
-	    fmt::arg("RHS_EXPR", rhs_expr)
+	    fmt::arg("DST", frame_var(ins.sword0(), dst)),
+	    fmt::arg("LHS", frame_var(ins.sword1(), lhs)),
+	    fmt::arg("RHS", rhs_expr)
 	);
 	emit_auto_bc_inc(state);
 }
@@ -1029,14 +982,14 @@ void BytecodeToC::emit_binop_var_imm_ins(
 void BytecodeToC::emit_divmod_var_float_ins(FnState& state, std::string_view op, VarType type) {
 	BytecodeInstruction& ins = state.ins;
 	emit(
-	    "\t\t{TYPE} lhs = ASEA_FRAME_VAR({SWORD1}).as_{TYPE};\n"
-	    "\t\t{TYPE} divider = ASEA_FRAME_VAR({SWORD2}).as_{TYPE};\n"
+	    "\t\t{TYPE} lhs = {LHS};\n"
+	    "\t\t{TYPE} divider = {RHS};\n"
 	    "\t\tif (divider == 0) {{ goto err_divide_by_zero; }}\n"
-	    "\t\tASEA_FRAME_VAR({SWORD0}).as_{TYPE} = {OP}(lhs, divider);\n",
+	    "\t\t{DST} = {OP}(lhs, divider);\n",
 	    fmt::arg("TYPE", type.type),
-	    fmt::arg("SWORD0", ins.sword0()),
-	    fmt::arg("SWORD1", ins.sword1()),
-	    fmt::arg("SWORD2", ins.sword2()),
+	    fmt::arg("DST", frame_var(ins.sword0(), type)),
+	    fmt::arg("LHS", frame_var(ins.sword1(), type)),
+	    fmt::arg("RHS", frame_var(ins.sword2(), type)),
 	    fmt::arg("OP", op)
 	);
 	state.error_handlers.divide_by_zero = true;
@@ -1086,17 +1039,27 @@ void BytecodeToC::emit_divmod_var_unsigned_ins(FnState& state, std::string_view 
 	emit_auto_bc_inc(state);
 }
 
-std::string BytecodeToC::frame_var_ptr_expr(std::string_view expr) {
+std::string BytecodeToC::frame_var_ptr(std::string_view expr) {
 	return fmt::format("((asea_var*)((asDWORD*)fp - {}))", expr);
 }
 
-std::string BytecodeToC::frame_ptr(int offset) { return frame_var_ptr_expr(std::to_string(offset)); }
+std::string BytecodeToC::frame_ptr(int offset) {
+	if (offset == 0) {
+		return "fp";
+	}
+	return frame_var_ptr(std::to_string(offset));
+}
 
-std::string BytecodeToC::frame_var_expr(std::string_view expr, VarType type) {
+std::string BytecodeToC::frame_var(std::string_view expr, VarType type) {
 	return fmt::format("((asea_var*)((asDWORD*)fp - {}))->as_{}", expr, type.type);
 }
 
-std::string BytecodeToC::frame_var(int offset, VarType type) { return frame_var_expr(std::to_string(offset), type); }
+std::string BytecodeToC::frame_var(int offset, VarType type) {
+	if (offset == 0) {
+		return fmt::format("fp->as_{}", type.type);
+	}
+	return frame_var(std::to_string(offset), type);
+}
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset) {
 	return std::size_t(std::int64_t(base_offset) + std::int64_t(relative_offset));
