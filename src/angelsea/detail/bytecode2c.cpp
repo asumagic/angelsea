@@ -157,6 +157,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 
 	FnState state{.fn = fn, .ins = {}, .error_handlers = {}};
 
+	configure_jit_entries(state);
 	emit_entry_dispatch(state);
 
 	for (BytecodeInstruction ins : get_bytecode(fn)) {
@@ -177,16 +178,7 @@ std::string BytecodeToC::create_new_entry_point_name(asIScriptFunction& fn) {
 	return str;
 }
 
-void BytecodeToC::emit_entry_dispatch(FnState& state) {
-	if (m_config.c.use_gnu_label_as_value) {
-		emit(
-		    "\tstatic const void *const entry[] = {{\n"
-		    "\t\t&&bc0,\n" // because index 0 is meaningless
-		);
-	} else {
-		emit("\tswitch(entryLabel) {{\n");
-	}
-
+void BytecodeToC::configure_jit_entries(FnState& state) {
 	bool    last_was_jit_entry = false;
 	asPWORD jit_entry_id       = 1;
 
@@ -206,23 +198,33 @@ void BytecodeToC::emit_entry_dispatch(FnState& state) {
 
 		ins.pword0() = jit_entry_id;
 
-		if (m_config.c.use_gnu_label_as_value) {
-			emit("\t\t&&bc{},\n", ins.offset);
-		} else {
-			emit("\tcase {}: goto bc{};\n", jit_entry_id, ins.offset);
-		}
-
 		last_was_jit_entry = true;
-
 		++jit_entry_id;
 	}
+}
 
+void BytecodeToC::emit_entry_dispatch(FnState& state) {
 	if (m_config.c.use_gnu_label_as_value) {
+		emit(
+		    "\tstatic const void *const entry[] = {{\n"
+		    "\t\t&&bc0,\n" // because index 0 is meaningless
+		);
+		for (BytecodeInstruction ins : get_bytecode(state.fn)) {
+			if (ins.info->bc == asBC_JitEntry && ins.pword0() != 0) {
+				emit("\t\t&&bc{},\n", ins.offset);
+			}
+		}
 		emit(
 		    "\t}};\n"
 		    "\tgoto *entry[entryLabel];\n\n"
 		);
 	} else {
+		emit("\tswitch(entryLabel) {{\n");
+		for (BytecodeInstruction ins : get_bytecode(state.fn)) {
+			if (ins.info->bc == asBC_JitEntry && ins.pword0() != 0) {
+				emit("\tcase {}: goto bc{};\n", ins.pword0(), ins.offset);
+			}
+		}
 		emit("\t}};\n");
 	}
 }

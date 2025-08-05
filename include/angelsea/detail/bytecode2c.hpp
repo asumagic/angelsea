@@ -103,6 +103,8 @@ class BytecodeToC {
 		fmt::format_to(std::back_inserter(m_module_state.buffer), format, std::forward<Ts>(format_args)...);
 	}
 
+	void configure_jit_entries(FnState& state);
+
 	void emit_entry_dispatch(FnState& state);
 	void emit_error_handlers(FnState& state);
 
