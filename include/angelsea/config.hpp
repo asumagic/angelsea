@@ -81,8 +81,8 @@ struct JitConfig {
 	/// MIR optimization level, as passed to `MIR_gen_set_optimize_level`, to
 	/// balance between runtime speed and compile times (higher improves
 	/// codegen).
-	/// MIR default is `2`. Meaningful values are 0 through 3.
-	int mir_optimization_level = 3;
+	/// MIR default is `2`. Meaningful values are 0 through 2.
+	int mir_optimization_level = 2;
 
 	/// Gross hack that frees a bunch of memory internally used by MIR that is not really used after the code generation
 	/// of a function. This reduces RES memory usage very significantly in real applications.

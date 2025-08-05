@@ -310,12 +310,13 @@ void MirJit::transfer_and_destroy(AsyncMirFunction& fn) {
 	}
 
 	MIR_gen_init(m_mir);
-	MIR_link(m_mir, MIR_set_gen_interface, nullptr);
 
 	MIR_gen_set_debug_file(m_mir, config().debug.mir_diagnostic_file);
 	MIR_gen_set_debug_level(m_mir, config().debug.mir_debug_level);
 
 	MIR_gen_set_optimize_level(m_mir, config().mir_optimization_level);
+
+	MIR_link(m_mir, MIR_set_gen_interface, nullptr);
 
 	auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(m_mir, mir_entry_fn));
 
