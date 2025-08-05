@@ -89,6 +89,9 @@ class BytecodeToC {
 		/// Any Jitentry that is not the first?
 		bool has_any_late_jit_entries = true;
 
+		/// Map from switch bytecode offset (asBC_JMPP) to all its targets
+		std::unordered_map<std::size_t, std::vector<std::size_t>> switch_map;
+
 		struct {
 			bool null : 1            = false;
 			bool divide_by_zero : 1  = false;
@@ -107,6 +110,7 @@ class BytecodeToC {
 	}
 
 	void configure_jit_entries(FnState& state);
+	void discover_switch_map(FnState& state);
 
 	void emit_entry_dispatch(FnState& state);
 	void emit_error_handlers(FnState& state);

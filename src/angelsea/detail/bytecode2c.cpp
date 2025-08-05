@@ -160,7 +160,9 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 
 	FnState state{.fn = fn, .ins = {}, .error_handlers = {}};
 
+	discover_switch_map(state);
 	configure_jit_entries(state);
+
 	emit_entry_dispatch(state);
 
 	for (BytecodeInstruction ins : get_bytecode(fn)) {
@@ -223,7 +225,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 			case asBC_LdGRdR4:
 			case asBC_RET:
 			case asBC_COPY:
-			case asBC_JMPP:
 			case asBC_CALLSYS:
 			case asBC_CALLBND:
 			case asBC_CALLINTF:
@@ -277,6 +278,23 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 	}
 
 	state.has_any_late_jit_entries = jit_entry_id > 2; // because of the increment
+}
+
+void BytecodeToC::discover_switch_map(FnState& state) {
+	// discover mappings from the offset of every asBC_JMPP instruction and the branch targets
+	std::vector<std::size_t>* current_mapping = nullptr;
+
+	for (BytecodeInstruction ins : get_bytecode(state.fn)) {
+		if (ins.info->bc == asBC_JMPP) {
+			current_mapping = &state.switch_map[ins.offset]; // create
+		} else if (ins.info->bc == asBC_JMP) {
+			if (current_mapping != nullptr) {
+				current_mapping->emplace_back(ins.offset + ins.size + ins.int0());
+			}
+		} else {
+			current_mapping = nullptr;
+		}
+	}
 }
 
 void BytecodeToC::emit_entry_dispatch(FnState& state) {
@@ -704,6 +722,20 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
+	case asBC_JMPP: {
+		emit("\t\tswitch({}) {{\n", frame_var(ins.sword0(), s32));
+		auto mapping_it = state.switch_map.find(ins.offset);
+		angelsea_assert(mapping_it != state.switch_map.end());
+		std::size_t i = 0;
+		// TODO: also investigate label as values for this
+		for (const std::size_t target : mapping_it->second) {
+			emit("\t\tcase {}: pc += {}; goto bc{};\n", i, target - ins.offset, target);
+			++i;
+		}
+		emit("\t\t}}\n");
+		break;
+	}
+
 	case asBC_NOT: {
 		emit(
 		    "\t\tasea_var *var = {VARPTR};\n"
@@ -883,7 +915,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_LdGRdR4:      // TODO: find way to emit
 	case asBC_RET:          // TODO: implement (probably?)
 	case asBC_COPY:         // TODO: find way to emit
-	case asBC_JMPP:         // TODO: implement (will need a switch pre-pass)
 	case asBC_CALLSYS:      // TODO: implement (calls & syscalls)
 	case asBC_CALLBND:      // TODO: find way to emit & implement (calls & syscalls)
 	case asBC_CALLINTF:     // TODO: implement (calls & syscalls)
