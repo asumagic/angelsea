@@ -746,6 +746,10 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_CALL: {
 		// TODO: when possible, translate this to a JIT to JIT function call
+		// NOTE: the above is more complicated now because the MIR_cleanup logic
+		// destroys inlining information. then again, it's probably more
+		// important to create a shim so that we don't have to go through the
+		// regular AS functions since we have better knowledge of the callee.
 
 		int                fn_idx    = ins.int0();
 		const std::string  fn_symbol = fmt::format("asea_script_fn{}", fn_idx);
@@ -1094,9 +1098,8 @@ void BytecodeToC::emit_cond_branch_ins(FnState& state, std::string_view test) {
 	    "\t\tif( {TEST} ) {{\n"
 	    "\t\t\tl_bc += {BRANCH_OFFSET};\n"
 	    "\t\t\tgoto bc{BRANCH_TARGET};\n"
-	    "\t\t}} else {{\n"
-	    "\t\t\tl_bc += {INSTRUCTION_LENGTH};\n"
-	    "\t\t}}\n",
+	    "\t\t}}\n"
+	    "\t\tl_bc += {INSTRUCTION_LENGTH};\n",
 	    fmt::arg("TEST", test),
 	    fmt::arg("INSTRUCTION_LENGTH", ins.size),
 	    fmt::arg("BRANCH_OFFSET", ins.int0() + (long)ins.size),
