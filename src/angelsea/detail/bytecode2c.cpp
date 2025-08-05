@@ -234,9 +234,9 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 		emit(
 		    "\terr_null:\n"
 		    "{SAVE_REGS}"
-		    "\tasea_set_internal_exception(_regs, \"" TXT_NULL_POINTER_ACCESS
+		    "\t\tasea_set_internal_exception(_regs, \"" TXT_NULL_POINTER_ACCESS
 		    "\");\n"
-		    "\t\t\treturn;\n"
+		    "\treturn;\n"
 		    "\t\n",
 		    fmt::arg("SAVE_REGS", save_registers_sequence)
 		);
@@ -246,9 +246,9 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 		emit(
 		    "\terr_divide_by_zero:\n"
 		    "{SAVE_REGS}"
-		    "\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_BY_ZERO
+		    "\t\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_BY_ZERO
 		    "\");\n"
-		    "\t\t\treturn;\n"
+		    "\treturn;\n"
 		    "\t\n",
 		    fmt::arg("SAVE_REGS", save_registers_sequence)
 		);
@@ -258,11 +258,20 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 		emit(
 		    "\terr_divide_overflow:\n"
 		    "{SAVE_REGS}"
-		    "\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_OVERFLOW
+		    "\t\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_OVERFLOW
 		    "\");\n"
-		    "\t\t\treturn;\n"
+		    "\treturn;\n"
 		    "\t\n",
 		    fmt::arg("SAVE_REGS", save_registers_sequence)
+		);
+	}
+
+	if (state.error_handlers.vm_fallback) {
+		emit(
+		    "\tvm:\n"
+		    "{}"
+		    "\t\treturn;\n",
+		    save_registers_sequence
 		);
 	}
 }
@@ -1004,13 +1013,12 @@ void BytecodeToC::emit_auto_bc_inc(FnState& state) { emit("\t\tl_bc += {};\n", s
 
 void BytecodeToC::emit_vm_fallback(FnState& state, std::string_view reason) {
 	++m_module_state.fallback_count;
-
-	emit("{}", save_registers_sequence);
+	state.error_handlers.vm_fallback = true;
 
 	if (m_config.c.human_readable) {
-		emit("\t\treturn; /* {} */\n", reason);
+		emit("\t\tgoto vm; /* {} */\n", reason);
 	} else {
-		emit("\t\treturn;\n");
+		emit("\t\tgoto vm;\n");
 	}
 }
 
