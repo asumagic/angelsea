@@ -547,24 +547,59 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 		int                fn_idx    = ins.int0();
 		const std::string  fn_symbol = fmt::format("asea_script_fn{}", fn_idx);
-		asCScriptFunction* function  = engine.scriptFunctions[fn_idx];
+		asCScriptFunction* callee    = engine.scriptFunctions[fn_idx];
 
 		if (m_on_map_extern_callback) {
-			m_on_map_extern_callback(fn_symbol.c_str(), ExternScriptFunction{fn_idx}, function);
+			m_on_map_extern_callback(fn_symbol.c_str(), ExternScriptFunction{fn_idx}, callee);
 		}
 
-		// Call fallback: We initiate the call from JIT, and the rest of the
-		// JitEntry handler will branch into the correct instruction.
-		emit(
-		    "\t\textern char {FN};\n"
-		    "\t\tpc += 2;\n"
-		    "{SAVE_REGS}"
-		    "\t\tasea_call_script_function(_regs, (asCScriptFunction*)&{FN});\n"
-		    "\t\treturn;\n",
-		    fmt::arg("FN", fn_symbol),
-		    fmt::arg("FN_ID", fn_idx),
-		    fmt::arg("SAVE_REGS", save_registers_sequence)
-		);
+		if (m_config.experimental_fast_script_call && m_config.hack_ignore_suspend) {
+			emit(
+			    "\t\textern char {FN};\n"
+			    "\t\tpc += 2;\n"
+			    "{SAVE_REGS}"
+			    "\t\tasea_prepare_script_stack(_regs, (asCScriptFunction*)&{FN});\n",
+			    fmt::arg("FN", fn_symbol),
+			    fmt::arg("SAVE_REGS", save_registers_sequence)
+			);
+
+			for (asUINT n = callee->scriptData->variables.GetLength(); n-- > 0;) {
+				asSScriptVariable* var = callee->scriptData->variables[n];
+
+				// Don't clear the function arguments
+				if (var->stackOffset <= 0) {
+					continue;
+				}
+
+				if (var->onHeap && (var->type.IsObject() || var->type.IsFuncdef())) {
+					if (m_config.c.human_readable) {
+						emit("\t\t/* arg {} requires clearing @ stack pos {}*/\n", n, -var->stackOffset);
+					}
+
+					emit("\t\t((asea_var*)((asDWORD*)(regs->fp) + {}))->as_asPWORD = 0;\n", -var->stackOffset);
+				}
+			}
+
+			if (callee->scriptData->variableSpace != 0) {
+				if (m_config.c.human_readable) {
+					emit("\t\t/* make space for variables */\n");
+				}
+				emit("\t\tregs->sp = (asDWORD*)(regs->sp) - {};\n", callee->scriptData->variableSpace);
+			}
+			emit("\t\treturn;\n");
+		} else {
+			// Call fallback: We initiate the call from JIT, and the rest of the
+			// JitEntry handler will branch into the correct instruction.
+			emit(
+			    "\t\textern char {FN};\n"
+			    "\t\tpc += 2;\n"
+			    "{SAVE_REGS}"
+			    "\t\tasea_call_script_function(_regs, (asCScriptFunction*)&{FN});\n"
+			    "\t\treturn;\n",
+			    fmt::arg("FN", fn_symbol),
+			    fmt::arg("SAVE_REGS", save_registers_sequence)
+			);
+		}
 		break;
 	}
 

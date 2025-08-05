@@ -146,6 +146,7 @@ typedef union { float f; asDWORD i; } asea_i2f;)___"
 
     R"___(
 void asea_call_script_function(asSVMRegisters* vm_registers, void* function);
+int asea_prepare_script_stack(asSVMRegisters* vm_registers, void* ffunction);
 void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
 void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text);
 float asea_fmodf(float a, float b);

@@ -93,6 +93,10 @@ struct JitConfig {
 	/// check for suspend.
 	bool hack_ignore_suspend = true;
 
+	/// Speeds up script calls by replacing complex call runtime logic with code generation. Does not enable inlining
+	/// yet.
+	bool experimental_fast_script_call = true;
+
 	struct CGeneratorConfig {
 		/// Enables C generation that uses the GNU C "label as values" extension, see:
 		/// https://gcc.gnu.org/onlinedocs/gcc-4.3.4/gcc/Labels-as-Values.html
