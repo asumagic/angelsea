@@ -153,11 +153,7 @@ float asea_fmod(float a, float b);
 )___"
 
     // Helper macros
-
     R"___(
-#define ASEA_STACK_DWORD_OFFSET(base, dword_offset) (asea_var*)((asDWORD*)base + dword_offset)
-#define ASEA_STACK_VAR(dword_offset) (*(asea_var*)((asDWORD*)sp + dword_offset))
-
 #define ASEA_FDIV(lhs, rhs) lhs / rhs
 #define ASEA_FMOD32(lhs, rhs) asea_fmodf(lhs, rhs)
 #define ASEA_FMOD64(lhs, rhs) asea_fmod(lhs, rhs)

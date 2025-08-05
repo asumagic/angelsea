@@ -19,10 +19,10 @@ namespace angelsea::detail {
 /// This is used both for operands and the destination.
 struct VarType {
 	/// C type name
-	std::string_view type;
-	std::size_t      byte_count;
+	std::string_view c;
+	std::size_t      size;
 
-	bool operator==(const VarType& other) const { return type == other.type; };
+	bool operator==(const VarType& other) const { return c == other.c; };
 };
 
 namespace var_types {
@@ -181,11 +181,13 @@ class BytecodeToC {
 	/// there is no `lhs_overflow_value` logic.
 	void emit_divmod_var_unsigned_ins(FnState& state, std::string_view op, VarType type);
 
-	std::string frame_var_ptr(std::string_view expr);
+	std::string frame_ptr(std::string_view expr);
 	std::string frame_ptr(int offset);
 
 	std::string frame_var(std::string_view expr, VarType type);
 	std::string frame_var(int offset, VarType type);
+
+	std::string stack_var(int offset, VarType type);
 
 	const JitConfig& m_config;
 	asIScriptEngine& m_script_engine;
