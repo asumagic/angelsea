@@ -88,6 +88,11 @@ struct JitConfig {
 	/// of a function. This reduces RES memory usage very significantly in real applications.
 	bool hack_mir_minimize = true;
 
+	/// Ignore asBC_SUSPEND instructions, and never check for the suspend status in the VM. This is useful even if
+	/// `asEP_BUILD_WITHOUT_LINE_CUES` is set, as some suspend instructions may remain, and some instructions implicitly
+	/// check for suspend.
+	bool hack_ignore_suspend = true;
+
 	struct CGeneratorConfig {
 		/// Enables C generation that uses the GNU C "label as values" extension, see:
 		/// https://gcc.gnu.org/onlinedocs/gcc-4.3.4/gcc/Labels-as-Values.html

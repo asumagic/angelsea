@@ -303,11 +303,10 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_SUSPEND: {
-		log(m_config,
-		    m_script_engine,
-		    fn,
-		    LogSeverity::PERF_WARNING,
-		    "asBC_SUSPEND found; this will fallback to the VM and be slow!");
+		if (m_config.hack_ignore_suspend) {
+			emit_auto_bc_inc(state);
+			break;
+		}
 		emit_vm_fallback(state, "SUSPEND is not implemented yet");
 		break;
 	}
