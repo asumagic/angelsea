@@ -84,6 +84,10 @@ struct JitConfig {
 	/// MIR default is `2`. Meaningful values are 0 through 3.
 	int mir_optimization_level = 3;
 
+	/// Gross hack that frees a bunch of memory internally used by MIR that is not really used after the code generation
+	/// of a function. This reduces RES memory usage very significantly in real applications.
+	bool hack_mir_minimize = true;
+
 	struct CGeneratorConfig {
 		/// Enables C generation that uses the GNU C "label as values" extension, see:
 		/// https://gcc.gnu.org/onlinedocs/gcc-4.3.4/gcc/Labels-as-Values.html
