@@ -94,7 +94,7 @@ struct JitConfig {
 	bool hack_ignore_suspend = true;
 
 	/// Speeds up script calls by replacing complex call runtime logic with code generation. Does not enable inlining
-	/// yet.
+	/// yet. This is subject to breakage with AngelScript updates.
 	bool experimental_fast_script_call = true;
 
 	struct CGeneratorConfig {

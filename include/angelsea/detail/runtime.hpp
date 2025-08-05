@@ -17,7 +17,13 @@ extern "C" {
 /// The JIT function should always return to the VM after calling this function.
 void asea_call_script_function(asSVMRegisters* vm_registers, asCScriptFunction& fn);
 
-int asea_prepare_script_stack(asSVMRegisters* vm_registers, asCScriptFunction& fn);
+int asea_prepare_script_stack(
+    asSVMRegisters*    vm_registers,
+    asCScriptFunction& fn,
+    asDWORD*           pc,
+    asDWORD*           sp,
+    asDWORD*           fp
+);
 
 /// \brief Prints a debug message via the engine, only enabled when debugging.
 void asea_debug_message(asSVMRegisters* vm_registers, const char* text);

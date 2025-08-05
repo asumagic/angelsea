@@ -20,34 +20,41 @@ void asea_call_script_function(asSVMRegisters* vm_registers, asCScriptFunction& 
 	asea_get_context(vm_registers).CallScriptFunction(&fn);
 }
 
-int asea_prepare_script_stack(asSVMRegisters* vm_registers, asCScriptFunction& fn) {
-	asCContext& ctx = asea_get_context(vm_registers);
+int asea_prepare_script_stack(
+    asSVMRegisters*    vm_registers,
+    asCScriptFunction& fn,
+    asDWORD*           pc,
+    asDWORD*           sp,
+    asDWORD*           fp
+) {
+	asCContext& ctx              = asea_get_context(vm_registers);
+	ctx.m_regs.programPointer    = pc;
+	ctx.m_regs.stackPointer      = sp;
+	ctx.m_regs.stackFramePointer = fp;
+
 	if (ctx.PushCallState() < 0) {
 		return 1;
 	}
 
-	ctx.m_currentFunction     = &fn;
-	ctx.m_regs.programPointer = fn.scriptData->byteCode.AddressOf();
+	ctx.m_currentFunction = &fn;
 
-	asDWORD* oldStackPointer = ctx.m_regs.stackPointer;
-	asUINT   needSize        = fn.scriptData->stackNeeded;
+	const asUINT needSize = fn.scriptData->stackNeeded;
 
-	// TODO: move this to native codegen
+	// TODO: move this to native codegen?
 	// With a quick check we know right away that we don't need to call ReserveStackSpace and do other checks inside it
-	if (ctx.m_stackBlocks.GetLength() == 0
-	    || oldStackPointer - (needSize + RESERVE_STACK) < ctx.m_stackBlocks[ctx.m_stackIndex]) {
+	if (ctx.m_stackBlocks.GetLength() == 0 || sp - (needSize + RESERVE_STACK) < ctx.m_stackBlocks[ctx.m_stackIndex]) {
 		if (!ctx.ReserveStackSpace(needSize)) {
 			return 1;
 		}
 
-		if (ctx.m_regs.stackPointer != oldStackPointer) {
+		if (ctx.m_regs.stackPointer != sp) {
 			int numDwords = fn.GetSpaceNeededForArguments() + (fn.objectType ? AS_PTR_SIZE : 0)
 			    + (fn.DoesReturnOnStack() ? AS_PTR_SIZE : 0);
-			memcpy(ctx.m_regs.stackPointer, oldStackPointer, sizeof(asDWORD) * numDwords);
+			memcpy(ctx.m_regs.stackPointer, sp, sizeof(asDWORD) * numDwords);
 		}
 	}
 
-	// Update framepointer
+	ctx.m_regs.programPointer    = fn.scriptData->byteCode.AddressOf();
 	ctx.m_regs.stackFramePointer = ctx.m_regs.stackPointer;
 
 	return 0;

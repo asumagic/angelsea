@@ -182,26 +182,62 @@ std::string BytecodeToC::create_new_entry_point_name(asIScriptFunction& fn) {
 }
 
 void BytecodeToC::configure_jit_entries(FnState& state) {
-	bool    last_was_jit_entry = false;
-	asPWORD jit_entry_id       = 1;
+	asPWORD jit_entry_id = 1;
 
-	for (BytecodeInstruction ins : get_bytecode(state.fn)) {
+	auto bytecode = get_bytecode(state.fn);
+	for (auto it = bytecode.begin(), prev = it; it != bytecode.end(); prev = it, ++it) {
+		BytecodeInstruction ins = *it;
+
 		if (ins.info->bc != asBC_JitEntry) {
-			last_was_jit_entry = false;
-			continue; // skip to the next
+			continue;
 		}
 
 		// always clear pword0 as there may be trash data
 		ins.pword0() = 0;
 
-		if (last_was_jit_entry) {
-			// ignore successive JIT entries
-			continue;
+		if (it != bytecode.begin()) {
+			BytecodeInstruction prev_ins    = *prev;
+			bool                should_skip = false;
+
+			// TODO: check what are the conditions for AS to insert jit entries
+
+			// check previous instruction
+			switch (prev_ins.info->bc) {
+			case asBC_JitEntry: // two jit entries in a row: ignore
+			case asBC_JMP:      // probably end of if-else forest: see point on branches
+			case asBC_JZ:       // cond jumps: unsure why it warrants a jitentry
+			case asBC_JLowZ:
+			case asBC_JNZ:
+			case asBC_JLowNZ:
+			case asBC_JS:
+			case asBC_JNS:
+			case asBC_JP:
+			case asBC_JNP:
+			case asBC_IncVi: // not sure why it warrants a jitentry
+			case asBC_DecVi:
+			case asBC_SUSPEND: // not supported as of writing but it'll happen so w/e
+			case asBC_STOREOBJ:
+			case asBC_SetV1:
+			case asBC_SetV2:
+			case asBC_SetV4:
+			case asBC_SetV8:    should_skip = true; break;
+
+			default:            should_skip = false;
+			}
+
+			// NOTE: this doesn't seem to need to care about branch targets: we normally support basically all branching
+			// instructions, and AS should always be emitting a jit entry at _some point_ before
+
+			// NOTE: we shouldn't remove the jitentry after an asBC_CALL because it's not unlikely the callee is going
+			// to want to return execution to the VM -- in that case, we always immediately return to the VM
+
+			if (should_skip) {
+				continue;
+			}
 		}
 
 		ins.pword0() = jit_entry_id;
 
-		last_was_jit_entry = true;
 		++jit_entry_id;
 	}
 }
@@ -557,16 +593,14 @@ void BytecodeToC::translate_instruction(FnState& state) {
 			emit(
 			    "\t\textern char {FN};\n"
 			    "\t\tpc += 2;\n"
-			    "{SAVE_REGS}"
-			    "\t\tasea_prepare_script_stack(_regs, (asCScriptFunction*)&{FN});\n",
-			    fmt::arg("FN", fn_symbol),
-			    fmt::arg("SAVE_REGS", save_registers_sequence)
+			    "\t\tasea_prepare_script_stack(_regs, (asCScriptFunction*)&{FN}, pc, sp, fp);\n",
+			    fmt::arg("FN", fn_symbol)
 			);
 
 			for (asUINT n = callee->scriptData->variables.GetLength(); n-- > 0;) {
 				asSScriptVariable* var = callee->scriptData->variables[n];
 
-				// Don't clear the function arguments
+				// don't clear the function arguments
 				if (var->stackOffset <= 0) {
 					continue;
 				}
@@ -586,7 +620,20 @@ void BytecodeToC::translate_instruction(FnState& state) {
 				}
 				emit("\t\tregs->sp = (asDWORD*)(regs->sp) - {};\n", callee->scriptData->variableSpace);
 			}
-			emit("\t\treturn;\n");
+
+			if (callee == &state.fn) {
+				if (m_config.c.human_readable) {
+					emit("\t\t/* recursive call */\n");
+				}
+				emit(
+				    "\t\t{SELF}(_regs, 1);\n"
+				    "\t\treturn;\n",
+				    fmt::arg("SELF", m_module_state.fn_name)
+				);
+			} else {
+				// TODO: immediately branch into jitfn if possible
+				emit("\t\treturn;\n");
+			}
 		} else {
 			// Call fallback: We initiate the call from JIT, and the rest of the
 			// JitEntry handler will branch into the correct instruction.
