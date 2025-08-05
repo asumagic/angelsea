@@ -83,12 +83,10 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	    // "\tvoid *l_sp __attribute__((antialias(bc_sp)));\n"
 	    // "\tvoid *l_fp;\n"
 	    // "#else\n"
-	    "\tasDWORD *pc;\n"
-	    "\tasea_var *sp;\n"
-	    "\tasea_var *fp;\n"
-	    "{}",
+	    "\tasDWORD *pc = regs->pc;\n"
+	    "\tasea_var *sp = regs->sp;\n"
+	    "\tasea_var *fp = regs->fp;\n"
 	    // "#endif\n",
-	    load_registers_sequence
 	);
 
 	// Transpiled functions are compiled to be JIT entry points for the
