@@ -86,6 +86,9 @@ class BytecodeToC {
 		/// Current instruction being translated (if in a callee of translate_instruction)
 		BytecodeInstruction ins;
 
+		/// Any Jitentry that is not the first?
+		bool has_any_late_jit_entries = true;
+
 		struct {
 			bool null : 1            = false;
 			bool divide_by_zero : 1  = false;

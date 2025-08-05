@@ -275,9 +275,18 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 
 		++jit_entry_id;
 	}
+
+	state.has_any_late_jit_entries = jit_entry_id > 2; // because of the increment
 }
 
 void BytecodeToC::emit_entry_dispatch(FnState& state) {
+	if (!state.has_any_late_jit_entries) {
+		if (m_config.c.human_readable) {
+			emit("\t/* only one jit entry! not generating dispatch */\n");
+		}
+		return;
+	}
+
 	if (m_config.c.use_gnu_label_as_value) {
 		emit(
 		    "\tstatic const void *const entry[] = {{\n"
