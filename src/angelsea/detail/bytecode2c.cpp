@@ -196,6 +196,11 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		ins.pword0() = 0;
 
 		if (it != bytecode.begin()) {
+			// consider skipping some JitEntry we believe the VM should never be hitting. this is useful to avoid
+			// pessimizing optimizations, so that the optimizer can merge subsequent basic blocks.
+			// TODO: we could also eliminate or comment out the label in many cases once we build in some knowledge of
+			// branch targets (including switches, so JMPP), which may avoid emitting many basic blocks to start with
+
 			BytecodeInstruction prev_ins    = *prev;
 			bool                should_skip = false;
 
