@@ -30,6 +30,8 @@ static constexpr std::string_view load_registers_sequence
       "\t\tsp = regs->sp;\n"
       "\t\tfp = regs->fp;\n";
 
+template<typename T> static std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.type, v); }
+
 BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix) :
     m_config(config), m_script_engine(engine), m_c_symbol_prefix(std::move(c_symbol_prefix)), m_module_idx(-1) {
 	m_module_state.buffer.reserve(1024 * 64);
@@ -315,9 +317,9 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_TYPEID:
-	case asBC_PshC4:   emit_stack_push_ins(state, fmt::to_string(ins.dword0()), u32); break;
-	case asBC_VAR:     emit_stack_push_ins(state, fmt::format("(asPWORD){}", ins.sword0()), pword); break;
-	case asBC_PshC8:   emit_stack_push_ins(state, fmt::to_string(ins.qword0()), u64); break;
+	case asBC_PshC4:   emit_stack_push_ins(state, imm_int(ins.dword0(), u32), u32); break;
+	case asBC_VAR:     emit_stack_push_ins(state, imm_int(ins.sword0(), pword), pword); break;
+	case asBC_PshC8:   emit_stack_push_ins(state, imm_int(ins.qword0(), u64), u64); break;
 	case asBC_PshV4:   emit_stack_push_ins(state, frame_var(ins.sword0(), u32), u32); break;
 	case asBC_PshV8:   emit_stack_push_ins(state, frame_var(ins.sword0(), u64), u64); break;
 	case asBC_PshNull: emit_stack_push_ins(state, "0", pword); break; // TODO: not tested, how to emit?
@@ -372,13 +374,8 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	// V1/V2 are equivalent to V4
 	case asBC_SetV1:
 	case asBC_SetV2:
-	case asBC_SetV4:
-		emit_assign_ins(state, frame_var(ins.sword0(), u32), fmt::format("(asDWORD){}", ins.dword0()));
-		break;
-
-	case asBC_SetV8:
-		emit_assign_ins(state, frame_var(ins.sword0(), u64), fmt::format("(asQWORD){}", ins.qword0()));
-		break;
+	case asBC_SetV4:    emit_assign_ins(state, frame_var(ins.sword0(), u32), imm_int(ins.dword0(), u32)); break;
+	case asBC_SetV8:    emit_assign_ins(state, frame_var(ins.sword0(), u64), imm_int(ins.qword0(), u64)); break;
 
 	case asBC_CpyVtoR4: emit_assign_ins(state, "regs->value.as_asDWORD", frame_var(ins.sword0(), u32)); break;
 	case asBC_CpyRtoV4: emit_assign_ins(state, frame_var(ins.sword0(), u32), "regs->value.as_asDWORD"); break;
@@ -598,11 +595,11 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_NOT: {
 		emit(
-		    "\t\tasea_var *var = &ASEA_FRAME_VAR({SWORD0});\n"
+		    "\t\tasea_var *var = {VARPTR};\n"
 		    "\t\tasDWORD value = var->as_asDWORD;\n"
 		    "\t\tvar->as_asDWORD = 0;\n"
 		    "\t\tvar->as_asBYTE = !value;\n",
-		    fmt::arg("SWORD0", ins.sword0())
+		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
 		);
 		emit_auto_bc_inc(state);
 		break;
@@ -657,8 +654,8 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CMPu64: emit_compare_var_var_ins(state, u64); break;
 	case asBC_CmpPtr: emit_compare_var_var_ins(state, pword); break;
 
-	case asBC_CMPIi:  emit_compare_var_imm_ins(state, s32, fmt::to_string(ins.int0())); break;
-	case asBC_CMPIu:  emit_compare_var_imm_ins(state, u32, fmt::to_string(ins.dword0())); break;
+	case asBC_CMPIi:  emit_compare_var_imm_ins(state, s32, imm_int(ins.int0(), s32)); break;
+	case asBC_CMPIu:  emit_compare_var_imm_ins(state, u32, imm_int(ins.dword0(), u32)); break;
 	case asBC_CMPIf:
 		emit("\t\tasea_i2f rhs_i2f = {{.i={}}};\n", ins.dword0());
 		emit_compare_var_imm_ins(state, f32, "rhs_i2f.f");
