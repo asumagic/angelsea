@@ -20,14 +20,14 @@ namespace angelsea::detail {
 // TODO: fix indent level for all of those that use this...
 
 static constexpr std::string_view save_registers_sequence
-    = "\t\tregs->programPointer = l_bc;\n"
-      "\t\tregs->stackPointer = l_sp;\n"
-      "\t\tregs->stackFramePointer = l_fp;\n";
+    = "\t\tregs->programPointer = pc;\n"
+      "\t\tregs->stackPointer = sp;\n"
+      "\t\tregs->stackFramePointer = fp;\n";
 
 static constexpr std::string_view load_registers_sequence
-    = "\t\tl_bc = regs->programPointer;\n"
-      "\t\tl_sp = regs->stackPointer;\n"
-      "\t\tl_fp = regs->stackFramePointer;\n";
+    = "\t\tpc = regs->programPointer;\n"
+      "\t\tsp = regs->stackPointer;\n"
+      "\t\tfp = regs->stackFramePointer;\n";
 
 BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix) :
     m_config(config), m_script_engine(engine), m_c_symbol_prefix(std::move(c_symbol_prefix)), m_module_idx(-1) {
@@ -74,17 +74,15 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	// going to be pain with strict aliasing either way
 	emit("\tasea_vm_registers *regs = (asea_vm_registers *)_regs;\n");
 
-	// We define l_sp/l_fp as void* instead of asea_stack_var* to avoid doing
-	// plain arithmetic over it directly
 	emit(
 	    // "#ifdef __MIRC__\n"
 	    // "\tasDWORD *l_bc __attribute__((antialias(bc_sp)));\n"
 	    // "\tvoid *l_sp __attribute__((antialias(bc_sp)));\n"
 	    // "\tvoid *l_fp;\n"
 	    // "#else\n"
-	    "\tasDWORD *l_bc;\n"
-	    "\tvoid *l_sp;\n"
-	    "\tvoid *l_fp;\n"
+	    "\tasDWORD *pc;\n"
+	    "\tchar *sp;\n"
+	    "\tchar *fp;\n"
 	    "{}",
 	    // "#endif\n",
 	    load_registers_sequence
@@ -323,7 +321,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_TYPEID:
 	case asBC_PshC4:  {
 		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -1);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -1);\n"
 		    "\t\tASEA_STACK_TOP.as_asDWORD = {DWORD0};\n",
 		    fmt::arg("DWORD0", ins.dword0())
 		);
@@ -332,7 +330,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 	case asBC_PshC8: {
 		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -2);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -2);\n"
 		    "\t\tASEA_STACK_TOP.as_asQWORD = {QWORD0};\n",
 		    fmt::arg("QWORD0", ins.qword0())
 		);
@@ -342,7 +340,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_PshV4: {
 		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -1);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -1);\n"
 		    "\t\tASEA_STACK_TOP.as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -351,7 +349,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 	case asBC_PshV8: {
 		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -2);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -2);\n"
 		    "\t\tASEA_STACK_TOP.as_asQWORD = ASEA_FRAME_VAR({SWORD0}).as_asQWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -360,7 +358,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 	case asBC_PshVPtr: {
 		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
 		    "\t\tASEA_STACK_TOP.as_asPWORD = ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -370,7 +368,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_PshRPtr: {
 		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
 		    "\t\tASEA_STACK_TOP.as_asPWORD = regs->valueRegister.as_asPWORD;\n"
 		);
 		emit_auto_bc_inc(state);
@@ -379,7 +377,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_PopRPtr: {
 		emit(
 		    "\t\tregs->valueRegister.as_asPWORD = ASEA_STACK_TOP.as_asPWORD;\n"
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, AS_PTR_SIZE);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, AS_PTR_SIZE);\n"
 		);
 		emit_auto_bc_inc(state);
 		break;
@@ -467,7 +465,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_PSF: {
 		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
 		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD)&ASEA_FRAME_VAR({SWORD0});\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -492,7 +490,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_PGA: {
 		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), false);
 		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
 		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD)&{OBJ};\n",
 		    fmt::arg("OBJ", symbol)
 		);
@@ -503,7 +501,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_PshGPtr: {
 		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), false);
 		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
 		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD){OBJ};\n",
 		    fmt::arg("OBJ", symbol)
 		);
@@ -514,7 +512,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_PshNull: {
 		// TODO: simple but not tested! how can we get AS to emit it?
 		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
 		    "\t\tASEA_STACK_TOP.as_asPWORD = 0;\n"
 		);
 		emit_auto_bc_inc(state);
@@ -522,7 +520,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_PopPtr: {
-		emit("\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, AS_PTR_SIZE);\n");
+		emit("\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, AS_PTR_SIZE);\n");
 		emit_auto_bc_inc(state);
 		break;
 	}
@@ -540,7 +538,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_VAR: {
 		emit(
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, -AS_PTR_SIZE);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
 		    "\t\tASEA_STACK_TOP.as_asPWORD = (asPWORD){SWORD0};\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
@@ -598,7 +596,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 		emit(
 		    "\t\tasPWORD *dst = (asPWORD*)ASEA_STACK_TOP.as_asPWORD;\n"
-		    "\t\tl_sp = ASEA_STACK_DWORD_OFFSET(l_sp, AS_PTR_SIZE);\n"
+		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, AS_PTR_SIZE);\n"
 		    "\t\tasPWORD src = ASEA_STACK_TOP.as_asPWORD;\n"
 		    "\t\t*dst = src;\n",
 		    fmt::arg("SWORD0", ins.sword0())
@@ -671,7 +669,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_WRTV1: {
 		emit(
-		    "\t\tASEA_VALUEREG_DEREF().as_asBYTE = ASEA_FRAME_VAR({SWORD0}).as_asBYTE;\n",
+		    "\t\tregs->valueRegister.as_var_ptr->as_asBYTE = ASEA_FRAME_VAR({SWORD0}).as_asBYTE;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -680,7 +678,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_WRTV2: {
 		emit(
-		    "\t\tASEA_VALUEREG_DEREF().as_asWORD = ASEA_FRAME_VAR({SWORD0}).as_asWORD;\n",
+		    "\t\tregs->valueRegister.as_var_ptr->as_asWORD = ASEA_FRAME_VAR({SWORD0}).as_asWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -689,7 +687,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_WRTV4: {
 		emit(
-		    "\t\tASEA_VALUEREG_DEREF().as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
+		    "\t\tregs->valueRegister.as_var_ptr->as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -698,7 +696,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_WRTV8: {
 		emit(
-		    "\t\tASEA_VALUEREG_DEREF().as_asQWORD = ASEA_FRAME_VAR({SWORD0}).as_asQWORD;\n",
+		    "\t\tregs->valueRegister.as_var_ptr->as_asQWORD = ASEA_FRAME_VAR({SWORD0}).as_asQWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -709,7 +707,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
 		    "\t\tvar->as_asDWORD = 0;\n"
-		    "\t\tvar->as_asBYTE = ASEA_VALUEREG_DEREF().as_asBYTE;\n",
+		    "\t\tvar->as_asBYTE = regs->valueRegister.as_var_ptr->as_asBYTE;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -719,7 +717,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
 		    "\t\tvar->as_asDWORD = 0;\n"
-		    "\t\tvar->as_asWORD = ASEA_VALUEREG_DEREF().as_asWORD;\n",
+		    "\t\tvar->as_asWORD = regs->valueRegister.as_var_ptr->as_asWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -728,7 +726,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_RDR4: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
-		    "\t\tvar->as_asDWORD = ASEA_VALUEREG_DEREF().as_asDWORD;\n",
+		    "\t\tvar->as_asDWORD = regs->valueRegister.as_var_ptr->as_asDWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -737,7 +735,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_RDR8: {
 		emit(
 		    "\t\tasea_var* var = &ASEA_FRAME_VAR({SWORD0});\n"
-		    "\t\tvar->as_asQWORD = ASEA_VALUEREG_DEREF().as_asQWORD;\n",
+		    "\t\tvar->as_asQWORD = regs->valueRegister.as_var_ptr->as_asQWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
 		emit_auto_bc_inc(state);
@@ -763,7 +761,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		// JitEntry handler will branch into the correct instruction.
 		emit(
 		    "\t\textern char {FN};\n"
-		    "\t\tl_bc += 2;\n"
+		    "\t\tpc += 2;\n"
 		    "{SAVE_REGS}"
 		    "\t\tasea_call_script_function(_regs, (asCScriptFunction*)&{FN});\n"
 		    "\t\treturn;\n",
@@ -776,7 +774,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_JMP: {
 		emit(
-		    "\t\tl_bc += {BRANCH_OFFSET};\n"
+		    "\t\tpc += {BRANCH_OFFSET};\n"
 		    "\t\tgoto bc{BRANCH_TARGET};\n",
 		    fmt::arg("BRANCH_OFFSET", ins.int0() + ins.size),
 		    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + ins.size))
@@ -1013,7 +1011,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	emit("\t}}\n");
 }
 
-void BytecodeToC::emit_auto_bc_inc(FnState& state) { emit("\t\tl_bc += {};\n", state.ins.size); }
+void BytecodeToC::emit_auto_bc_inc(FnState& state) { emit("\t\tpc += {};\n", state.ins.size); }
 
 void BytecodeToC::emit_vm_fallback(FnState& state, std::string_view reason) {
 	++m_module_state.fallback_count;
@@ -1096,10 +1094,10 @@ void BytecodeToC::emit_cond_branch_ins(FnState& state, std::string_view test) {
 	BytecodeInstruction& ins = state.ins;
 	emit(
 	    "\t\tif( {TEST} ) {{\n"
-	    "\t\t\tl_bc += {BRANCH_OFFSET};\n"
+	    "\t\t\tpc += {BRANCH_OFFSET};\n"
 	    "\t\t\tgoto bc{BRANCH_TARGET};\n"
 	    "\t\t}}\n"
-	    "\t\tl_bc += {INSTRUCTION_LENGTH};\n",
+	    "\t\tpc += {INSTRUCTION_LENGTH};\n",
 	    fmt::arg("TEST", test),
 	    fmt::arg("INSTRUCTION_LENGTH", ins.size),
 	    fmt::arg("BRANCH_OFFSET", ins.int0() + (long)ins.size),
@@ -1148,7 +1146,7 @@ void BytecodeToC::emit_test_ins(FnState& state, std::string_view op_with_rhs_0) 
 }
 
 void BytecodeToC::emit_prefixop_valuereg_ins(FnState& state, std::string_view op, VarType var) {
-	emit("\t\t{OP}ASEA_VALUEREG_DEREF().as_{TYPE};\n", fmt::arg("OP", op), fmt::arg("TYPE", var.type));
+	emit("\t\t{OP}regs->valueRegister.as_var_ptr->as_{TYPE};\n", fmt::arg("OP", op), fmt::arg("TYPE", var.type));
 	emit_auto_bc_inc(state);
 }
 

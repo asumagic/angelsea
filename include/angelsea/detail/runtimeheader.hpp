@@ -5,21 +5,21 @@
 namespace angelsea::detail {
 
 constexpr std::string_view angelsea_c_header_copyright = R"___(/*
-    This generated source file contains macro definitions and references to
-    internal structures extracted from the AngelScript scripting library, which
-    are licensed under the zlib license (license provided below).
+	This generated source file contains macro definitions and references to
+	internal structures extracted from the AngelScript scripting library, which
+	are licensed under the zlib license (license provided below).
 
-    Very minor modifications may have been applied to formatting or to allow
-    compilation via a C compiler.
+	Very minor modifications may have been applied to formatting or to allow
+	compilation via a C compiler.
 
-    This file should NOT be compiled by a C++ compiler, as it relies on type
-    punning thru unions in a way that is not legal in C++.
+	This file should NOT be compiled by a C++ compiler, as it relies on type
+	punning thru unions in a way that is not legal in C++.
 
-    Generated function definitions are the result of stitching of code stencils
-    which are closely based on the definition and internal structure of the
-    AngelScript virtual machine.
-    Checks and references to variables may be elided at compile time when
-    possible.
+	Generated function definitions are the result of stitching of code stencils
+	which are closely based on the definition and internal structure of the
+	AngelScript virtual machine.
+	Checks and references to variables may be elided at compile time when
+	possible.
 */
 
 /*
@@ -35,15 +35,15 @@ constexpr std::string_view angelsea_c_header_copyright = R"___(/*
    redistribute it freely, subject to the following restrictions:
 
    1. The origin of this software must not be misrepresented; you
-      must not claim that you wrote the original software. If you use
-      this software in a product, an acknowledgment in the product
-      documentation would be appreciated but is not required.
+	  must not claim that you wrote the original software. If you use
+	  this software in a product, an acknowledgment in the product
+	  documentation would be appreciated but is not required.
 
    2. Altered source versions must be plainly marked as such, and
-      must not be misrepresented as being the original software.
+	  must not be misrepresented as being the original software.
 
    3. This notice may not be removed or altered from any source
-      distribution.
+	  distribution.
 
    The original version of this library can be located at:
    http://www.angelcode.com/angelscript/
@@ -97,7 +97,8 @@ typedef enum
     // not C++'s) This is only _fully_ legal and could theoretically break if the compiler can  see beyond its compile
     // unit (e.g. with LTO) but it should be otherwise unproblematic (and AS itself does worse, anyway).
     R"___(
-typedef union {
+union asea_var_u;
+union asea_var_u {
 	asINT8 as_asINT8;
 	asINT16 as_asINT16;
 	asINT32 as_asINT32;
@@ -110,7 +111,9 @@ typedef union {
 	float as_float;
 	double as_double;
 	void* as_ptr;
-} asea_var;
+	union asea_var_u* as_var_ptr;
+};
+typedef union asea_var_u asea_var;
 
 typedef struct asSVMRegisters asSVMRegisters;
 typedef struct asIScriptContext asIScriptContext;
@@ -126,8 +129,8 @@ typedef struct {)___"
     // We rewrite some of the asDWORD* pointers to be void* instead; this is across the compile boundary in the case of
     // JIT.
     "\tasDWORD *programPointer;\n" // points to current bytecode instruction
-    "\tvoid *stackFramePointer;\n" // function stack frame
-    "\tvoid *stackPointer;\n"      // top of stack (grows downward)
+    "\tchar *stackFramePointer;\n" // function stack frame
+    "\tchar *stackPointer;\n"      // top of stack (grows downward)
     "\tasea_var valueRegister;\n"  // temp register for primitives
     "\tvoid *objectRegister;\n"    // temp register for objects and handles
     "\tasITypeInfo *objectType;\n" // type of object held in object register
@@ -152,11 +155,10 @@ float asea_fmod(float a, float b);
     // Helper macros
 
     R"___(
-#define ASEA_STACK_DWORD_OFFSET(base, dword_offset) (void*)((char*)(base) + ((dword_offset) * 4))
-#define ASEA_FRAME_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(l_fp, -(dword_offset))))
-#define ASEA_STACK_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(l_sp, (dword_offset))))
-#define ASEA_STACK_TOP (*(asea_var*)(l_sp))
-#define ASEA_VALUEREG_DEREF() (*(asea_var*)(regs->valueRegister.as_ptr))
+#define ASEA_STACK_DWORD_OFFSET(base, dword_offset) (char*)(base + ((dword_offset) * 4))
+#define ASEA_FRAME_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(fp, -(dword_offset))))
+#define ASEA_STACK_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(sp, (dword_offset))))
+#define ASEA_STACK_TOP (*(asea_var*)(sp))
 
 #define ASEA_FDIV(lhs, rhs) lhs / rhs
 #define ASEA_FMOD32(lhs, rhs) asea_fmodf(lhs, rhs)
