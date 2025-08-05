@@ -203,26 +203,56 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 
 			// check previous instruction
 			switch (prev_ins.info->bc) {
-			case asBC_JitEntry: // two jit entries in a row: ignore
-			case asBC_JMP:      // probably end of if-else forest: see point on branches
-			case asBC_JZ:       // cond jumps: unsure why it warrants a jitentry
-			case asBC_JLowZ:
-			case asBC_JNZ:
-			case asBC_JLowNZ:
-			case asBC_JS:
-			case asBC_JNS:
-			case asBC_JP:
-			case asBC_JNP:
-			case asBC_IncVi: // not sure why it warrants a jitentry
-			case asBC_DecVi:
-			case asBC_SUSPEND: // not supported as of writing but it'll happen so w/e
-			case asBC_STOREOBJ:
-			case asBC_SetV1:
-			case asBC_SetV2:
-			case asBC_SetV4:
-			case asBC_SetV8:    should_skip = true; break;
+			case asBC_SUSPEND: // TODO: falls back as of writing, remove when fixed
+				should_skip = m_config.hack_ignore_suspend;
+				break;
 
-			default:            should_skip = false;
+				// assume asBC_CALL can always fallback
+			case asBC_CALL:
+				// TODO: all those fall back conditionally as of writing, remove when fixed
+			case asBC_RefCpyV:
+			case asBC_REFCPY:
+			// TODO: all of those are not implemented as of writing, remove when fixed
+			case asBC_SwapPtr:
+			case asBC_PshG4:
+			case asBC_LdGRdR4:
+			case asBC_RET:
+			case asBC_COPY:
+			case asBC_JMPP:
+			case asBC_CALLSYS:
+			case asBC_CALLBND:
+			case asBC_CALLINTF:
+			case asBC_Thiscall1:
+			case asBC_CallPtr:
+			case asBC_ALLOC:
+			case asBC_FREE:
+			case asBC_GETREF:
+			case asBC_ClrVPtr:
+			case asBC_OBJTYPE:
+			case asBC_CpyVtoR8:
+			case asBC_CpyVtoG4:
+			case asBC_CpyGtoV4:
+			case asBC_ChkRefS:
+			case asBC_ChkNullV:
+			case asBC_Cast:
+			case asBC_ChkNullS:
+			case asBC_ClrHi:
+			case asBC_FuncPtr:
+			case asBC_LoadVObjR:
+			case asBC_AllocMem:
+			case asBC_SetListSize:
+			case asBC_PshListElmnt:
+			case asBC_SetListType:
+			case asBC_POWi:
+			case asBC_POWu:
+			case asBC_POWf:
+			case asBC_POWd:
+			case asBC_POWdi:
+			case asBC_POWi64:
+			case asBC_POWu64:       should_skip = false; break;
+
+			// only skip if it's a known instruction as of writing
+			default:                should_skip = prev_ins.info->bc <= asBC_Thiscall1;
 			}
 
 			// NOTE: this doesn't seem to need to care about branch targets: we normally support basically all branching
