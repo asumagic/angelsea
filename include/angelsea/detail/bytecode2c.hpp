@@ -93,7 +93,7 @@ class BytecodeToC {
 			bool null : 1            = false;
 			bool divide_by_zero : 1  = false;
 			bool divide_overflow : 1 = false;
-			bool vm_fallback         = false;
+			bool vm_fallback : 1     = false;
 		} error_handlers;
 	};
 
