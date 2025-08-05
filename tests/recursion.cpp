@@ -30,6 +30,36 @@ TEST_CASE("recursive fibonacci", "[fib]") {
 	REQUIRE(run_fib(35) == 9227465);
 }
 
+TEST_CASE("fib benchmark", "[fib][benchmark]") {
+	EngineContext context{angelsea::JitConfig{.log_targets{.performance_warning = asEMsgType(-1)}}};
+
+	out = {};
+
+	asIScriptModule& jit_module = context.build("build", "scripts/fib.as");
+	context.prepare_execution();
+
+	asIScriptFunction* jit_fib = jit_module.GetFunctionByDecl("int fib(int)");
+	ANGELSEA_TEST_CHECK(jit_fib != nullptr);
+
+	context.engine->SetEngineProperty(asEP_INCLUDE_JIT_INSTRUCTIONS, false);
+
+	asIScriptModule&   interp_module = context.build("build-nojit", "scripts/fib.as");
+	asIScriptFunction* interp_fib    = interp_module.GetFunctionByDecl("int fib(int)");
+	ANGELSEA_TEST_CHECK(interp_fib != nullptr);
+
+	asIScriptContext* script_context = context.engine->CreateContext();
+
+	const auto run_fib = [&](int i, asIScriptFunction* fib_fn) -> int {
+		ANGELSEA_TEST_CHECK(script_context->Prepare(fib_fn) >= 0);
+		ANGELSEA_TEST_CHECK(script_context->SetArgDWord(0, i) >= 0);
+		ANGELSEA_TEST_CHECK(script_context->Execute() == asEXECUTION_FINISHED);
+		return script_context->GetReturnDWord();
+	};
+
+	BENCHMARK("Interpreter fib(25)") { return run_fib(25, interp_fib); };
+	BENCHMARK("JIT         fib(25)") { return run_fib(25, jit_fib); };
+}
+
 TEST_CASE("fib in a thread", "[fibasync]") {
 	EngineContext context;
 	context.jit.SetCompileCallback([](auto* func, void* ud) { std::thread([=] { func(ud); }).detach(); });
