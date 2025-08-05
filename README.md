@@ -17,20 +17,21 @@ AngelScript behavior.
 It can fallback to the interpreter at any point, and may be invoked from any JIT
 entry point (e.g. inserted by AS at the start of the function or after calls).
 
-## Current status
-
-The JIT compiler can already be used, but it is limited: Instruction support is
-still very partial and will only improve.
-
-Performance _may_ be better similar or better than the interpreter at the
-moment. However, there are still more fallbacks to the VM than I would like, and
-system calls are not implemented, and that's a massive one for performance.
-
-The process has three steps:
+The compile process has three steps:
 
 - Bytecode to C (can be triggered by a heuristic for functions called enough times)
 - C to MIR (can be async)
-- MIR optimization and codegen (can't be async; investigating.)
+- MIR optimization and codegen (can't be async yet; investigating.)
+
+## Current status
+
+The JIT compiler can already be used: The test suite is constantly checked and
+it is regularly tested against a test development build of
+[King Arthur's Gold](https://store.steampowered.com/app/219830/King_Arthurs_Gold).
+
+Early benchmarks show the JIT exceeding interpreter performance for now.
+However, instruction support is partial and some features (such as native calls)
+fall back to the VM, which is rather detrimental to real-world performance.
 
 The last point hurts performance-wise for real-time apps. The following issues
 may be showstoppers for you:
@@ -121,6 +122,7 @@ don't want to rely on Angelsea building it), see the optional step.
 > (workaround if using upstream: set `config.mir_optimization_level = 1;`)
 > - [Jump optimization can cause use-after-free when using label references](https://github.com/vnmakarov/mir/issues/424)
 > (workaround if using upstream: set `config.mir_optimization_level = 1;`)
+> - High memory usage: implemented a hack; see `config.hack_mir_minimize` (defaults to true)
 
 ```bash
 git submodule update --init --recursive vendor/angelscript
