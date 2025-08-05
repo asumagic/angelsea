@@ -40,12 +40,15 @@ class BytecodeToC {
 		void*              ptr;
 		asCGlobalProperty* property;
 	};
-	/// An external string constant, whose type depends on the registered string
-	/// factory.
+	/// An external string constant, whose type depends on the registered string factory.
 	struct ExternStringConstant {
 		void* ptr;
 	};
-	using ExternMapping = std::variant<ExternGlobalVariable, ExternStringConstant, ExternScriptFunction>;
+	struct ExternObjectType {
+		asCObjectType* object_type;
+	};
+	using ExternMapping
+	    = std::variant<ExternGlobalVariable, ExternStringConstant, ExternScriptFunction, ExternObjectType>;
 
 	using OnMapFunctionCallback = std::function<void(asIScriptFunction&, const std::string& name)>;
 	using OnMapExternCallback   = std::function<void(const char* c_name, const ExternMapping& kind, void* raw_value)>;
@@ -208,6 +211,7 @@ class BytecodeToC {
 		std::string buffer;
 		std::size_t fallback_count;
 		std::size_t string_constant_idx;
+		std::size_t objtype_idx;
 		std::size_t fn_idx;
 		std::string fn_name;
 	};

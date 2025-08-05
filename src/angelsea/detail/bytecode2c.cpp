@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include "as_objecttype.h"
 #include <algorithm>
 #include <angelscript.h>
 #include <angelsea/detail/bytecode2c.hpp>
@@ -41,6 +42,7 @@ void BytecodeToC::prepare_new_context() {
 	++m_module_idx;
 	m_module_state.fallback_count      = 0;
 	m_module_state.string_constant_idx = 0;
+	m_module_state.objtype_idx         = 0;
 	m_module_state.fn_idx              = 0;
 
 	m_module_state.buffer.clear();
@@ -235,7 +237,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 			case asBC_FREE:
 			case asBC_GETREF:
 			case asBC_ClrVPtr:
-			case asBC_OBJTYPE:
 			case asBC_CpyVtoR8:
 			case asBC_CpyVtoG4:
 			case asBC_CpyGtoV4:
@@ -466,6 +467,24 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit("\t\tif (sp->as_asPWORD == 0) {{ goto err_null; }}\n");
 		state.error_handlers.null = true;
 		emit_auto_bc_inc(state);
+		break;
+	}
+
+	case asBC_OBJTYPE: {
+		asPWORD           objtype_raw = ins.pword0();
+		asCObjectType*    objtype_ptr = std::bit_cast<asCObjectType*>(objtype_raw);
+		const std::string objtype_symbol
+		    = fmt::format("{}_mod{}_objty{}", m_c_symbol_prefix, m_module_idx, m_module_state.objtype_idx);
+		++m_module_state.objtype_idx;
+
+		if (m_config.c.human_readable) {
+			emit("\t\t/* object type `{}` */\n", objtype_ptr->GetName());
+		}
+		emit("\t\textern void* {};\n", objtype_symbol);
+		if (m_on_map_extern_callback) {
+			m_on_map_extern_callback(objtype_symbol.c_str(), ExternObjectType{objtype_ptr}, objtype_ptr);
+		}
+		emit_stack_push_ins(state, fmt::format("(asPWORD*)&{}", objtype_symbol), pword);
 		break;
 	}
 
@@ -924,7 +943,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_FREE:         // TODO: implement
 	case asBC_GETREF:       // TODO: implement
 	case asBC_ClrVPtr:      // TODO: find way to emit (maybe asOBJ_SCOPED?)
-	case asBC_OBJTYPE:      // TODO: implement (seems used in factories)
 	case asBC_CpyVtoR8:     // TODO: find way to emit (probably easy and similar to CpyVtoR4)
 	case asBC_CpyVtoG4:     // TODO: find way to emit
 	case asBC_CpyGtoV4:     // TODO: implement
