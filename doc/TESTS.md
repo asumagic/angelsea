@@ -44,3 +44,11 @@ ASEA_DUMP_MIR=1 ASEA_DUMP_C=1 ../build/tests/angelsea-tests [fib]
 
 See `get_test_jit_config` (in [`common.cpp`](../tests/common.cpp)) for more
 options.
+
+### Running via CTest
+
+We also support running tests via ctest, e.g.:
+
+```
+clear; cmake --build ../build && ctest -j 20 --test-dir ../build/tests --rerun-failed  --output-on-failure
+```
