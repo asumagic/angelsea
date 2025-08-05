@@ -112,6 +112,9 @@ class BytecodeToC {
 
 	std::string emit_global_lookup(FnState& state, void** pointer, bool global_var_only);
 
+	void emit_stack_push_ins(FnState& state, std::string_view expr, VarType type);
+	void emit_stack_pop_ins(FnState& state, std::string_view expr, VarType type);
+
 	/// Emits the complete handler for a conditional relative branching instruction.
 	/// If the condition provided by the expression in `test` is true, then perform a relative jump by the specified
 	/// amount.
@@ -173,6 +176,12 @@ class BytecodeToC {
 	/// integral variables on the stack, outputting to a third one. Equivalent to `emit_divmod_var_int_ins`, except
 	/// there is no `lhs_overflow_value` logic.
 	void emit_divmod_var_unsigned_ins(FnState& state, std::string_view op, VarType type);
+
+	std::string frame_var_ptr_expr(std::string_view expr);
+	std::string frame_var_ptr_expr(int offset);
+
+	std::string frame_var_expr(std::string_view expr, VarType type);
+	std::string frame_var_expr(int offset, VarType type);
 
 	const JitConfig& m_config;
 	asIScriptEngine& m_script_engine;

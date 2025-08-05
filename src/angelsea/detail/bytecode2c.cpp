@@ -319,66 +319,58 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_TYPEID:
-	case asBC_PshC4:  {
-		emit(
-		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -1);\n"
-		    "\t\tsp->as_asDWORD = {DWORD0};\n",
-		    fmt::arg("DWORD0", ins.dword0())
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
-	case asBC_PshC8: {
-		emit(
-		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -2);\n"
-		    "\t\tsp->as_asQWORD = {QWORD0};\n",
-		    fmt::arg("QWORD0", ins.qword0())
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
-
-	case asBC_PshV4: {
-		emit(
-		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -1);\n"
-		    "\t\tsp->as_asDWORD = ASEA_FRAME_VAR({SWORD0}).as_asDWORD;\n",
-		    fmt::arg("SWORD0", ins.sword0())
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
-	case asBC_PshV8: {
-		emit(
-		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -2);\n"
-		    "\t\tsp->as_asQWORD = ASEA_FRAME_VAR({SWORD0}).as_asQWORD;\n",
-		    fmt::arg("SWORD0", ins.sword0())
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
-	case asBC_PshVPtr: {
-		emit(
-		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
-		    "\t\tsp->as_asPWORD = ASEA_FRAME_VAR({SWORD0}).as_asPWORD;\n",
-		    fmt::arg("SWORD0", ins.sword0())
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
-
-	case asBC_PshRPtr: {
-		emit(
-		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
-		    "\t\tsp->as_asPWORD = regs->valueRegister.as_asPWORD;\n"
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
+	case asBC_PshC4:   emit_stack_push_ins(state, fmt::to_string(ins.dword0()), u32); break;
+	case asBC_VAR:     emit_stack_push_ins(state, fmt::format("(asPWORD){}", ins.sword0()), pword); break;
+	case asBC_PshC8:   emit_stack_push_ins(state, fmt::to_string(ins.qword0()), u64); break;
+	case asBC_PshV4:   emit_stack_push_ins(state, frame_var_expr(ins.sword0(), u32), u32); break;
+	case asBC_PshV8:   emit_stack_push_ins(state, frame_var_expr(ins.sword0(), u64), u64); break;
+	case asBC_PshNull: emit_stack_push_ins(state, "0", pword); break; // TODO: not tested, how to emit?
+	case asBC_PshVPtr: emit_stack_push_ins(state, frame_var_expr(ins.sword0(), pword), pword); break;
+	case asBC_PshRPtr: emit_stack_push_ins(state, "regs->valueRegister.as_asPWORD", pword); break;
 	case asBC_PopRPtr: {
 		emit(
 		    "\t\tregs->valueRegister.as_asPWORD = sp->as_asPWORD;\n"
 		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, AS_PTR_SIZE);\n"
 		);
+		emit_auto_bc_inc(state);
+		break;
+	}
+	case asBC_PSF:
+		emit_stack_push_ins(state, fmt::format("(asPWORD){}", frame_var_ptr_expr(ins.sword0())), pword);
+		break;
+
+	case asBC_PGA: {
+		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), false);
+		emit_stack_push_ins(state, fmt::format("(asPWORD)&{}", symbol), pword);
+		break;
+	}
+
+	case asBC_PshGPtr: {
+		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), false);
+		emit_stack_push_ins(state, fmt::format("(asPWORD){}", symbol), pword);
+		break;
+	}
+
+	case asBC_PopPtr: {
+		emit("\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, AS_PTR_SIZE);\n");
+		emit_auto_bc_inc(state);
+		break;
+	}
+
+	case asBC_RDSPtr: {
+		emit(
+		    "\t\tasPWORD* a = (asPWORD*)sp->as_ptr;\n"
+		    "\t\tif (a == 0) {{ goto err_null; }}\n"
+		    "\t\tsp->as_asPWORD = *a;\n"
+		);
+		state.error_handlers.null = true;
+		emit_auto_bc_inc(state);
+		break;
+	}
+
+	case asBC_CHKREF: {
+		emit("\t\tif (sp->as_asPWORD == 0) {{ goto err_null; }}\n");
+		state.error_handlers.null = true;
 		emit_auto_bc_inc(state);
 		break;
 	}
@@ -463,16 +455,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
-	case asBC_PSF: {
-		emit(
-		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
-		    "\t\tsp->as_asPWORD = (asPWORD)&ASEA_FRAME_VAR({SWORD0});\n",
-		    fmt::arg("SWORD0", ins.sword0())
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
-
 	case asBC_SetG4: {
 		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), true);
 		emit("\t\t*(asDWORD*)&{OBJ} = {DWORD};\n", fmt::arg("OBJ", symbol), fmt::arg("DWORD", ins.dword0(AS_PTR_SIZE)));
@@ -483,72 +465,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_LDG: {
 		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), true);
 		emit("\t\tregs->valueRegister.as_asPWORD = (asPWORD)&{};\n", symbol);
-		emit_auto_bc_inc(state);
-		break;
-	}
-
-	case asBC_PGA: {
-		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), false);
-		emit(
-		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
-		    "\t\tsp->as_asPWORD = (asPWORD)&{OBJ};\n",
-		    fmt::arg("OBJ", symbol)
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
-
-	case asBC_PshGPtr: {
-		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), false);
-		emit(
-		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
-		    "\t\tsp->as_asPWORD = (asPWORD){OBJ};\n",
-		    fmt::arg("OBJ", symbol)
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
-
-	case asBC_PshNull: {
-		// TODO: simple but not tested! how can we get AS to emit it?
-		emit(
-		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
-		    "\t\tsp->as_asPWORD = 0;\n"
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
-
-	case asBC_PopPtr: {
-		emit("\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, AS_PTR_SIZE);\n");
-		emit_auto_bc_inc(state);
-		break;
-	}
-
-	case asBC_RDSPtr: {
-		emit(
-		    "\t\tasPWORD* a = (asPWORD*)sp->as_ptr;\n"
-		    "\t\tif (a == 0) {{ goto err_null; }}\n"
-		    "\t\tsp->as_asPWORD = *a;\n"
-		);
-		state.error_handlers.null = true;
-		emit_auto_bc_inc(state);
-		break;
-	}
-
-	case asBC_VAR: {
-		emit(
-		    "\t\tsp = ASEA_STACK_DWORD_OFFSET(sp, -AS_PTR_SIZE);\n"
-		    "\t\tsp->as_asPWORD = (asPWORD){SWORD0};\n",
-		    fmt::arg("SWORD0", ins.sword0())
-		);
-		emit_auto_bc_inc(state);
-		break;
-	}
-
-	case asBC_CHKREF: {
-		emit("\t\tif (sp->as_asPWORD == 0) {{ goto err_null; }}\n");
-		state.error_handlers.null = true;
 		emit_auto_bc_inc(state);
 		break;
 	}
@@ -1090,6 +1006,17 @@ std::string BytecodeToC::emit_global_lookup(FnState& state, void** pointer, bool
 	return fn_symbol;
 }
 
+void BytecodeToC::emit_stack_push_ins(FnState& state, std::string_view expr, VarType type) {
+	if (type == var_types::pword) {
+		emit("\t\tsp = (asea_var*)((char*)sp - sizeof(asPWORD));\n");
+	} else {
+		emit("\t\tsp = (asea_var*)((char*)sp - {});\n", type.byte_count);
+	}
+
+	emit("\t\tsp->as_{TYPE} = {EXPR};\n", fmt::arg("TYPE", type.type), fmt::arg("EXPR", expr));
+	emit_auto_bc_inc(state);
+}
+
 void BytecodeToC::emit_cond_branch_ins(FnState& state, std::string_view test) {
 	BytecodeInstruction& ins = state.ins;
 	emit(
@@ -1257,6 +1184,20 @@ void BytecodeToC::emit_divmod_var_unsigned_ins(FnState& state, std::string_view 
 	);
 	state.error_handlers.divide_by_zero = true;
 	emit_auto_bc_inc(state);
+}
+
+std::string BytecodeToC::frame_var_ptr_expr(std::string_view expr) {
+	return fmt::format("((asea_var*)((asDWORD*)fp - {}))", expr);
+}
+
+std::string BytecodeToC::frame_var_ptr_expr(int offset) { return frame_var_ptr_expr(std::to_string(offset)); }
+
+std::string BytecodeToC::frame_var_expr(std::string_view expr, VarType type) {
+	return fmt::format("((asea_var*)((asDWORD*)fp - {}))->as_{}", expr, type.type);
+}
+
+std::string BytecodeToC::frame_var_expr(int offset, VarType type) {
+	return frame_var_expr(std::to_string(offset), type);
 }
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset) {
