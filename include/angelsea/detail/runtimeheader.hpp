@@ -129,8 +129,8 @@ typedef struct {)___"
     // We rewrite some of the asDWORD* pointers to be void* instead; this is across the compile boundary in the case of
     // JIT.
     "\tasDWORD *programPointer;\n" // points to current bytecode instruction
-    "\tchar *stackFramePointer;\n" // function stack frame
-    "\tchar *stackPointer;\n"      // top of stack (grows downward)
+    "\tvoid *stackFramePointer;\n" // function stack frame
+    "\tvoid *stackPointer;\n"      // top of stack (grows downward)
     "\tasea_var valueRegister;\n"  // temp register for primitives
     "\tvoid *objectRegister;\n"    // temp register for objects and handles
     "\tasITypeInfo *objectType;\n" // type of object held in object register
@@ -155,10 +155,9 @@ float asea_fmod(float a, float b);
     // Helper macros
 
     R"___(
-#define ASEA_STACK_DWORD_OFFSET(base, dword_offset) (char*)(base + ((dword_offset) * 4))
-#define ASEA_FRAME_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(fp, -(dword_offset))))
-#define ASEA_STACK_VAR(dword_offset) (*(asea_var*)(ASEA_STACK_DWORD_OFFSET(sp, (dword_offset))))
-#define ASEA_STACK_TOP (*(asea_var*)(sp))
+#define ASEA_STACK_DWORD_OFFSET(base, dword_offset) (asea_var*)((asDWORD*)base + dword_offset)
+#define ASEA_FRAME_VAR(dword_offset) (*(asea_var*)((asDWORD*)fp - dword_offset))
+#define ASEA_STACK_VAR(dword_offset) (*(asea_var*)((asDWORD*)sp + dword_offset))
 
 #define ASEA_FDIV(lhs, rhs) lhs / rhs
 #define ASEA_FMOD32(lhs, rhs) asea_fmodf(lhs, rhs)
