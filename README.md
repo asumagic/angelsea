@@ -28,15 +28,15 @@ system calls are not implemented, and that's a massive one for performance.
 
 The process has three steps:
 
-- Bytecode to C
+- Bytecode to C (can be triggered by a heuristic for functions called enough times)
 - C to MIR (can be async)
 - MIR optimization and codegen (can't be async; investigating.)
 
 The last point hurts performance-wise for real-time apps. The following issues
 may be showstoppers for you:
 
-- https://github.com/asumagic/angelsea/issues/5
-- https://github.com/asumagic/angelsea/issues/6
+- https://github.com/asumagic/angelsea/issues/5: Blocking compile times are not great for real-time
+- https://github.com/asumagic/angelsea/issues/6: Memory usage is somewhat high (greatly reduced recently)
 
 ## Supported platforms
 
