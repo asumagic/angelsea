@@ -134,7 +134,8 @@ static int c2mir_getc_callback(void* user_data) {
 
 void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 	std::string c_name;
-	m_c_generator.set_map_function_callback([&](asIScriptFunction& received_fn, const std::string& name) {
+	m_c_generator.set_map_function_callback([&]([[maybe_unused]] asIScriptFunction& received_fn,
+	                                            const std::string&                  name) {
 		angelsea_assert(&received_fn == fn.script_function);
 		c_name = name;
 	});
@@ -321,8 +322,8 @@ void MirJit::transfer_and_destroy(AsyncMirFunction& fn) {
 
 	auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(m_mir, mir_entry_fn));
 
-	m_ignore_unregister = fn.script_function;
-	const auto err      = fn.script_function->SetJITFunction(entry_point);
+	m_ignore_unregister             = fn.script_function;
+	[[maybe_unused]] const auto err = fn.script_function->SetJITFunction(entry_point);
 	angelsea_assert(err == asSUCCESS);
 	m_ignore_unregister = nullptr;
 

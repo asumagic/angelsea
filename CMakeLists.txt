@@ -92,12 +92,12 @@ endif()
 
 # AngelScript CMake module doesn't give us the include, make a target that does
 add_library(asea_angelscript INTERFACE)
-target_include_directories(asea_angelscript INTERFACE ${ASEA_ANGELSCRIPT_ROOT}/angelscript/include)
+target_include_directories(asea_angelscript SYSTEM INTERFACE ${ASEA_ANGELSCRIPT_ROOT}/angelscript/include)
 
 # Target which also provides the internal header include path
 add_library(asea_angelscript_internal INTERFACE)
 target_link_libraries(asea_angelscript_internal INTERFACE asea_angelscript)
-target_include_directories(asea_angelscript_internal INTERFACE ${ASEA_ANGELSCRIPT_ROOT}/angelscript/source)
+target_include_directories(asea_angelscript_internal SYSTEM INTERFACE ${ASEA_ANGELSCRIPT_ROOT}/angelscript/source)
 
 if (NOT ASEA_ANGELSCRIPT_SYSTEM)
     target_link_libraries(asea_angelscript INTERFACE angelscript)

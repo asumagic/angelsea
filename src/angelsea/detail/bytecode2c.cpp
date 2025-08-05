@@ -25,10 +25,10 @@ static constexpr std::string_view save_registers_sequence
       "\t\tregs->sp = sp;\n"
       "\t\tregs->fp = fp;\n";
 
-static constexpr std::string_view load_registers_sequence
-    = "\t\tpc = regs->pc;\n"
-      "\t\tsp = regs->sp;\n"
-      "\t\tfp = regs->fp;\n";
+// static constexpr std::string_view load_registers_sequence
+//     = "\t\tpc = regs->pc;\n"
+//       "\t\tsp = regs->sp;\n"
+//       "\t\tfp = regs->fp;\n";
 
 template<typename T> static std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
 
@@ -156,7 +156,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		);
 	}
 
-	FnState state{.fn = fn, .ins = {}, .error_handlers = {}};
+	FnState state{.fn = fn, .ins = {}, .switch_map = {}, .error_handlers = {}};
 
 	discover_switch_map(state);
 	configure_jit_entries(state);
@@ -173,8 +173,11 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	emit("}}\n");
 }
 
-std::string BytecodeToC::create_new_entry_point_name(asIScriptFunction& fn) {
+std::string BytecodeToC::create_new_entry_point_name([[maybe_unused]] asIScriptFunction& fn) {
 	angelsea_assert(fn.GetId() != 0 && "Did not expect a delegate function");
+
+	// TODO: unified global mapping, but it's not so trivial if also having to track destructions -- pretty sure GetId()
+	// can be reused in AS
 
 	const auto str = fmt::format("{}_mod{}_fn{}", m_c_symbol_prefix, m_module_idx, m_module_state.fn_idx);
 	++m_module_state.fn_idx;
@@ -383,7 +386,6 @@ bool BytecodeToC::is_instruction_blacklisted(asEBCInstr bc) const {
 void BytecodeToC::translate_instruction(FnState& state) {
 	using namespace var_types;
 	auto& ins = state.ins;
-	auto& fn  = state.fn;
 
 	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
 
@@ -497,8 +499,8 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_RefCpyV: {
-		asCObjectType*    type = reinterpret_cast<asCObjectType*>(ins.pword0());
-		asSTypeBehaviour& beh  = type->beh;
+		asCObjectType* type = reinterpret_cast<asCObjectType*>(ins.pword0());
+		// asSTypeBehaviour& beh  = type->beh;
 
 		if (!(type->flags & (asOBJ_NOCOUNT | asOBJ_VALUE))) {
 			emit_vm_fallback(state, "can't handle release/addref for RefCpyV calls yet");
@@ -512,8 +514,8 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_REFCPY: {
-		asCObjectType*    type = reinterpret_cast<asCObjectType*>(ins.pword0());
-		asSTypeBehaviour& beh  = type->beh;
+		asCObjectType* type = reinterpret_cast<asCObjectType*>(ins.pword0());
+		// asSTypeBehaviour& beh  = type->beh;
 
 		if (!(type->flags & (asOBJ_NOCOUNT | asOBJ_VALUE))) {
 			emit_vm_fallback(state, "can't handle release/addref for RefCpy calls yet");
@@ -995,7 +997,11 @@ void BytecodeToC::emit_primitive_cast_var_ins(FnState& state, VarType src, VarTy
 	emit_assign_ins(state, frame_var(ins.sword0(), dst), frame_var(in_place ? ins.sword0() : ins.sword1(), src));
 }
 
-std::string BytecodeToC::emit_global_lookup(FnState& state, void** pointer, bool global_var_only) {
+std::string BytecodeToC::emit_global_lookup(
+    [[maybe_unused]] FnState& state,
+    void**                    pointer,
+    [[maybe_unused]] bool     global_var_only
+) {
 	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
 
 	std::string                            fn_symbol;
