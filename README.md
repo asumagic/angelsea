@@ -316,11 +316,6 @@ AOT is fine for you, it might actually make sense to use.
 
 To my knowledge, there is no other (public...) project of that kind.
 
-### Do you support multi-threaded code generation?
-
-Not yet, but it seems like this is something MIR lets you do pretty easily at a
-module level.
-
 ### Why this name?
 
 I was looking for puns with "mir" or "mimir" and miserably failed, so all you
