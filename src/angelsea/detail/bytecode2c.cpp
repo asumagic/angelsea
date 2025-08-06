@@ -484,7 +484,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		if (m_on_map_extern_callback) {
 			m_on_map_extern_callback(objtype_symbol.c_str(), ExternObjectType{objtype_ptr}, objtype_ptr);
 		}
-		emit_stack_push_ins(state, fmt::format("(asPWORD*)&{}", objtype_symbol), pword);
+		emit_stack_push_ins(state, fmt::format("(asPWORD)&{}", objtype_symbol), pword);
 		break;
 	}
 
