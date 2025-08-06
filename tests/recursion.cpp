@@ -30,6 +30,27 @@ TEST_CASE("recursive fibonacci", "[fib]") {
 	REQUIRE(run_fib(35) == 9227465);
 }
 
+int fib(int n) {
+	if (n < 2) {
+		return n;
+	}
+
+	return fib(n - 1) + fib(n - 2);
+}
+
+uint64_t fib_iterative(uint64_t n) {
+	uint64_t last = 1;
+	uint64_t prev = 0;
+
+	for (uint64_t i = 1; i < n; ++i) {
+		uint64_t next = prev + last;
+		prev          = last;
+		last          = next;
+	}
+
+	return last;
+}
+
 TEST_CASE("fib benchmark", "[fib][benchmark]") {
 	EngineContext context{angelsea::JitConfig{.log_targets{.performance_warning = asEMsgType(-1)}}};
 
@@ -66,9 +87,17 @@ TEST_CASE("fib benchmark", "[fib][benchmark]") {
 
 	BENCHMARK("Interpreter fib(10000) (iterative)") { return run_fib(10000, interp_fib_iterative, true); };
 	BENCHMARK("JIT         fib(10000) (iterative)") { return run_fib(10000, jit_fib_iterative, true); };
+	BENCHMARK("C++         fib(10000) (iterative)") {
+		volatile int i = 10000;
+		return fib_iterative(i);
+	};
 
 	BENCHMARK("Interpreter fib(25) (recursive)") { return run_fib(25, interp_fib, false); };
 	BENCHMARK("JIT         fib(25) (recursive)") { return run_fib(25, jit_fib, false); };
+	BENCHMARK("C++         fib(25) (recursive)") {
+		volatile int i = 25;
+		return fib(i);
+	};
 }
 
 TEST_CASE("fib in a thread", "[fibasync]") {
