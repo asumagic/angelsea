@@ -114,7 +114,7 @@ struct JitConfig {
 	/// Speeds up the generic calling convention if \ref experimental_direct_generic_call is true by assuming that the
 	/// called system functions will always set the return value. If the callee fails to do so when this function is
 	/// set, uninitialized reads can happen script-side, which may result in crashes with pointers.
-	bool hack_generic_assume_callee_correctness = true;
+	bool hack_generic_assume_callee_correctness = false;
 
 	struct CGeneratorConfig {
 		/// Enables C generation that uses the GNU C "label as values" extension, see:

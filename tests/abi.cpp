@@ -15,8 +15,16 @@ void generic_noarg_hack(asIScriptGeneric* gen) {
 	g->returnVal  = 123;
 }
 
+void generic_sum3int(asIScriptGeneric* gen) {
+	int a = gen->GetArgDWord(0);
+	int b = gen->GetArgDWord(1);
+	int c = gen->GetArgDWord(2);
+	gen->SetReturnDWord(a + b + c);
+}
+
 void bind_generic_functions(asIScriptEngine& e) {
 	e.RegisterGlobalFunction("int generic_noarg()", asFUNCTION(generic_noarg_hack), asCALL_GENERIC);
+	e.RegisterGlobalFunction("int generic_sum3int(int, int, int)", asFUNCTION(generic_sum3int), asCALL_GENERIC);
 }
 
 TEST_CASE("generic calling convention", "[abi][conv_generic]") {
@@ -24,6 +32,7 @@ TEST_CASE("generic calling convention", "[abi][conv_generic]") {
 	bind_generic_functions(*context.engine);
 
 	REQUIRE(run_string(context, "print(''+generic_noarg())") == "123\n");
+	REQUIRE(run_string(context, "print(''+generic_sum3int(500, 30, 2))") == "532\n");
 }
 
 TEST_CASE("generic abi benchmark", "[abi][conv_generic][benchmark]") {

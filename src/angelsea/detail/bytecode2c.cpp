@@ -1178,7 +1178,8 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 	    "\t\textern void {FNCALLABLE}(asea_generic*);\n"
 	    "\t\textern void {FNDESC};\n"
 	    "\t\tg.sysFunction = &{FNDESC};\n"
-	    "\t\tg.stackPointer = args;\n",
+	    "\t\tg.stackPointer = args;\n" // TODO: don't write if the stack never needs to be accessed
+	    ,
 	    fmt::arg("FNDESC", fn_desc_symbol),
 	    fmt::arg("FNCALLABLE", fn_callable_symbol)
 	);
