@@ -655,83 +655,9 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_RDR4: emit_assign_ins(state, frame_var(ins.sword0(), u32), "regs->value.as_var_ptr->as_asDWORD"); break;
 	case asBC_RDR8: emit_assign_ins(state, frame_var(ins.sword0(), u64), "regs->value.as_var_ptr->as_asQWORD"); break;
 
-	case asBC_CALL: {
-		// TODO: when possible, translate this to a JIT to JIT function call
-		// NOTE: the above is more complicated now because the MIR_cleanup logic
-		// destroys inlining information. then again, it's probably more
-		// important to create a shim so that we don't have to go through the
-		// regular AS functions since we have better knowledge of the callee.
+	case asBC_CALL: emit_direct_script_call(state, ins.int0()); break;
 
-		int                fn_idx    = ins.int0();
-		const std::string  fn_symbol = fmt::format("asea_script_fn{}", fn_idx);
-		asCScriptFunction* callee    = engine.scriptFunctions[fn_idx];
-
-		if (m_on_map_extern_callback) {
-			m_on_map_extern_callback(fn_symbol.c_str(), ExternScriptFunction{fn_idx}, callee);
-		}
-
-		if (m_config.experimental_fast_script_call && m_config.hack_ignore_suspend) {
-			emit(
-			    "\t\textern char {FN};\n"
-			    "\t\tpc += 2;\n"
-			    "\t\tasea_prepare_script_stack(_regs, (asCScriptFunction*)&{FN}, pc, sp, fp);\n",
-			    fmt::arg("FN", fn_symbol)
-			);
-
-			for (asUINT n = callee->scriptData->variables.GetLength(); n-- > 0;) {
-				asSScriptVariable* var = callee->scriptData->variables[n];
-
-				// don't clear the function arguments
-				if (var->stackOffset <= 0) {
-					continue;
-				}
-
-				if (var->onHeap && (var->type.IsObject() || var->type.IsFuncdef())) {
-					if (m_config.c.human_readable) {
-						emit("\t\t/* arg {} requires clearing @ stack pos {}*/\n", n, -var->stackOffset);
-					}
-
-					emit("\t\t((asea_var*)((asDWORD*)(regs->fp) + {}))->as_asPWORD = 0;\n", -var->stackOffset);
-				}
-			}
-
-			if (callee->scriptData->variableSpace != 0) {
-				if (m_config.c.human_readable) {
-					emit("\t\t/* make space for variables */\n");
-				}
-				emit("\t\tregs->sp = (asDWORD*)(regs->sp) - {};\n", callee->scriptData->variableSpace);
-			}
-
-			if (callee == &state.fn) {
-				if (m_config.c.human_readable) {
-					emit("\t\t/* recursive call */\n");
-				}
-				emit(
-				    "\t\t{SELF}(_regs, 1);\n"
-				    "\t\treturn;\n",
-				    fmt::arg("SELF", m_module_state.fn_name)
-				);
-			} else {
-				// TODO: immediately branch into jitfn if possible
-				emit("\t\treturn;\n");
-			}
-		} else {
-			// Call fallback: We initiate the call from JIT, and the rest of the
-			// JitEntry handler will branch into the correct instruction.
-			emit(
-			    "\t\textern char {FN};\n"
-			    "\t\tpc += 2;\n"
-			    "{SAVE_REGS}"
-			    "\t\tasea_call_script_function(_regs, (asCScriptFunction*)&{FN});\n"
-			    "\t\treturn;\n",
-			    fmt::arg("FN", fn_symbol),
-			    fmt::arg("SAVE_REGS", save_registers_sequence)
-			);
-		}
-		break;
-	}
-
-	case asBC_JMP: {
+	case asBC_JMP:  {
 		emit(
 		    "\t\tpc += {BRANCH_OFFSET};\n"
 		    "\t\tgoto bc{BRANCH_TARGET};\n",
@@ -1055,6 +981,82 @@ std::string BytecodeToC::emit_global_lookup(
 
 	emit("\t\textern void* {};\n", fn_symbol);
 	return fn_symbol;
+}
+
+void BytecodeToC::emit_direct_script_call(FnState& state, int fn_idx) {
+	// TODO: when possible, translate this to a JIT to JIT function call
+	// NOTE: the above is more complicated now because the MIR_cleanup logic
+	// destroys inlining information. then again, it's probably more
+	// important to create a shim so that we don't have to go through the
+	// regular AS functions since we have better knowledge of the callee.
+
+	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
+
+	const std::string  fn_symbol = fmt::format("asea_script_fn{}", fn_idx);
+	asCScriptFunction* callee    = engine.scriptFunctions[fn_idx];
+
+	if (m_on_map_extern_callback) {
+		m_on_map_extern_callback(fn_symbol.c_str(), ExternScriptFunction{fn_idx}, callee);
+	}
+
+	if (m_config.experimental_fast_script_call && m_config.hack_ignore_suspend) {
+		emit(
+		    "\t\textern char {FN};\n"
+		    "\t\tpc += 2;\n"
+		    "\t\tasea_prepare_script_stack(_regs, (asCScriptFunction*)&{FN}, pc, sp, fp);\n",
+		    fmt::arg("FN", fn_symbol)
+		);
+
+		for (asUINT n = callee->scriptData->variables.GetLength(); n-- > 0;) {
+			asSScriptVariable* var = callee->scriptData->variables[n];
+
+			// don't clear the function arguments
+			if (var->stackOffset <= 0) {
+				continue;
+			}
+
+			if (var->onHeap && (var->type.IsObject() || var->type.IsFuncdef())) {
+				if (m_config.c.human_readable) {
+					emit("\t\t/* arg {} requires clearing @ stack pos {}*/\n", n, -var->stackOffset);
+				}
+
+				emit("\t\t((asea_var*)((asDWORD*)(regs->fp) + {}))->as_asPWORD = 0;\n", -var->stackOffset);
+			}
+		}
+
+		if (callee->scriptData->variableSpace != 0) {
+			if (m_config.c.human_readable) {
+				emit("\t\t/* make space for variables */\n");
+			}
+			emit("\t\tregs->sp = (asDWORD*)(regs->sp) - {};\n", callee->scriptData->variableSpace);
+		}
+
+		if (callee == &state.fn) {
+			if (m_config.c.human_readable) {
+				emit("\t\t/* recursive call */\n");
+			}
+			emit(
+			    "\t\t{SELF}(_regs, 1);\n"
+			    "\t\treturn;\n",
+			    fmt::arg("SELF", m_module_state.fn_name)
+			);
+		} else {
+			// TODO: immediately branch into jitfn if possible
+			emit("\t\treturn;\n");
+		}
+	} else {
+		// Call fallback: We initiate the call from JIT, and the rest of the
+		// JitEntry handler will branch into the correct instruction.
+		emit(
+		    "\t\textern char {FN};\n"
+		    "\t\tpc += 2;\n"
+		    "{SAVE_REGS}"
+		    "\t\tasea_call_script_function(_regs, (asCScriptFunction*)&{FN});\n"
+		    "\t\treturn;\n",
+		    fmt::arg("FN", fn_symbol),
+		    fmt::arg("SAVE_REGS", save_registers_sequence)
+		);
+	}
 }
 
 void BytecodeToC::emit_stack_push_ins(FnState& state, std::string_view expr, VarType type) {

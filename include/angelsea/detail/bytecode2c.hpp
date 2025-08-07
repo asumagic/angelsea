@@ -124,6 +124,8 @@ class BytecodeToC {
 
 	std::string emit_global_lookup(FnState& state, void** pointer, bool global_var_only);
 
+	void emit_direct_script_call(FnState& state, int fn_idx);
+
 	void emit_stack_push_ins(FnState& state, std::string_view expr, VarType type);
 	void emit_stack_pop_ins(FnState& state, std::string_view expr, VarType type);
 
