@@ -11,6 +11,7 @@
 #include <angelsea/detail/log.hpp>
 #include <angelsea/detail/runtimeheader.hpp>
 #include <angelsea/detail/stringutil.hpp>
+#include <as_callfunc.h>
 #include <as_property.h>
 #include <as_scriptengine.h>
 #include <as_texts.h>
@@ -42,7 +43,7 @@ void BytecodeToC::prepare_new_context() {
 	++m_module_idx;
 	m_module_state.fallback_count      = 0;
 	m_module_state.string_constant_idx = 0;
-	m_module_state.objtype_idx         = 0;
+	m_module_state.type_info_idx       = 0;
 	m_module_state.fn_idx              = 0;
 
 	m_module_state.buffer.clear();
@@ -90,6 +91,15 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	    "\tasea_var *fp = regs->fp;\n"
 	    // "#endif\n",
 	);
+
+	if (m_config.experimental_direct_generic_call) {
+		// TODO: detect if there are any generic calls, should be easy in a prepass
+		emit(
+		    "\t\tasea_generic g;\n"
+		    "\t\tg._vtable = &asea_generic_vtable;\n"
+		    "\t\tg.engine = &asea_engine;\n"
+		);
+	}
 
 	// Transpiled functions are compiled to be JIT entry points for the
 	// AngelScript VM.
@@ -471,19 +481,9 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_OBJTYPE: {
-		asPWORD           objtype_raw = ins.pword0();
-		asCObjectType*    objtype_ptr = std::bit_cast<asCObjectType*>(objtype_raw);
-		const std::string objtype_symbol
-		    = fmt::format("{}_mod{}_objty{}", m_c_symbol_prefix, m_module_idx, m_module_state.objtype_idx);
-		++m_module_state.objtype_idx;
-
-		if (m_config.c.human_readable) {
-			emit("\t\t/* object type `{}` */\n", objtype_ptr->GetName());
-		}
-		emit("\t\textern void* {};\n", objtype_symbol);
-		if (m_on_map_extern_callback) {
-			m_on_map_extern_callback(objtype_symbol.c_str(), ExternObjectType{objtype_ptr}, objtype_ptr);
-		}
+		asPWORD        objtype_raw    = ins.pword0();
+		asCObjectType* objtype_ptr    = std::bit_cast<asCObjectType*>(objtype_raw);
+		const auto     objtype_symbol = emit_type_info_lookup(state, *objtype_ptr);
 		emit_stack_push_ins(state, fmt::format("(asPWORD)&{}", objtype_symbol), pword);
 		break;
 	}
@@ -652,12 +652,13 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit_auto_bc_inc(state);
 		break;
 	}
-	case asBC_RDR4: emit_assign_ins(state, frame_var(ins.sword0(), u32), "regs->value.as_var_ptr->as_asDWORD"); break;
-	case asBC_RDR8: emit_assign_ins(state, frame_var(ins.sword0(), u64), "regs->value.as_var_ptr->as_asQWORD"); break;
+	case asBC_RDR4:    emit_assign_ins(state, frame_var(ins.sword0(), u32), "regs->value.as_var_ptr->as_asDWORD"); break;
+	case asBC_RDR8:    emit_assign_ins(state, frame_var(ins.sword0(), u64), "regs->value.as_var_ptr->as_asQWORD"); break;
 
-	case asBC_CALL: emit_direct_script_call(state, ins.int0()); break;
+	case asBC_CALL:    emit_direct_script_call_ins(state, ins.int0()); break;
+	case asBC_CALLSYS: emit_direct_system_call_ins(state, ins.int0()); break;
 
-	case asBC_JMP:  {
+	case asBC_JMP:     {
 		emit(
 		    "\t\tpc += {BRANCH_OFFSET};\n"
 		    "\t\tgoto bc{BRANCH_TARGET};\n",
@@ -860,7 +861,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_LdGRdR4:      // TODO: find way to emit
 	case asBC_RET:          // TODO: implement (probably?)
 	case asBC_COPY:         // TODO: find way to emit
-	case asBC_CALLSYS:      // TODO: implement (calls & syscalls)
 	case asBC_CALLBND:      // TODO: find way to emit & implement (calls & syscalls)
 	case asBC_CALLINTF:     // TODO: implement (calls & syscalls)
 	case asBC_Thiscall1:    // TODO: implement (calls & syscalls) -- can probably just do callsys directly?
@@ -983,7 +983,23 @@ std::string BytecodeToC::emit_global_lookup(
 	return fn_symbol;
 }
 
-void BytecodeToC::emit_direct_script_call(FnState& state, int fn_idx) {
+std::string BytecodeToC::emit_type_info_lookup(FnState& state, asITypeInfo& type) {
+	const std::string type_info_symbol
+	    = fmt::format("{}_mod{}_typeinfo{}", m_c_symbol_prefix, m_module_idx, m_module_state.type_info_idx);
+	++m_module_state.type_info_idx;
+
+	if (m_config.c.human_readable) {
+		emit("\t\t/* type info `{}` */\n", type.GetName());
+	}
+	emit("\t\textern void* {};\n", type_info_symbol);
+	if (m_on_map_extern_callback) {
+		m_on_map_extern_callback(type_info_symbol.c_str(), ExternTypeInfo{&type}, &type);
+	}
+
+	return type_info_symbol;
+}
+
+void BytecodeToC::emit_direct_script_call_ins(FnState& state, int fn_idx) {
 	// TODO: when possible, translate this to a JIT to JIT function call
 	// NOTE: the above is more complicated now because the MIR_cleanup logic
 	// destroys inlining information. then again, it's probably more
@@ -992,7 +1008,7 @@ void BytecodeToC::emit_direct_script_call(FnState& state, int fn_idx) {
 
 	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
 
-	const std::string  fn_symbol = fmt::format("asea_script_fn{}", fn_idx);
+	const std::string  fn_symbol = fmt::format("{}_scriptfn{}", m_c_symbol_prefix, fn_idx);
 	asCScriptFunction* callee    = engine.scriptFunctions[fn_idx];
 
 	if (m_on_map_extern_callback) {
@@ -1057,6 +1073,147 @@ void BytecodeToC::emit_direct_script_call(FnState& state, int fn_idx) {
 		    fmt::arg("SAVE_REGS", save_registers_sequence)
 		);
 	}
+}
+
+void BytecodeToC::emit_direct_system_call_ins(FnState& state, int fn_idx) {
+	if (!m_config.hack_ignore_exceptions) {
+		emit_vm_fallback(state, "Direct system call failed: hack_ignore_exceptions == false");
+		return;
+	}
+
+	if (!m_config.hack_ignore_suspend) {
+		emit_vm_fallback(state, "Direct system call failed: hack_ignore_suspend == false");
+	}
+
+	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
+
+	const std::string           fn_callable_symbol = fmt::format("{}_sysfnptr{}", m_c_symbol_prefix, fn_idx);
+	const std::string           fn_desc_symbol     = fmt::format("{}_sysfn{}", m_c_symbol_prefix, fn_idx);
+	asCScriptFunction&          script_fn          = *engine.scriptFunctions[fn_idx];
+	asSSystemFunctionInterface& sys_fn             = *script_fn.sysFuncIntf;
+	const internalCallConv      abi                = sys_fn.callConv;
+
+	if (m_on_map_extern_callback) {
+		m_on_map_extern_callback(fn_desc_symbol.c_str(), ExternScriptFunction{fn_idx}, &script_fn);
+		m_on_map_extern_callback(
+		    fn_callable_symbol.c_str(),
+		    ExternSystemFunction{fn_idx},
+		    reinterpret_cast<void**>(sys_fn.func)
+		);
+	}
+
+	if (abi == ICC_GENERIC_FUNC || abi == ICC_GENERIC_METHOD) {
+		emit_direct_system_call_generic_ins(state, script_fn, fn_desc_symbol, fn_callable_symbol);
+		return;
+	}
+
+	emit_vm_fallback(state, "Unsupported calling convention");
+}
+
+void BytecodeToC::emit_direct_system_call_generic_ins(
+    FnState&           state,
+    asCScriptFunction& fn,
+    std::string_view   fn_desc_symbol,
+    std::string_view   fn_callable_symbol
+) {
+	if (!m_config.experimental_direct_generic_call) {
+		emit_vm_fallback(state, "Direct generic call failed: experimental_direct_generic_call == false");
+		return;
+	}
+
+	asCScriptEngine&            engine = static_cast<asCScriptEngine&>(m_script_engine);
+	asSSystemFunctionInterface& sys_fn = *fn.sysFuncIntf;
+
+	const internalCallConv abi = sys_fn.callConv;
+
+	if (fn.IsVariadic()) {
+		// TODO: variadics are a bit annoying to support; certainly viable but they're so rare that other than full AOT
+		// i don't see the point to support them
+		emit_vm_fallback(state, "Direct generic call failed: Variadics not supported yet");
+		return;
+	}
+
+	if (abi == ICC_GENERIC_METHOD) {
+		emit_vm_fallback(state, "TODO generic method");
+		return;
+	}
+
+	if (fn.DoesReturnOnStack()) {
+		emit_vm_fallback(state, "TODO return on stack");
+		return;
+	}
+
+	if (sys_fn.returnAutoHandle && engine.ep.genericCallMode == 1) {
+		emit_vm_fallback(state, "TODO auto handle");
+		return;
+	}
+
+	if (sys_fn.cleanArgs.GetLength() > 0) {
+		emit_vm_fallback(state, "TODO clean args");
+		return;
+	}
+
+	if (!m_config.hack_ignore_context_inspect) {
+		emit("{}", save_registers_sequence);
+	}
+
+	emit(
+	    "\t\tasDWORD* args = (asDWORD*)sp;\n"
+	    "\t\tint pop_size = {INIT_POP_SIZE};\n",
+	    fmt::arg("INIT_POP_SIZE", sys_fn.paramSize)
+	);
+
+	asITypeInfo* ret_type_info      = fn.returnType.GetTypeInfo();
+	const auto   ret_type_info_expr = ret_type_info != nullptr ? emit_type_info_lookup(state, *ret_type_info) : "0";
+
+	// TODO: check which of those could skip initialization if there are cases where the asCGeneric methods will never
+	// read them
+
+	// FIXME: optional suspend support -- also doProcessSuspend also includes setting exceptions on the script context!
+	// also check this for script to script calls
+
+	// FIXME: set m_callingSystemFunction -- also relevant to the above?
+
+	emit(
+	    "\t\textern void {FNCALLABLE}(asea_generic*);\n"
+	    "\t\textern void {FNDESC};\n"
+	    "\t\tg.sysFunction = &{FNDESC};\n"
+	    "\t\tg.stackPointer = args;\n",
+	    fmt::arg("FNDESC", fn_desc_symbol),
+	    fmt::arg("FNCALLABLE", fn_callable_symbol)
+	);
+
+	if (abi == ICC_GENERIC_METHOD) {
+		// TODO:
+		emit("\t\tg.currentObject = TODO;\n"); // FIXME
+	}
+
+	if (!m_config.hack_generic_assume_callee_correctness) {
+		emit(
+		    "\t\tg.objectRegister = 0;\n"
+		    "\t\tg.returnVal = 0;\n"
+		);
+	}
+
+	emit(
+	    "\t\t{FNCALLABLE}(&g);\n"
+	    // TODO: we can probably statically tell which regs need to be written to and which don't
+	    "\t\tregs->value.as_asPWORD = g.returnVal;\n"
+	    "\t\tsp = (asea_var*)((asDWORD*)sp + pop_size);\n",
+	    fmt::arg("FNCALLABLE", fn_callable_symbol),
+	    fmt::arg("RETTYPEINFO", ret_type_info_expr)
+	);
+
+	if (ret_type_info != nullptr) {
+		const auto ret_type_info_expr = emit_type_info_lookup(state, *ret_type_info);
+		emit(
+		    "\t\tregs->obj = g.objectRegister;\n"
+		    "\t\tregs->obj_type = {RETTYPEINFO};\n", // FIXME: emit a symbol for the obj type, it's static (thankfully)
+		    fmt::arg("RETTYPEINFO", ret_type_info_expr)
+		);
+	}
+
+	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::emit_stack_push_ins(FnState& state, std::string_view expr, VarType type) {

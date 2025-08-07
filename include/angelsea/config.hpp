@@ -93,9 +93,28 @@ struct JitConfig {
 	/// check for suspend.
 	bool hack_ignore_suspend = true;
 
+	/// Ignore C++ exceptions thrown by application functions during direct system calls from JIT functions. If this
+	/// hack is disabled, scripts won't be able to perform native calls and will become significantly slower.
+	bool hack_ignore_exceptions = true;
+
+	/// Do not update the program pointer, stack pointer and the stack frame pointers on direct system function calls
+	/// and some other scenarios. This breaks callees that may rely on the debug interface to inspect script state, but
+	/// is safe otherwise.
+	bool hack_ignore_context_inspect = true;
+
 	/// Speeds up script calls by replacing complex call runtime logic with code generation. Does not enable inlining
 	/// yet. This is subject to breakage with AngelScript updates.
 	bool experimental_fast_script_call = true;
+
+	/// Speeds up the generic calling convention by replacing complex call runtime logic with code generation. This is
+	/// subject to breakage with AngelScript updates. It also tries to be clever with the C++ ABI (as it has to populate
+	/// the vtable pointer for asCGeneric correctly), which could be prone to breakage.
+	bool experimental_direct_generic_call = true;
+
+	/// Speeds up the generic calling convention if \ref experimental_direct_generic_call is true by assuming that the
+	/// called system functions will always set the return value. If the callee fails to do so when this function is
+	/// set, uninitialized reads can happen script-side, which may result in crashes with pointers.
+	bool hack_generic_assume_callee_correctness = true;
 
 	struct CGeneratorConfig {
 		/// Enables C generation that uses the GNU C "label as values" extension, see:

@@ -6,6 +6,7 @@
 #include <angelsea/config.hpp>
 #include <angelsea/detail/bytecodeinstruction.hpp>
 #include <as_property.h>
+#include <as_scriptfunction.h>
 #include <fmt/format.h>
 #include <functional>
 #include <string>
@@ -36,6 +37,9 @@ class BytecodeToC {
 	struct ExternScriptFunction {
 		int id;
 	};
+	struct ExternSystemFunction {
+		int id;
+	};
 	struct ExternGlobalVariable {
 		void*              ptr;
 		asCGlobalProperty* property;
@@ -44,11 +48,11 @@ class BytecodeToC {
 	struct ExternStringConstant {
 		void* ptr;
 	};
-	struct ExternObjectType {
-		asCObjectType* object_type;
+	struct ExternTypeInfo {
+		asITypeInfo* object_type;
 	};
-	using ExternMapping
-	    = std::variant<ExternGlobalVariable, ExternStringConstant, ExternScriptFunction, ExternObjectType>;
+	using ExternMapping = std::
+	    variant<ExternGlobalVariable, ExternStringConstant, ExternScriptFunction, ExternSystemFunction, ExternTypeInfo>;
 
 	using OnMapFunctionCallback = std::function<void(asIScriptFunction&, const std::string& name)>;
 	using OnMapExternCallback   = std::function<void(const char* c_name, const ExternMapping& kind, void* raw_value)>;
@@ -123,8 +127,16 @@ class BytecodeToC {
 	void emit_auto_bc_inc(FnState& state);
 
 	std::string emit_global_lookup(FnState& state, void** pointer, bool global_var_only);
+	std::string emit_type_info_lookup(FnState& state, asITypeInfo& type);
 
-	void emit_direct_script_call(FnState& state, int fn_idx);
+	void emit_direct_script_call_ins(FnState& state, int fn_idx);
+	void emit_direct_system_call_ins(FnState& state, int fn_idx);
+	void emit_direct_system_call_generic_ins(
+	    FnState&           state,
+	    asCScriptFunction& fn,
+	    std::string_view   fn_desc_symbol,
+	    std::string_view   fn_callable_symbol
+	);
 
 	void emit_stack_push_ins(FnState& state, std::string_view expr, VarType type);
 	void emit_stack_pop_ins(FnState& state, std::string_view expr, VarType type);
@@ -213,7 +225,7 @@ class BytecodeToC {
 		std::string buffer;
 		std::size_t fallback_count;
 		std::size_t string_constant_idx;
-		std::size_t objtype_idx;
+		std::size_t type_info_idx;
 		std::size_t fn_idx;
 		std::string fn_name;
 	};

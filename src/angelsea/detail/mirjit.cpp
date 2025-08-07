@@ -9,6 +9,7 @@
 #include <angelsea/detail/log.hpp>
 #include <angelsea/detail/mirjit.hpp>
 #include <angelsea/detail/runtime.hpp>
+#include <as_generic.h>
 #include <mir-gen.h>
 #include <mir.h>
 #include <string>
@@ -30,6 +31,8 @@ static void bind_runtime(Mir& mir) {
 	ASEA_BIND_MIR(asea_set_internal_exception);
 	ASEA_BIND_MIR(asea_fmodf);
 	ASEA_BIND_MIR(asea_fmod);
+	ASEA_BIND_MIR(memcpy);
+	ASEA_BIND_MIR(memset);
 #undef ASEA_BIND_MIR
 }
 
@@ -57,7 +60,12 @@ void jit_entry_await_async(asSVMRegisters* regs, asPWORD pending_fn_raw) {
 }
 
 MirJit::MirJit(const JitConfig& config, asIScriptEngine& engine) :
-    m_config(config), m_engine(&engine), m_mir{}, m_c_generator{m_config, *m_engine}, m_ignore_unregister{nullptr} {
+    m_config(config),
+    m_engine(&engine),
+    m_mir{},
+    m_c_generator{m_config, *m_engine},
+    m_ignore_unregister{nullptr},
+    m_registered_engine_globals{false} {
 	bind_runtime(m_mir);
 }
 
@@ -69,6 +77,11 @@ MirJit::~MirJit() {
 }
 
 void MirJit::register_function(asIScriptFunction& script_function) {
+	if (!m_registered_engine_globals) {
+		bind_engine_globals(*script_function.GetEngine());
+		m_registered_engine_globals = true;
+	}
+
 	auto [lazy_mir_it, not_already_registered] = m_lazy_functions.emplace(
 	    &script_function,
 	    LazyMirFunction{
@@ -113,6 +126,18 @@ void MirJit::unregister_function(asIScriptFunction& script_function) {
 	}
 
 	// can't unload modules from MIR AFAIK
+}
+
+void MirJit::bind_engine_globals(asIScriptEngine& engine) {
+	MIR_load_external(m_mir, "asea_engine", &engine);
+
+	if (m_config.experimental_direct_generic_call) {
+		// gross hack to initialize the vtable ptr of asCGeneric properly in JITted functions
+		// unsure how to support that for AOT from the C side
+		asCGeneric generic{nullptr, nullptr, nullptr, nullptr};
+		void*      generic_vtable = *reinterpret_cast<void**>(&generic);
+		MIR_load_external(m_mir, "asea_generic_vtable", generic_vtable);
+	}
 }
 
 struct InputData {

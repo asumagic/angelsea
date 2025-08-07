@@ -115,12 +115,14 @@ union asea_var_u {
 };
 typedef union asea_var_u asea_var;
 
-typedef struct asSVMRegisters asSVMRegisters;
-typedef struct asIScriptContext asIScriptContext;
-typedef struct asITypeInfo asITypeInfo;
-typedef struct asCScriptFunction asCScriptFunction;
-typedef struct asCObjectType asCObjectType;
-typedef struct asSTypeBehaviour asSTypeBehaviour;
+typedef struct asSVMRegisters_t asSVMRegisters;
+typedef struct asIScriptContext_t asIScriptContext;
+typedef struct asITypeInfo_t asITypeInfo;
+typedef struct asCScriptFunction_t asCScriptFunction;
+typedef struct asCObjectType_t asCObjectType;
+typedef struct asITypeInfo_t asITypeInfo;
+typedef struct asCScriptEngine_t asCScriptEngine;
+typedef struct asSTypeBehaviour_t asSTypeBehaviour;
 
 #endif
 
@@ -140,7 +142,26 @@ typedef struct {)___"
 
     R"___(} asea_vm_registers;
 
-typedef union { float f; asDWORD i; } asea_i2f;)___"
+typedef struct {)___"
+    // The layout must be compatible with asCGeneric. This makes assumptions about the C++ ABI! We do not actually make
+    // use of the vtable; but we assume the location and size of it.
+    // Used only when experimental direct generic calls are implemented.
+
+    R"___(
+	void *_vtable;
+	asCScriptEngine *engine;
+	asCScriptFunction *sysFunction;
+	void *currentObject;
+	asDWORD *stackPointer;
+	void *objectRegister;
+	asQWORD returnVal;
+} asea_generic;
+
+typedef union {
+	float   f;
+	asDWORD i;
+} asea_i2f;
+)___"
 
     // Angelsea runtime functions, see runtime.hpp
 
@@ -151,6 +172,9 @@ void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
 void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text);
 float asea_fmodf(float a, float b);
 float asea_fmod(float a, float b);
+
+extern void asea_engine;
+extern void asea_generic_vtable;
 )___"
 
     // Helper macros

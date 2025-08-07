@@ -95,6 +95,8 @@ class MirJit {
 	void register_function(asIScriptFunction& script_function);
 	void unregister_function(asIScriptFunction& script_function);
 
+	void bind_engine_globals(asIScriptEngine& engine);
+
 	void translate_lazy_function(LazyMirFunction& fn);
 	void codegen_async_function(AsyncMirFunction& fn);
 	void transfer_compiled_modules();
@@ -136,6 +138,8 @@ class MirJit {
 	/// slight hack: when we SetJITFunction, AS calls our CleanFunction; but we do *not* want this to happen, because we
 	/// use several temporary JIT functions, and we don't want to destroy any of our references to it during that time!
 	asIScriptFunction* m_ignore_unregister;
+
+	bool m_registered_engine_globals;
 
 	// std::unordered_map<asIScriptFunction*, MirFunction> m_jit_functions;
 };
