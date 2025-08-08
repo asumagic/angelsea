@@ -31,6 +31,7 @@ static void bind_runtime(Mir& mir) {
 	ASEA_BIND_MIR(asea_set_internal_exception);
 	ASEA_BIND_MIR(asea_fmodf);
 	ASEA_BIND_MIR(asea_fmod);
+	ASEA_BIND_MIR(asea_clean_args);
 	ASEA_BIND_MIR(memcpy);
 	ASEA_BIND_MIR(memset);
 #undef ASEA_BIND_MIR

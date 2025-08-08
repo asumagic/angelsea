@@ -1138,11 +1138,6 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 		return;
 	}
 
-	if (sys_fn.cleanArgs.GetLength() > 0) {
-		emit_vm_fallback(state, "TODO clean args");
-		return;
-	}
-
 	if (!m_config.hack_ignore_context_inspect) {
 		emit("{}", save_registers_sequence);
 	}
@@ -1215,6 +1210,12 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 		    "\t\tregs->obj_type = {RETTYPEINFO};\n", // FIXME: emit a symbol for the obj type, it's static (thankfully)
 		    fmt::arg("RETTYPEINFO", ret_type_info_expr)
 		);
+	}
+
+	// TODO: JIT compile this, but it probably isn't *that* important since frees are likely to be moderately expensive
+	// compared to a few branches either way
+	if (sys_fn.cleanArgs.GetLength() > 0) {
+		emit("\t\tasea_clean_args(_regs, &{FNDESC}, args);\n", fmt::arg("FNDESC", fn_desc_symbol));
 	}
 
 	emit_auto_bc_inc(state);

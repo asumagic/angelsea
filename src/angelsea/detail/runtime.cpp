@@ -70,4 +70,25 @@ void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text)
 
 float asea_fmodf(float a, float b) { return fmodf(a, b); }
 float asea_fmod(float a, float b) { return fmod(a, b); }
+
+void asea_clean_args(asSVMRegisters* vm_registers, asCScriptFunction& fn, asDWORD* args) {
+	asCScriptEngine& engine = asea_get_engine(vm_registers);
+
+	auto& clean_args = fn.sysFuncIntf->cleanArgs;
+	for (std::size_t i = 0; i < clean_args.GetLength(); ++i) {
+		void** addr = (void**)&args[clean_args[i].off];
+		if (clean_args[i].op == 0) {
+			if (*addr != 0) {
+				engine.CallObjectMethod(*addr, clean_args[i].ot->beh.release);
+				*addr = 0;
+			}
+		} else {
+			if (clean_args[i].op == 2) {
+				engine.CallObjectMethod(*addr, clean_args[i].ot->beh.destruct);
+			}
+
+			engine.CallFree(*addr);
+		}
+	}
+}
 }

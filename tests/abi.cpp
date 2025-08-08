@@ -5,9 +5,16 @@
 #include <angelscript.h>
 #include <as_datatype.h>
 #include <as_generic.h>
+#include <autowrapper/aswrappedcall.h>
 
 struct SomeClass {
 	int a = 0;
+};
+
+struct NoisyClass {
+	NoisyClass() { out << "Con"; }
+	NoisyClass(const NoisyClass& other) { out << "Cpy"; }
+	~NoisyClass() { out << "Des"; }
 };
 
 void generic_noarg(asIScriptGeneric* gen) {
@@ -41,6 +48,8 @@ void generic_return_string(asIScriptGeneric* gen) {
 	*ret += *static_cast<std::string*>(gen->GetArgObject(2));
 }
 
+void generic_take_noisy(asIScriptGeneric* gen) {}
+
 void bind_generic_functions(asIScriptEngine& e) {
 	e.RegisterGlobalFunction("int generic_noarg()", asFUNCTION(generic_noarg_hack), asCALL_GENERIC);
 	e.RegisterGlobalFunction("int generic_sum3int(int, int, int)", asFUNCTION(generic_sum3int), asCALL_GENERIC);
@@ -58,6 +67,23 @@ void bind_generic_functions(asIScriptEngine& e) {
 	    asCALL_GENERIC
 	);
 	e.RegisterObjectProperty("SomeClass", "int a", asOFFSET(SomeClass, a));
+
+	e.RegisterObjectType("NoisyClass", sizeof(SomeClass), asOBJ_VALUE | asGetTypeTraits<NoisyClass>());
+	e.RegisterObjectBehaviour("NoisyClass", asBEHAVE_CONSTRUCT, "void f()", WRAP_CON(NoisyClass, ()), asCALL_GENERIC);
+	e.RegisterObjectBehaviour(
+	    "NoisyClass",
+	    asBEHAVE_CONSTRUCT,
+	    "void f(const NoisyClass &in)",
+	    WRAP_CON(NoisyClass, (const NoisyClass&)),
+	    asCALL_GENERIC
+	);
+	e.RegisterObjectBehaviour("NoisyClass", asBEHAVE_DESTRUCT, "void f()", WRAP_DES(NoisyClass), asCALL_GENERIC);
+
+	e.RegisterGlobalFunction(
+	    "void generic_take_noisy(NoisyClass a, NoisyClass b)",
+	    asFUNCTION(generic_take_noisy),
+	    asCALL_GENERIC
+	);
 }
 
 TEST_CASE("generic calling convention", "[abi][conv_generic]") {
@@ -74,6 +100,9 @@ TEST_CASE("generic calling convention", "[abi][conv_generic]") {
 
 	// involves a return on stack, but no cleanargs or otherwise
 	REQUIRE(run_string(context, "print(generic_return_string(123, 456, ' :3'));") == "hello world! 123, 456 :3\n");
+
+	// involves cleanargs
+	REQUIRE(run_string(context, "generic_take_noisy(NoisyClass(), NoisyClass());") == "ConCpyDesConCpyDesDesDes");
 }
 
 TEST_CASE("generic abi benchmark", "[abi][conv_generic][benchmark]") {

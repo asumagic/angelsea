@@ -32,6 +32,10 @@ void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
 /// be use one of the TXT_* AngelScript macros for the relevant exception.
 void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text);
 
+/// \brief Performs cleanup for arguments of a function. This generally amounts
+/// to calling ref release or destruct behaviors.
+void asea_clean_args(asSVMRegisters* vm_registers, asCScriptFunction& fn, asDWORD* args);
+
 float asea_fmodf(float a, float b);
 float asea_fmod(float a, float b);
 }
