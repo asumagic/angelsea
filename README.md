@@ -313,9 +313,9 @@ completely bypassed for passing simple arguments, which would result in
 excellent call performance with the native calling convention.  
 At the time of writing, this is not anything angelsea can do, though.
 
-angelsea is able to make generic calls much faster by doing a lot less work than
+Angelsea is able to make generic calls much faster by doing a lot less work than
 the AngelScript VM, though, largely thanks to the fact we can generate code
-tailored for each functions, skipping steps and branches we know are
+tailored for each function, skipping steps and branches we know are
 unnecessary. It also has some hacks like pooling the `asCGeneric` objects at
 function level to skip reinitialization of fields that never change.  
 This allows angelsea to give a ~5x performance uplift for a 1 million generic
