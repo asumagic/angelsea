@@ -1111,11 +1111,13 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 		}
 
 		if (!call.is_internal_call) {
-			if (!m_config.hack_ignore_context_inspect) {
-				emit("{}", save_registers_sequence);
-			}
-
-			emit("\t\tsp += asea_call_system_function(_regs, {FN});\n", fmt::arg("FN", call.fn_idx));
+			// could condition programPointer and maybe stackFramePointer(?) on hack_ignore_context_inspect but we need
+			// to write most registers anyway
+			emit("{}", save_registers_sequence);
+			emit(
+			    "\t\tsp = (asea_var*)((asDWORD*)sp + asea_call_system_function(_regs, {FN}));\n",
+			    fmt::arg("FN", call.fn_idx)
+			);
 
 			// FIXME: doprocessuspend check wrt setting *script* exceptions correctness
 		} else {
