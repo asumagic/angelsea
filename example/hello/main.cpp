@@ -48,7 +48,7 @@ int main() {
 
 	// Set up JIT
 	angelsea::JitConfig config;
-	config.dump_mir_code = true; // dump the code to see it's working
+	config.debug.dump_mir_code = true; // dump the code to see it's working
 	angelsea::Jit jit{config, *engine};
 
 	r = engine->SetJITCompiler(&jit);

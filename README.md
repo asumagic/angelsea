@@ -217,7 +217,7 @@ engine->SetEngineProperty(asEP_BUILD_WITHOUT_LINE_CUES, true);
 
 angelsea::JitConfig config {
     .triggers = {
-        .hits_before_func_compile   = 10000,
+        .hits_before_func_compile = 10000,
     }
 };
 angelsea::Jit jit(config, *engine);
