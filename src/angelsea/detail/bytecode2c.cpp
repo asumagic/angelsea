@@ -1133,11 +1133,6 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 		return;
 	}
 
-	if (fn.DoesReturnOnStack()) {
-		emit_vm_fallback(state, "TODO return on stack");
-		return;
-	}
-
 	if (sys_fn.returnAutoHandle && engine.ep.genericCallMode == 1) {
 		emit_vm_fallback(state, "TODO auto handle");
 		return;
@@ -1178,6 +1173,13 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 		    "\t\tif (g.currentObject == 0) {{ goto err_null; }}\n"
 		);
 		state.error_handlers.null = true;
+	}
+
+	if (fn.DoesReturnOnStack()) {
+		emit(
+		    "\t\tpop_size += sizeof(asPWORD) / 4;\n"
+		    "\t\targs += sizeof(asPWORD) / 4;\n"
+		);
 	}
 
 	emit(

@@ -2,6 +2,7 @@
 
 #include "common.hpp"
 
+#include <angelscript.h>
 #include <as_datatype.h>
 #include <as_generic.h>
 
@@ -31,9 +32,23 @@ void generic_add_obj_hack(asIScriptGeneric* gen) {
 	static_cast<SomeClass*>(g->currentObject)->a += g->stackPointer[0];
 }
 
+void generic_return_string(asIScriptGeneric* gen) {
+	std::string* ret = static_cast<std::string*>(gen->GetAddressOfReturnLocation());
+	new (ret) std::string("hello world! ");
+	*ret += std::to_string(gen->GetArgDWord(0));
+	*ret += ", ";
+	*ret += std::to_string(gen->GetArgDWord(1));
+	*ret += *static_cast<std::string*>(gen->GetArgObject(2));
+}
+
 void bind_generic_functions(asIScriptEngine& e) {
 	e.RegisterGlobalFunction("int generic_noarg()", asFUNCTION(generic_noarg_hack), asCALL_GENERIC);
 	e.RegisterGlobalFunction("int generic_sum3int(int, int, int)", asFUNCTION(generic_sum3int), asCALL_GENERIC);
+	e.RegisterGlobalFunction(
+	    "string generic_return_string(int, int, const string&in)",
+	    asFUNCTION(generic_return_string),
+	    asCALL_GENERIC
+	);
 
 	e.RegisterObjectType("SomeClass", sizeof(SomeClass), asOBJ_VALUE | asOBJ_POD);
 	e.RegisterObjectMethod(
@@ -50,8 +65,15 @@ TEST_CASE("generic calling convention", "[abi][conv_generic]") {
 	bind_generic_functions(*context.engine);
 
 	REQUIRE(run_string(context, "print(''+generic_noarg())") == "123\n");
+
+	// involves the stack pointer
 	REQUIRE(run_string(context, "print(''+generic_sum3int(500, 30, 2))") == "532\n");
+
+	// involves the object pointer
 	REQUIRE(run_string(context, "SomeClass s; s.a = 0; s.generic_add_obj(100); print(''+s.a);") == "100\n");
+
+	// involves a return on stack, but no cleanargs or otherwise
+	REQUIRE(run_string(context, "print(generic_return_string(123, 456, ' :3'));") == "hello world! 123, 456 :3\n");
 }
 
 TEST_CASE("generic abi benchmark", "[abi][conv_generic][benchmark]") {
