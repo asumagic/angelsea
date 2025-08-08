@@ -95,9 +95,9 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	if (m_config.experimental_direct_generic_call) {
 		// TODO: detect if there are any generic calls, should be easy in a prepass
 		emit(
-		    "\t\tasea_generic g;\n"
-		    "\t\tg._vtable = &asea_generic_vtable;\n"
-		    "\t\tg.engine = &asea_engine;\n"
+		    "\tasea_generic g;\n"
+		    "\tg._vtable = &asea_generic_vtable;\n"
+		    "\tg.engine = &asea_engine;\n"
 		);
 	}
 
