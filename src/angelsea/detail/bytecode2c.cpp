@@ -227,6 +227,18 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 				should_skip = m_config.hack_ignore_suspend;
 				break;
 
+			case asBC_CALLSYS: {
+				if (m_config.experimental_direct_generic_call) {
+					asCScriptEngine&   engine    = static_cast<asCScriptEngine&>(m_script_engine);
+					asCScriptFunction& script_fn = *engine.scriptFunctions[prev_ins.int0()];
+					internalCallConv   abi       = script_fn.sysFuncIntf->callConv;
+					should_skip                  = abi == ICC_GENERIC_FUNC || abi == ICC_GENERIC_METHOD;
+				} else {
+					should_skip = false;
+				}
+				break;
+			}
+
 				// assume asBC_CALL can always fallback
 			case asBC_CALL:
 				// TODO: all those fall back conditionally as of writing, remove when fixed
@@ -238,7 +250,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 			case asBC_LdGRdR4:
 			case asBC_RET:
 			case asBC_COPY:
-			case asBC_CALLSYS:
 			case asBC_CALLBND:
 			case asBC_CALLINTF:
 			case asBC_Thiscall1:
