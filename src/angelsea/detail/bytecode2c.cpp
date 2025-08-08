@@ -1217,7 +1217,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 
 	if (abi == ICC_GENERIC_METHOD) {
 		if (!call.object_pointer_override.empty()) {
-			emit("\t\tg.currentObject = {}\n", call.object_pointer_override);
+			emit("\t\tg.currentObject = {};\n", call.object_pointer_override);
 		} else {
 			emit(
 			    "\t\tpop_size += sizeof(asPWORD) / 4;\n"
