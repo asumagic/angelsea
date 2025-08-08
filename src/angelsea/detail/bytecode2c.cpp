@@ -1133,11 +1133,6 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 		return;
 	}
 
-	if (abi == ICC_GENERIC_METHOD) {
-		emit_vm_fallback(state, "TODO generic method");
-		return;
-	}
-
 	if (fn.DoesReturnOnStack()) {
 		emit_vm_fallback(state, "TODO return on stack");
 		return;
@@ -1186,7 +1181,13 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 
 	if (abi == ICC_GENERIC_METHOD) {
 		// TODO:
-		emit("\t\tg.currentObject = TODO;\n"); // FIXME
+		emit(
+		    "\t\tpop_size += sizeof(asPWORD) / 4;\n"
+		    "\t\targs += sizeof(asPWORD) / 4;\n"
+		    "\t\tg.currentObject = sp->as_ptr;\n"
+		    "\t\tif (g.currentObject == 0) {{ goto err_null; }}\n"
+		);
+		state.error_handlers.null = true;
 	}
 
 	if (!m_config.hack_generic_assume_callee_correctness) {
