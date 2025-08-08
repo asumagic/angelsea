@@ -251,8 +251,8 @@ in source **and** binary distributions!
 
 Currently, only the `asCALL_GENERIC` calling convention is supported (and not
 all of it yet). They will perform _much_ faster than native conventions, so we
-strongly recommend them for angelsea, as otherwise all your native calls will
-fall back to the VM.
+strongly recommend it for angelsea (for now), as otherwise all your native calls
+will fall back to the VM.
 
 In contrast, the BlindMindStudios JIT implements the native calling conventions
 to the extent that it can. This is much more complicated to support because it
