@@ -368,8 +368,8 @@ originates from it), but it was way too large in scope. It more or less intended
 to take over the entire interpreter, which meant total coverage of *all* of AS'
 low-level semantics before it was any useful. This is doubly a problem, because
 to speak the C ABI -- let alone the C++ ABI -- you basically need to do it
-yourself AFAIK. Besides, LLVM is _huge_, breaks on almost every major update,
-and is rather unreasonable for an embeddable language.
+yourself AFAIK. Besides, LLVM is _huge_, breaks API compatibility on almost
+every major update, and is rather unreasonable for an embeddable language.
 - Hazelight's UnrealEngine-AngelScript is way more involved than I thought and
 includes a [C++ AOT transpiler](https://github.com/Hazelight/UnrealEngine-Angelscript/tree/e1bdb40e97da880ae907030dda65639d5a4b7b3d/Engine/Plugins/Angelscript/Source/AngelscriptCode/Private/StaticJIT).
 To my understanding it is tightly coupled to that project and its fork of AS,
