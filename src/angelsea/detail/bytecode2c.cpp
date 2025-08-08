@@ -245,7 +245,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 			case asBC_CallPtr:
 			case asBC_ALLOC:
 			case asBC_FREE:
-			case asBC_GETREF:
 			case asBC_ClrVPtr:
 			case asBC_CpyVtoR8:
 			case asBC_CpyVtoG4:
