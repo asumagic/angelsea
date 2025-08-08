@@ -218,6 +218,10 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 			is_trace_supported = true;
 		}
 
+		if (!is_trace_supported) {
+			continue;
+		}
+
 		// consider skipping some JitEntry we believe the VM should never be hitting. this is useful to avoid
 		// pessimizing optimizations, so that the optimizer can merge subsequent basic blocks.
 		// TODO: we could also eliminate or comment out the label in many cases once we build in some knowledge of
