@@ -234,7 +234,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 			// assume asBC_CALL can always fallback
 		case asBC_CALL:
 			// TODO: all those fall back conditionally as of writing, remove when fixed
-		case asBC_RefCpyV:
 		case asBC_REFCPY:
 		// TODO: all of those are not implemented as of writing, remove when fixed
 		case asBC_SwapPtr:
