@@ -249,17 +249,79 @@ in source **and** binary distributions!
 
 ### What is the best supported calling convention?
 
-> [!NOTE]
-> As of writing, this is not true yet; asCALL_GENERIC calls are not yet handled.
+Currently, only the `asCALL_GENERIC` calling convention is supported (and not
+all of it yet). They will perform _much_ faster than native conventions, so we
+strongly recommend them for angelsea, as otherwise all your native calls will
+fall back to the VM.
 
-For now, special care is given to the `asCALL_GENERIC` convention
-performance-wise, but others will work (although they will fall back to the
-interpreter).  
-This is because it is the easiest to support without falling back to the
-interpreter, because it can be made reasonably fast, and because the primary
-downstream user of angelsea uses it exclusively.  
-As of writing, `asIScriptGeneric` is not a particularly efficient interface, but
-when the time comes, we may contribute back design improvements for it.
+In contrast, the BlindMindStudios JIT implements the native calling conventions
+to the extent that it can. This is much more complicated to support because it
+more or less involves reinventing the C++ ABI.
+
+Angelsea currently only supports the generic calling convention because it is
+the easiest to support without falling back to the interpreter, because it can
+be made reasonably fast, and because the primary downstream user of angelsea
+uses it exclusively.  
+As of writing, `asIScriptGeneric` is not a particularly efficient interface (see
+below), but when the time comes, we may try to contribute back design
+improvements for it.
+
+<details>
+<summary>Elaborating on the generic calling convention</summary>
+
+`asIScriptGeneric` is a rather slow interface by design. You might think that
+the native calling convention (e.g. `asCALL_CDECL` and all) might be faster, but
+it's not actually obvious why that would be true. In stock AngelScript (i.e. no
+JIT), the native convention is actually fairly slow as it needs to go through
+native shims that are fairly complex due to needing to handle arbitrary
+signatures, resulting in a rather impressive pile of C++ ABI emulation for each
+unique platform.
+
+AngelScript tries to be clever about this in some cases (e.g. `asBC_Thiscall1`),
+but native calls otherwise carry more overhead than you might think.
+
+In essence, the native calling convention actually fundamentally has to do
+_more_ work than the generic calling convention! In both cases, all arguments
+live on the AS stack either way, and have to be pulled out of it sooner or
+later. Whether AS itself or your app need to look up those arguments doesn't
+really matter.
+
+That being said, the generic calling convention *is* actually somewhat slow
+out-of-the-box in AngelScript, but this is not an unsolvable problem.  
+The callee (your code) needs to do, for _every_ argument or other call to the
+generic, a virtual function call. This is usually not outrageously expensive,
+but it prevents inlining despite the functions being (overall) not very
+expensive each.  
+Worse, some functions also do a lot of work and e.g. need to look up the
+script function type information and then loop over arguments,
+_for every argument lookup you do_.
+
+When automatically wrapping functions for the generic calling convention, it
+actually is feasible to hack a lot of that complexity away by directly poking at
+`asCGeneric`.  
+I do have some automatic wrappers in use for
+[King Arthur's Gold](https://store.steampowered.com/app/219830/King_Arthurs_Gold/),
+which wrap essentially all of our thousands of bindings, but I believe that 
+AngelScript itself has a similar pile of templates nowadays. If there's interest
+in my generic wrappers, hacks included, I can try cleaning it up and providing
+it standalone and/or as part of angelsea.
+
+For JIT compilers, all of this is not necessarily true. In theory, even somewhat
+naive compilers (like angelsea) could bypass the AngelScript stack for values it
+knows won't need to be manipulated by AS. In this case, the stack could be
+completely bypassed for passing simple arguments, which would result in
+excellent call performance with the native calling convention.  
+At the time of writing, this is not anything angelsea can do, though.
+
+angelsea is able to make generic calls much faster by doing a lot less work than
+the AngelScript VM, though, largely thanks to the fact we can generate code
+tailored for each functions, skipping steps and branches we know are
+unnecessary. It also has some hacks like pooling the `asCGeneric` objects at
+function level to skip reinitialization of fields that never change.  
+This allows angelsea to give a ~5x performance uplift for a 1 million generic
+calls benchmark.
+
+</details>
 
 ### Why generate C instead of MIR?
 
