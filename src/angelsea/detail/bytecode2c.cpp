@@ -520,15 +520,37 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_RefCpyV: {
-		asCObjectType* type = reinterpret_cast<asCObjectType*>(ins.pword0());
-		// asSTypeBehaviour& beh  = type->beh;
+		asCObjectType*    type = reinterpret_cast<asCObjectType*>(ins.pword0());
+		asSTypeBehaviour& beh  = type->beh;
+
+		emit(
+		    "\t\tasPWORD src = sp->as_asPWORD;\n"
+		    "\t\tasPWORD* dst = &{DST};\n",
+		    fmt::arg("DST", frame_var(ins.sword0(), pword))
+		);
 
 		if (!(type->flags & (asOBJ_NOCOUNT | asOBJ_VALUE))) {
-			emit_vm_fallback(state, "can't handle release/addref for RefCpyV calls yet");
-			break;
+			// TODO: fix indent within call
+			if (beh.release != 0) {
+				emit("\t\tif (*dst != 0) {{\n");
+				emit_system_call(
+				    state,
+				    {.fn_idx = beh.release, .object_pointer_override = "(void*)*dst", .is_internal_call = true}
+				);
+				emit("\t\t}}\n");
+			}
+
+			if (beh.addref != 0) {
+				emit("\t\tif (src != 0) {{\n");
+				emit_system_call(
+				    state,
+				    {.fn_idx = beh.addref, .object_pointer_override = "(void*)src", .is_internal_call = true}
+				);
+				emit("\t\t}}\n");
+			}
 		}
 
-		emit("\t\t{DST} = sp->as_asPWORD;\n", fmt::arg("DST", frame_var(ins.sword0(), pword)));
+		emit("\t\t*dst = src;\n");
 		emit_auto_bc_inc(state);
 
 		break;
@@ -670,9 +692,19 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_CALL:      emit_direct_script_call_ins(state, ins.int0()); break;
 	case asBC_Thiscall1:
-	case asBC_CALLSYS:   emit_direct_system_call_ins(state, ins.int0()); break;
+	case asBC_CALLSYS:   {
+		if (auto result = emit_direct_system_call(
+		        state,
+		        SystemCall{.fn_idx = ins.int0(), .object_pointer_override = {}, .is_internal_call = false}
+		    );
+		    !result.ok) {
+			emit_vm_fallback(state, result.fail_reason);
+		}
+		emit_auto_bc_inc(state);
+		break;
+	}
 
-	case asBC_JMP:       {
+	case asBC_JMP: {
 		emit(
 		    "\t\tpc += {BRANCH_OFFSET};\n"
 		    "\t\tgoto bc{BRANCH_TARGET};\n",
@@ -1087,50 +1119,65 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, int fn_idx) {
 	}
 }
 
-void BytecodeToC::emit_direct_system_call_ins(FnState& state, int fn_idx) {
+void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
+	const auto result = emit_direct_system_call(state, call);
+	if (!result.ok) {
+		// fallback approach to ensure the call always succeeds even if we cannot emit a direct call
+		if (m_config.c.human_readable) {
+			emit("\t\t/* Fallback to VM call: {} */\n", result.fail_reason);
+		}
+
+		if (!call.is_internal_call) {
+			emit("\t\tasea_system_function_call(_regs, {});\n", call.fn_idx);
+		} else {
+			// TODO: assert for method
+			emit("\t\tasea_call_object_method(_regs, {}, {});\n", call.object_pointer_override, call.fn_idx);
+		}
+	}
+}
+
+BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& state, SystemCall call) {
 	if (!m_config.hack_ignore_exceptions) {
-		emit_vm_fallback(state, "Direct system call failed: hack_ignore_exceptions == false");
-		return;
+		return {.ok = false, .fail_reason = "Direct system call failed: hack_ignore_exceptions == false"};
 	}
 
 	if (!m_config.hack_ignore_suspend) {
-		emit_vm_fallback(state, "Direct system call failed: hack_ignore_suspend == false");
+		return {.ok = false, .fail_reason = "Direct system call failed: hack_ignore_suspend == false"};
 	}
 
 	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
 
-	const std::string           fn_callable_symbol = fmt::format("{}_sysfnptr{}", m_c_symbol_prefix, fn_idx);
-	const std::string           fn_desc_symbol     = fmt::format("{}_sysfn{}", m_c_symbol_prefix, fn_idx);
-	asCScriptFunction&          script_fn          = *engine.scriptFunctions[fn_idx];
+	const std::string           fn_callable_symbol = fmt::format("{}_sysfnptr{}", m_c_symbol_prefix, call.fn_idx);
+	const std::string           fn_desc_symbol     = fmt::format("{}_sysfn{}", m_c_symbol_prefix, call.fn_idx);
+	asCScriptFunction&          script_fn          = *engine.scriptFunctions[call.fn_idx];
 	asSSystemFunctionInterface& sys_fn             = *script_fn.sysFuncIntf;
 	const internalCallConv      abi                = sys_fn.callConv;
 
 	if (m_on_map_extern_callback) {
-		m_on_map_extern_callback(fn_desc_symbol.c_str(), ExternScriptFunction{fn_idx}, &script_fn);
+		m_on_map_extern_callback(fn_desc_symbol.c_str(), ExternScriptFunction{call.fn_idx}, &script_fn);
 		m_on_map_extern_callback(
 		    fn_callable_symbol.c_str(),
-		    ExternSystemFunction{fn_idx},
+		    ExternSystemFunction{call.fn_idx},
 		    reinterpret_cast<void**>(sys_fn.func)
 		);
 	}
 
 	if (abi == ICC_GENERIC_FUNC || abi == ICC_GENERIC_METHOD) {
-		emit_direct_system_call_generic_ins(state, script_fn, fn_desc_symbol, fn_callable_symbol);
-		return;
+		return emit_direct_system_call_generic(state, call, script_fn, fn_desc_symbol, fn_callable_symbol);
 	}
 
-	emit_vm_fallback(state, "Unsupported calling convention");
+	return {.ok = false, .fail_reason = "Unsupported calling convention"};
 }
 
-void BytecodeToC::emit_direct_system_call_generic_ins(
+BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
     FnState&           state,
+    SystemCall         call,
     asCScriptFunction& fn,
     std::string_view   fn_desc_symbol,
     std::string_view   fn_callable_symbol
 ) {
 	if (!m_config.experimental_direct_generic_call) {
-		emit_vm_fallback(state, "Direct generic call failed: experimental_direct_generic_call == false");
-		return;
+		return {.ok = false, .fail_reason = "Direct generic call failed: experimental_direct_generic_call == false"};
 	}
 
 	asCScriptEngine&            engine = static_cast<asCScriptEngine&>(m_script_engine);
@@ -1138,16 +1185,16 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 
 	const internalCallConv abi = sys_fn.callConv;
 
-	if (fn.IsVariadic()) {
-		// TODO: variadics are a bit annoying to support; certainly viable but they're so rare that other than full AOT
-		// i don't see the point to support them
-		emit_vm_fallback(state, "Direct generic call failed: Variadics not supported yet");
-		return;
-	}
+	if (!call.is_internal_call) {
+		if (fn.IsVariadic()) {
+			// TODO: variadics are a bit annoying to support; certainly viable but they're so rare that other than full
+			// AOT i don't see the point to support them
+			return {.ok = false, .fail_reason = "Direct generic call failed: Variadics not supported yet"};
+		}
 
-	if (sys_fn.returnAutoHandle && engine.ep.genericCallMode == 1) {
-		emit_vm_fallback(state, "TODO auto handle");
-		return;
+		if (sys_fn.returnAutoHandle && engine.ep.genericCallMode == 1) {
+			return {.ok = false, .fail_reason = "Direct generic call failed: Auto handles not supported yet"};
+		}
 	}
 
 	if (!m_config.hack_ignore_context_inspect) {
@@ -1169,29 +1216,33 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 	// FIXME: set m_callingSystemFunction -- also relevant to the above?
 
 	if (abi == ICC_GENERIC_METHOD) {
-		// TODO:
-		emit(
-		    "\t\tpop_size += sizeof(asPWORD) / 4;\n"
-		    "\t\targs += sizeof(asPWORD) / 4;\n"
-		    "\t\tg.currentObject = sp->as_ptr;\n"
-		    "\t\tif (g.currentObject == 0) {{ goto err_null; }}\n"
-		);
-		state.error_handlers.null = true;
+		if (!call.object_pointer_override.empty()) {
+			emit("\t\tg.currentObject = {}\n", call.object_pointer_override);
+		} else {
+			emit(
+			    "\t\tpop_size += sizeof(asPWORD) / 4;\n"
+			    "\t\targs += sizeof(asPWORD) / 4;\n"
+			    "\t\tg.currentObject = sp->as_ptr;\n"
+			    "\t\tif (g.currentObject == 0) {{ goto err_null; }}\n"
+			);
+			state.error_handlers.null = true;
+		}
 	}
 
-	if (fn.DoesReturnOnStack()) {
-		emit(
-		    "\t\tpop_size += sizeof(asPWORD) / 4;\n"
-		    "\t\targs += sizeof(asPWORD) / 4;\n"
-		);
+	if (!call.is_internal_call) {
+		if (fn.DoesReturnOnStack()) {
+			emit(
+			    "\t\tpop_size += sizeof(asPWORD) / 4;\n"
+			    "\t\targs += sizeof(asPWORD) / 4;\n"
+			);
+		}
+		emit("\t\tg.stackPointer = args;\n"); // TODO: don't write if the stack never needs to be accessed
 	}
 
 	emit(
 	    "\t\textern void {FNCALLABLE}(asea_generic*);\n"
 	    "\t\textern void {FNDESC};\n"
-	    "\t\tg.sysFunction = &{FNDESC};\n"
-	    "\t\tg.stackPointer = args;\n" // TODO: don't write if the stack never needs to be accessed
-	    ,
+	    "\t\tg.sysFunction = &{FNDESC};\n",
 	    fmt::arg("FNDESC", fn_desc_symbol),
 	    fmt::arg("FNCALLABLE", fn_callable_symbol)
 	);
@@ -1203,30 +1254,33 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 		);
 	}
 
-	emit(
-	    "\t\t{FNCALLABLE}(&g);\n"
-	    // TODO: we can probably statically tell which regs need to be written to and which don't
-	    "\t\tregs->value.as_asPWORD = g.returnVal;\n"
-	    "\t\tsp = (asea_var*)((asDWORD*)sp + pop_size);\n",
-	    fmt::arg("FNCALLABLE", fn_callable_symbol)
-	);
+	emit("\t\t{FNCALLABLE}(&g);\n", fmt::arg("FNCALLABLE", fn_callable_symbol));
 
-	if (asITypeInfo* ret_type_info = fn.returnType.GetTypeInfo(); ret_type_info != nullptr) {
-		const auto ret_type_info_expr = emit_type_info_lookup(state, *ret_type_info);
+	if (!call.is_internal_call) {
+		// TODO: we can probably statically tell which regs need to be written to and which don't
 		emit(
-		    "\t\tregs->obj = g.objectRegister;\n"
-		    "\t\tregs->obj_type = {RETTYPEINFO};\n", // FIXME: emit a symbol for the obj type, it's static (thankfully)
-		    fmt::arg("RETTYPEINFO", ret_type_info_expr)
+		    "\t\tregs->value.as_asPWORD = g.returnVal;\n"
+		    "\t\tsp = (asea_var*)((asDWORD*)sp + pop_size);\n"
 		);
+
+		if (asITypeInfo* ret_type_info = fn.returnType.GetTypeInfo(); ret_type_info != nullptr) {
+			const auto ret_type_info_expr = emit_type_info_lookup(state, *ret_type_info);
+			emit(
+			    "\t\tregs->obj = g.objectRegister;\n"
+			    "\t\tregs->obj_type = {RETTYPEINFO};\n", // FIXME: emit a symbol for the obj type, it's static
+			                                             // (thankfully)
+			    fmt::arg("RETTYPEINFO", ret_type_info_expr)
+			);
+		}
+
+		// TODO: JIT compile this, but it probably isn't *that* important since frees are likely to be moderately
+		// expensive compared to a few branches either way
+		if (sys_fn.cleanArgs.GetLength() > 0) {
+			emit("\t\tasea_clean_args(_regs, &{FNDESC}, args);\n", fmt::arg("FNDESC", fn_desc_symbol));
+		}
 	}
 
-	// TODO: JIT compile this, but it probably isn't *that* important since frees are likely to be moderately expensive
-	// compared to a few branches either way
-	if (sys_fn.cleanArgs.GetLength() > 0) {
-		emit("\t\tasea_clean_args(_regs, &{FNDESC}, args);\n", fmt::arg("FNDESC", fn_desc_symbol));
-	}
-
-	emit_auto_bc_inc(state);
+	return {.ok = true, .fail_reason = {}};
 }
 
 void BytecodeToC::emit_stack_push_ins(FnState& state, std::string_view expr, VarType type) {

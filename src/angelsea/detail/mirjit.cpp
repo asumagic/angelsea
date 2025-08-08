@@ -26,6 +26,8 @@ C2Mir::~C2Mir() { c2mir_finish(m_ctx); }
 static void bind_runtime(Mir& mir) {
 #define ASEA_BIND_MIR(name) MIR_load_external(mir, #name, reinterpret_cast<void*>(name))
 	ASEA_BIND_MIR(asea_call_script_function);
+	ASEA_BIND_MIR(asea_call_system_function);
+	ASEA_BIND_MIR(asea_call_object_method);
 	ASEA_BIND_MIR(asea_prepare_script_stack);
 	ASEA_BIND_MIR(asea_debug_message);
 	ASEA_BIND_MIR(asea_set_internal_exception);

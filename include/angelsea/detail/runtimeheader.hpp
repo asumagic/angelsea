@@ -173,6 +173,8 @@ void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text)
 float asea_fmodf(float a, float b);
 float asea_fmod(float a, float b);
 void asea_clean_args(asSVMRegisters* vm_registers, void* function, asDWORD* args);
+int asea_call_system_function(asSVMRegisters* vm_registers, int fn);
+int asea_call_object_method(asSVMRegisters* vm_registers, void* obj, int fn);
 
 extern void asea_engine;
 extern void asea_generic_vtable;

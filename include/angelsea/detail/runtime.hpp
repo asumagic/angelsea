@@ -17,6 +17,16 @@ extern "C" {
 /// The JIT function should always return to the VM after calling this function.
 void asea_call_script_function(asSVMRegisters* vm_registers, asCScriptFunction& fn);
 
+/// \brief Shim for CallSystemFunction. Can be a method being called, but typically only for call instructions that deal
+/// with the context's stack. If you want to call a specific object method instead and provide your own object pointer,
+/// use `asea_call_system_method` instead.
+///
+/// Returns the number of DWORDs that should be popped from the stack by the caller.
+int asea_call_system_function(asSVMRegisters* vm_registers, int fn);
+
+/// \brief Shim for CallObjectMethod.
+void asea_call_object_method(asSVMRegisters* vm_registers, void* obj, int fn);
+
 int asea_prepare_script_stack(
     asSVMRegisters*    vm_registers,
     asCScriptFunction& fn,

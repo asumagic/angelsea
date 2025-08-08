@@ -130,10 +130,24 @@ class BytecodeToC {
 	std::string emit_global_lookup(FnState& state, void** pointer, bool global_var_only);
 	std::string emit_type_info_lookup(FnState& state, asITypeInfo& type);
 
-	void emit_direct_script_call_ins(FnState& state, int fn_idx);
-	void emit_direct_system_call_ins(FnState& state, int fn_idx);
-	void emit_direct_system_call_generic_ins(
+	struct SystemCall {
+		int              fn_idx;
+		std::string_view object_pointer_override;
+		/// Is this a direct function call from the VM (e.g. for behaviors), or is this a script call
+		bool is_internal_call;
+	};
+
+	struct SystemCallEmitResult {
+		bool             ok;
+		std::string_view fail_reason;
+	};
+
+	void                               emit_direct_script_call_ins(FnState& state, int fn_idx);
+	void                               emit_system_call(FnState& state, SystemCall call);
+	[[nodiscard]] SystemCallEmitResult emit_direct_system_call(FnState& state, SystemCall call);
+	[[nodiscard]] SystemCallEmitResult emit_direct_system_call_generic(
 	    FnState&           state,
+	    SystemCall         call,
 	    asCScriptFunction& fn,
 	    std::string_view   fn_desc_symbol,
 	    std::string_view   fn_callable_symbol

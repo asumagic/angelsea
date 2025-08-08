@@ -20,6 +20,14 @@ void asea_call_script_function(asSVMRegisters* vm_registers, asCScriptFunction& 
 	asea_get_context(vm_registers).CallScriptFunction(&fn);
 }
 
+int asea_call_system_function(asSVMRegisters* vm_registers, int fn) {
+	return CallSystemFunction(fn, &asea_get_context(vm_registers));
+}
+
+void asea_call_object_method(asSVMRegisters* vm_registers, void* obj, int fn) {
+	asea_get_engine(vm_registers).CallObjectMethod(obj, fn);
+}
+
 int asea_prepare_script_stack(
     asSVMRegisters*    vm_registers,
     asCScriptFunction& fn,
