@@ -65,10 +65,13 @@ angelsea::JitConfig get_test_jit_config() {
 	    .log_targets = {
 			.verbose = is_env_set("ASEA_VERBOSE") ? asMSGTYPE_INFORMATION : (asEMsgType)-1,
 		},
-	    .debug       = {
-	              .dump_c_code   = is_env_set("ASEA_DUMP_C"),
-	              .dump_mir_code = is_env_set("ASEA_DUMP_MIR"),
-        },
+	    .debug = {
+	        .dump_c_code   = is_env_set("ASEA_DUMP_C"),
+	        .dump_mir_code = is_env_set("ASEA_DUMP_MIR"),
+		},
+		.c = {
+			.human_readable = true
+		},
 	};
 
 	set_env_int_variable("ASEA_MIR_DEBUG_LEVEL", config.debug.mir_debug_level);
