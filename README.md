@@ -338,7 +338,9 @@ certain platforms (e.g. iOS) which notoriously ban JITs. You still would need
 the interpreter (if only because Angelsea will fallback to it), but in theory,
 all you would need to do is use bytecode2c with appropriate symbol callbacks,
 and add some glue code by implementing your own `asIJITCompiler` that map JIT
-entry points to C++.
+entry points to C++. (This isn't really an easy task yet, and there are _still_
+some prerequisite refactors before this is viable, but the overall design
+fundamentally allows it.)
 3. In theory, it enables the ability to inject native C code. Because MIR is
 capable of inlining functions, they could be made to implement
 performance-sensitive things like some array calls and avoid a native function
