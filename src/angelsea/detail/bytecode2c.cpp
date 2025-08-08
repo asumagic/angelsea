@@ -227,20 +227,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 			is_trace_supported = m_config.hack_ignore_suspend;
 			break;
 
-		case asBC_Thiscall1:
-		case asBC_CALLSYS:   {
-			if (m_config.experimental_direct_generic_call) {
-				asCScriptEngine&   engine    = static_cast<asCScriptEngine&>(m_script_engine);
-				asCScriptFunction& script_fn = *engine.scriptFunctions[ins.int0()];
-				internalCallConv   abi       = script_fn.sysFuncIntf->callConv;
-
-				is_trace_supported = abi == ICC_GENERIC_FUNC || abi == ICC_GENERIC_METHOD;
-			} else {
-				is_trace_supported = false;
-			}
-			break;
-		}
-
 			// assume asBC_CALL can always fallback
 		case asBC_CALL:
 			// TODO: all those fall back conditionally as of writing, remove when fixed
@@ -693,13 +679,10 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CALL:      emit_direct_script_call_ins(state, ins.int0()); break;
 	case asBC_Thiscall1:
 	case asBC_CALLSYS:   {
-		if (auto result = emit_direct_system_call(
-		        state,
-		        SystemCall{.fn_idx = ins.int0(), .object_pointer_override = {}, .is_internal_call = false}
-		    );
-		    !result.ok) {
-			emit_vm_fallback(state, result.fail_reason);
-		}
+		emit_system_call(
+		    state,
+		    SystemCall{.fn_idx = ins.int0(), .object_pointer_override = {}, .is_internal_call = false}
+		);
 		emit_auto_bc_inc(state);
 		break;
 	}

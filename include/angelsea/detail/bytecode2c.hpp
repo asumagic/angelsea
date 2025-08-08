@@ -142,9 +142,19 @@ class BytecodeToC {
 		std::string_view fail_reason;
 	};
 
-	void                               emit_direct_script_call_ins(FnState& state, int fn_idx);
-	void                               emit_system_call(FnState& state, SystemCall call);
+	void emit_direct_script_call_ins(FnState& state, int fn_idx);
+
+	/// Emit code to perform a system call, potentially directly if config allows. On failure, a direct call is emitted.
+	/// This function never calls emit_vm_fallback; i.e. it may perform calls via the VM but it will never return from
+	/// the JIT function to do so.
+	void emit_system_call(FnState& state, SystemCall call);
+
+	/// Emit code to perform a direct system call (i.e. with a known signature and target). On failure, no code is
+	/// emitted and the returned result object sets `ok == false`.
 	[[nodiscard]] SystemCallEmitResult emit_direct_system_call(FnState& state, SystemCall call);
+
+	/// Emit code to perform a direct system call (i.e. with a known signature and target), assuming it is of the
+	/// generic calling convention. On failure, no code is emitted and the returned result object sets `ok == false`.
 	[[nodiscard]] SystemCallEmitResult emit_direct_system_call_generic(
 	    FnState&           state,
 	    SystemCall         call,
