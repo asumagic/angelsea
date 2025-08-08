@@ -227,7 +227,8 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 				should_skip = m_config.hack_ignore_suspend;
 				break;
 
-			case asBC_CALLSYS: {
+			case asBC_Thiscall1:
+			case asBC_CALLSYS:   {
 				if (m_config.experimental_direct_generic_call) {
 					asCScriptEngine&   engine    = static_cast<asCScriptEngine&>(m_script_engine);
 					asCScriptFunction& script_fn = *engine.scriptFunctions[prev_ins.int0()];
@@ -252,7 +253,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 			case asBC_COPY:
 			case asBC_CALLBND:
 			case asBC_CALLINTF:
-			case asBC_Thiscall1:
 			case asBC_CallPtr:
 			case asBC_ALLOC:
 			case asBC_FREE:
@@ -673,13 +673,14 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit_auto_bc_inc(state);
 		break;
 	}
-	case asBC_RDR4:    emit_assign_ins(state, frame_var(ins.sword0(), u32), "regs->value.as_var_ptr->as_asDWORD"); break;
-	case asBC_RDR8:    emit_assign_ins(state, frame_var(ins.sword0(), u64), "regs->value.as_var_ptr->as_asQWORD"); break;
+	case asBC_RDR4:      emit_assign_ins(state, frame_var(ins.sword0(), u32), "regs->value.as_var_ptr->as_asDWORD"); break;
+	case asBC_RDR8:      emit_assign_ins(state, frame_var(ins.sword0(), u64), "regs->value.as_var_ptr->as_asQWORD"); break;
 
-	case asBC_CALL:    emit_direct_script_call_ins(state, ins.int0()); break;
-	case asBC_CALLSYS: emit_direct_system_call_ins(state, ins.int0()); break;
+	case asBC_CALL:      emit_direct_script_call_ins(state, ins.int0()); break;
+	case asBC_Thiscall1:
+	case asBC_CALLSYS:   emit_direct_system_call_ins(state, ins.int0()); break;
 
-	case asBC_JMP:     {
+	case asBC_JMP:       {
 		emit(
 		    "\t\tpc += {BRANCH_OFFSET};\n"
 		    "\t\tgoto bc{BRANCH_TARGET};\n",
@@ -884,7 +885,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_COPY:         // TODO: find way to emit
 	case asBC_CALLBND:      // TODO: find way to emit & implement (calls & syscalls)
 	case asBC_CALLINTF:     // TODO: implement (calls & syscalls)
-	case asBC_Thiscall1:    // TODO: implement (calls & syscalls) -- can probably just do callsys directly?
 	case asBC_CallPtr:      // TODO: find way to emit & implement (calls & syscalls) -- probably just functors
 	case asBC_ALLOC:        // TODO: implement
 	case asBC_FREE:         // TODO: implement
