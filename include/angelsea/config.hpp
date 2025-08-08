@@ -123,7 +123,7 @@ struct JitConfig {
 		/// Requires compiler support (includes: C2MIR, gcc, clang, but not MSVC).
 		/// Disabled by default, because it seems to regress performance with C2MIR.
 		bool use_gnu_label_as_value = false;
-		bool human_readable         = true;
+		bool human_readable         = false;
 		bool copyright_header       = false;
 	};
 	CGeneratorConfig c;
