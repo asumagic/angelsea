@@ -601,6 +601,17 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
+	case asBC_GETREF: {
+		emit(
+		    "\t\tasPWORD *var_idx = &{VAR};\n"
+		    "\t\t{VAR} = (asPWORD){VARDEREF};\n",
+		    fmt::arg("VAR", stack_var(ins.word0(), pword)),
+		    fmt::arg("VARDEREF", frame_ptr("(int)*var_idx"))
+		);
+		emit_auto_bc_inc(state);
+		break;
+	}
+
 	case asBC_LoadRObjR: {
 		emit(
 		    "\t\tasPWORD base = {VAR};\n"
@@ -867,7 +878,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CallPtr:      // TODO: find way to emit & implement (calls & syscalls) -- probably just functors
 	case asBC_ALLOC:        // TODO: implement
 	case asBC_FREE:         // TODO: implement
-	case asBC_GETREF:       // TODO: implement
 	case asBC_ClrVPtr:      // TODO: find way to emit (maybe asOBJ_SCOPED?)
 	case asBC_CpyVtoR8:     // TODO: find way to emit (probably easy and similar to CpyVtoR4)
 	case asBC_CpyVtoG4:     // TODO: find way to emit
