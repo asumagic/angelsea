@@ -1160,9 +1160,6 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 	    fmt::arg("INIT_POP_SIZE", sys_fn.paramSize)
 	);
 
-	asITypeInfo* ret_type_info      = fn.returnType.GetTypeInfo();
-	const auto   ret_type_info_expr = ret_type_info != nullptr ? emit_type_info_lookup(state, *ret_type_info) : "0";
-
 	// TODO: check which of those could skip initialization if there are cases where the asCGeneric methods will never
 	// read them
 
@@ -1211,11 +1208,10 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 	    // TODO: we can probably statically tell which regs need to be written to and which don't
 	    "\t\tregs->value.as_asPWORD = g.returnVal;\n"
 	    "\t\tsp = (asea_var*)((asDWORD*)sp + pop_size);\n",
-	    fmt::arg("FNCALLABLE", fn_callable_symbol),
-	    fmt::arg("RETTYPEINFO", ret_type_info_expr)
+	    fmt::arg("FNCALLABLE", fn_callable_symbol)
 	);
 
-	if (ret_type_info != nullptr) {
+	if (asITypeInfo* ret_type_info = fn.returnType.GetTypeInfo(); ret_type_info != nullptr) {
 		const auto ret_type_info_expr = emit_type_info_lookup(state, *ret_type_info);
 		emit(
 		    "\t\tregs->obj = g.objectRegister;\n"
