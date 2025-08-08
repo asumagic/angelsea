@@ -199,104 +199,96 @@ std::string BytecodeToC::create_new_entry_point_name([[maybe_unused]] asIScriptF
 void BytecodeToC::configure_jit_entries(FnState& state) {
 	asPWORD jit_entry_id = 1;
 
+	// answers: is the sequence of instructions since the last jit entry likely supported?
+	bool is_trace_supported = true;
+
 	auto bytecode = get_bytecode(state.fn);
 	for (auto it = bytecode.begin(), prev = it; it != bytecode.end(); prev = it, ++it) {
 		BytecodeInstruction ins = *it;
 
-		if (ins.info->bc != asBC_JitEntry) {
-			continue;
+		if (ins.info->bc == asBC_JitEntry) {
+			if (it == bytecode.begin() || !is_trace_supported) {
+				ins.pword0() = jit_entry_id;
+				++jit_entry_id;
+			} else {
+				// neutralize jit entry point
+				ins.pword0() = 0;
+			}
+
+			is_trace_supported = true;
 		}
 
-		// always clear pword0 as there may be trash data
-		ins.pword0() = 0;
+		// consider skipping some JitEntry we believe the VM should never be hitting. this is useful to avoid
+		// pessimizing optimizations, so that the optimizer can merge subsequent basic blocks.
+		// TODO: we could also eliminate or comment out the label in many cases once we build in some knowledge of
+		// branch targets (including switches, so JMPP), which may avoid emitting many basic blocks to start with
+		switch (ins.info->bc) {
+		case asBC_SUSPEND: // TODO: falls back as of writing, remove when fixed
+			is_trace_supported = m_config.hack_ignore_suspend;
+			break;
 
-		if (it != bytecode.begin()) {
-			// consider skipping some JitEntry we believe the VM should never be hitting. this is useful to avoid
-			// pessimizing optimizations, so that the optimizer can merge subsequent basic blocks.
-			// TODO: we could also eliminate or comment out the label in many cases once we build in some knowledge of
-			// branch targets (including switches, so JMPP), which may avoid emitting many basic blocks to start with
+		case asBC_Thiscall1:
+		case asBC_CALLSYS:   {
+			if (m_config.experimental_direct_generic_call) {
+				asCScriptEngine&   engine    = static_cast<asCScriptEngine&>(m_script_engine);
+				asCScriptFunction& script_fn = *engine.scriptFunctions[ins.int0()];
+				internalCallConv   abi       = script_fn.sysFuncIntf->callConv;
 
-			BytecodeInstruction prev_ins    = *prev;
-			bool                should_skip = false;
-
-			// TODO: check what are the conditions for AS to insert jit entries to validate below claims
-
-			// check previous instruction
-			switch (prev_ins.info->bc) {
-			case asBC_SUSPEND: // TODO: falls back as of writing, remove when fixed
-				should_skip = m_config.hack_ignore_suspend;
-				break;
-
-			case asBC_Thiscall1:
-			case asBC_CALLSYS:   {
-				if (m_config.experimental_direct_generic_call) {
-					asCScriptEngine&   engine    = static_cast<asCScriptEngine&>(m_script_engine);
-					asCScriptFunction& script_fn = *engine.scriptFunctions[prev_ins.int0()];
-					internalCallConv   abi       = script_fn.sysFuncIntf->callConv;
-					should_skip                  = abi == ICC_GENERIC_FUNC || abi == ICC_GENERIC_METHOD;
-				} else {
-					should_skip = false;
-				}
-				break;
+				is_trace_supported = abi == ICC_GENERIC_FUNC || abi == ICC_GENERIC_METHOD;
+			} else {
+				is_trace_supported = false;
 			}
-
-				// assume asBC_CALL can always fallback
-			case asBC_CALL:
-				// TODO: all those fall back conditionally as of writing, remove when fixed
-			case asBC_RefCpyV:
-			case asBC_REFCPY:
-			// TODO: all of those are not implemented as of writing, remove when fixed
-			case asBC_SwapPtr:
-			case asBC_PshG4:
-			case asBC_LdGRdR4:
-			case asBC_RET:
-			case asBC_COPY:
-			case asBC_CALLBND:
-			case asBC_CALLINTF:
-			case asBC_CallPtr:
-			case asBC_ALLOC:
-			case asBC_FREE:
-			case asBC_ClrVPtr:
-			case asBC_CpyVtoR8:
-			case asBC_CpyVtoG4:
-			case asBC_CpyGtoV4:
-			case asBC_ChkRefS:
-			case asBC_ChkNullV:
-			case asBC_Cast:
-			case asBC_ChkNullS:
-			case asBC_ClrHi:
-			case asBC_FuncPtr:
-			case asBC_LoadVObjR:
-			case asBC_AllocMem:
-			case asBC_SetListSize:
-			case asBC_PshListElmnt:
-			case asBC_SetListType:
-			case asBC_POWi:
-			case asBC_POWu:
-			case asBC_POWf:
-			case asBC_POWd:
-			case asBC_POWdi:
-			case asBC_POWi64:
-			case asBC_POWu64:       should_skip = false; break;
-
-			// only skip if it's a known instruction as of writing
-			default:                should_skip = prev_ins.info->bc <= asBC_Thiscall1;
-			}
-
-			// NOTE: this doesn't seem to need to care about branch targets: we normally support basically all branching
-			// instructions, and AS should always be emitting a jit entry at _some point_ before
-
-			// NOTE: we shouldn't remove the jitentry after an asBC_CALL because it's not unlikely the callee is going
-			// to want to return execution to the VM -- in that case, we always immediately return to the VM
-
-			if (should_skip) {
-				continue;
-			}
+			break;
 		}
 
-		ins.pword0() = jit_entry_id;
+			// assume asBC_CALL can always fallback
+		case asBC_CALL:
+			// TODO: all those fall back conditionally as of writing, remove when fixed
+		case asBC_RefCpyV:
+		case asBC_REFCPY:
+		// TODO: all of those are not implemented as of writing, remove when fixed
+		case asBC_SwapPtr:
+		case asBC_PshG4:
+		case asBC_LdGRdR4:
+		case asBC_RET:
+		case asBC_COPY:
+		case asBC_CALLBND:
+		case asBC_CALLINTF:
+		case asBC_CallPtr:
+		case asBC_ALLOC:
+		case asBC_FREE:
+		case asBC_ClrVPtr:
+		case asBC_CpyVtoR8:
+		case asBC_CpyVtoG4:
+		case asBC_CpyGtoV4:
+		case asBC_ChkRefS:
+		case asBC_ChkNullV:
+		case asBC_Cast:
+		case asBC_ChkNullS:
+		case asBC_ClrHi:
+		case asBC_FuncPtr:
+		case asBC_LoadVObjR:
+		case asBC_AllocMem:
+		case asBC_SetListSize:
+		case asBC_PshListElmnt:
+		case asBC_SetListType:
+		case asBC_POWi:
+		case asBC_POWu:
+		case asBC_POWf:
+		case asBC_POWd:
+		case asBC_POWdi:
+		case asBC_POWi64:
+		case asBC_POWu64:       is_trace_supported = false; break;
 
-		++jit_entry_id;
+		// only skip if it's a known instruction as of writing
+		default:                is_trace_supported = ins.info->bc <= asBC_Thiscall1;
+		}
+
+		// NOTE: this doesn't seem to need to care about branch targets: we normally support basically all branching
+		// instructions, and AS should always be emitting a jit entry at _some point_ before
+
+		// NOTE: we shouldn't remove the jitentry after an asBC_CALL because it's not unlikely the callee is going
+		// to want to return execution to the VM -- in that case, we always immediately return to the VM
 	}
 
 	state.has_any_late_jit_entries = jit_entry_id > 2; // because of the increment
@@ -408,7 +400,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	using namespace var_types;
 	auto& ins = state.ins;
 
-	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
+	// asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
 
 	if (m_config.c.human_readable) {
 		emit("\t/* bytecode: {} */\n", disassemble(m_script_engine, ins));
@@ -1003,7 +995,7 @@ std::string BytecodeToC::emit_global_lookup(
 	return fn_symbol;
 }
 
-std::string BytecodeToC::emit_type_info_lookup(FnState& state, asITypeInfo& type) {
+std::string BytecodeToC::emit_type_info_lookup([[maybe_unused]] FnState& state, asITypeInfo& type) {
 	const std::string type_info_symbol
 	    = fmt::format("{}_mod{}_typeinfo{}", m_c_symbol_prefix, m_module_idx, m_module_state.type_info_idx);
 	++m_module_state.type_info_idx;
