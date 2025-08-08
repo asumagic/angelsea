@@ -1153,7 +1153,7 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 	}
 
 	emit(
-	    "\t\tasDWORD* args = (asDWORD*)sp;\n"
+	    "\t\tasDWORD* args = &sp->as_asDWORD;\n"
 	    "\t\tint pop_size = {INIT_POP_SIZE};\n",
 	    fmt::arg("INIT_POP_SIZE", sys_fn.paramSize)
 	);
@@ -1169,16 +1169,6 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 
 	// FIXME: set m_callingSystemFunction -- also relevant to the above?
 
-	emit(
-	    "\t\textern void {FNCALLABLE}(asea_generic*);\n"
-	    "\t\textern void {FNDESC};\n"
-	    "\t\tg.sysFunction = &{FNDESC};\n"
-	    "\t\tg.stackPointer = args;\n" // TODO: don't write if the stack never needs to be accessed
-	    ,
-	    fmt::arg("FNDESC", fn_desc_symbol),
-	    fmt::arg("FNCALLABLE", fn_callable_symbol)
-	);
-
 	if (abi == ICC_GENERIC_METHOD) {
 		// TODO:
 		emit(
@@ -1189,6 +1179,16 @@ void BytecodeToC::emit_direct_system_call_generic_ins(
 		);
 		state.error_handlers.null = true;
 	}
+
+	emit(
+	    "\t\textern void {FNCALLABLE}(asea_generic*);\n"
+	    "\t\textern void {FNDESC};\n"
+	    "\t\tg.sysFunction = &{FNDESC};\n"
+	    "\t\tg.stackPointer = args;\n" // TODO: don't write if the stack never needs to be accessed
+	    ,
+	    fmt::arg("FNDESC", fn_desc_symbol),
+	    fmt::arg("FNCALLABLE", fn_callable_symbol)
+	);
 
 	if (!m_config.hack_generic_assume_callee_correctness) {
 		emit(
