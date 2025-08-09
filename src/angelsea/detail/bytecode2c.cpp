@@ -1280,14 +1280,6 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	for (std::size_t i = 0; i < fn.parameterTypes.GetLength(); ++i) {
 		const auto& param_type = fn.parameterTypes[i];
 
-		/*if (param_type.IsFloatType() && !param_type.IsReference()) {
-		    arg_types.emplace_back(var_types::f32.c);
-		    arg_exprs.emplace_back(fmt::format("{}.as_float"));
-		    current_arg_dwords += 1;
-		} else if (param_type.IsDoubleType() && !param_type.IsReference()) {
-		    arg_types.emplace_back(var_types::f64.c);
-		    current_arg_dwords += 2;
-		} else */
 		if (param_type.GetTokenType() == ttQuestion) {
 			return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle variable arguments yet"};
 		} else if (param_type.IsReference() || param_type.IsObjectHandle()) {
