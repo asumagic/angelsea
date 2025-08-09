@@ -223,6 +223,11 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 			continue;
 		}
 
+		if (is_instruction_blacklisted(ins.info->bc)) {
+			is_trace_supported = false;
+			continue;
+		}
+
 		// consider skipping some JitEntry we believe the VM should never be hitting. this is useful to avoid
 		// pessimizing optimizations, so that the optimizer can merge subsequent basic blocks.
 		// TODO: we could also eliminate or comment out the label in many cases once we build in some knowledge of
@@ -1127,6 +1132,7 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 			// FIXME: doprocessuspend check wrt setting *script* exceptions correctness
 		} else {
 			// TODO: assert for method
+			emit("{}", save_registers_sequence);
 			emit("\t\tasea_call_object_method(_regs, {}, {});\n", call.object_pointer_override, call.fn_idx);
 		}
 	}
