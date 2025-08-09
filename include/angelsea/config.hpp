@@ -104,12 +104,19 @@ struct JitConfig {
 
 	/// Speeds up script calls by replacing complex call runtime logic with code generation. Does not enable inlining
 	/// yet. This is subject to breakage with AngelScript updates.
-	bool experimental_fast_script_call = true;
+	bool experimental_fast_script_call = false;
 
 	/// Speeds up the generic calling convention by replacing complex call runtime logic with code generation. This is
 	/// subject to breakage with AngelScript updates. It also tries to be clever with the C++ ABI (as it has to populate
 	/// the vtable pointer for asCGeneric correctly), which could be prone to breakage.
 	bool experimental_direct_generic_call = true;
+
+	/// Speeds up the native calling convention by replacing complex call runtime logic with code generation. This is
+	/// subject to breakage with AngelScript updates. It is also more complex to support than the generic calling
+	/// convention, and more likely to be buggy. It also has to essentially emulate the C++ ABI in some cases, which is
+	/// more likely to break on less-tested platforms. Currently, few cases are supported, and native calls will often
+	/// fall back to the VM.
+	bool experimental_direct_native_call = true;
 
 	/// Speeds up the generic calling convention if \ref experimental_direct_generic_call is true by assuming that the
 	/// called system functions will always set the return value. If the callee fails to do so when this function is

@@ -142,3 +142,22 @@ TEST_CASE("generic abi benchmark", "[abi][conv_generic][benchmark]") {
 	BENCHMARK("JIT    1M generic `int()`") { return run_fn(jit_million_bench); };
 	BENCHMARK("Interp 1M generic `int()`") { return run_fn(interp_million_bench); };
 }
+
+int native_noarg() { return 123; }
+
+int native_sum3int(int a, int b, int c) { return a + b + c; }
+
+void bind_native_functions(asIScriptEngine& e) {
+	e.RegisterGlobalFunction("int native_noarg()", asFUNCTION(native_noarg), asCALL_CDECL);
+	e.RegisterGlobalFunction("int native_sum3int(int, int, int)", asFUNCTION(native_sum3int), asCALL_CDECL);
+}
+
+TEST_CASE("native calling convention", "[abi][conv_native]") {
+	EngineContext context;
+	bind_native_functions(*context.engine);
+
+	REQUIRE(run_string(context, "print(''+native_noarg())") == "123\n");
+
+	// involves the stack pointer
+	REQUIRE(run_string(context, "print(''+native_sum3int(500, 30, 2))") == "532\n");
+}

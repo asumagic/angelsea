@@ -16,6 +16,7 @@
 #include <as_scriptengine.h>
 #include <as_texts.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace angelsea::detail {
 
@@ -680,6 +681,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_RDR8:      emit_assign_ins(state, frame_var(ins.sword0(), u64), "regs->value.as_var_ptr->as_asQWORD"); break;
 
 	case asBC_CALL:      emit_direct_script_call_ins(state, ins.int0()); break;
+	// TODO: asBC_Thiscall1 is much slower than it should be in case of a fallback here
 	case asBC_Thiscall1:
 	case asBC_CALLSYS:   {
 		emit_system_call(
@@ -1160,7 +1162,191 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& 
 		return emit_direct_system_call_generic(state, call, script_fn, fn_desc_symbol, fn_callable_symbol);
 	}
 
-	return {.ok = false, .fail_reason = "Unsupported calling convention"};
+	return emit_direct_system_call_native(state, call, script_fn, fn_desc_symbol, fn_callable_symbol);
+}
+
+BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
+    FnState&           state,
+    SystemCall         call,
+    asCScriptFunction& fn,
+    std::string_view   fn_desc_symbol,
+    std::string_view   fn_callable_symbol
+) {
+	if (!m_config.experimental_direct_native_call) {
+		return {.ok = false, .fail_reason = "Direct native call failed: experimental_direct_native_call == false"};
+	}
+
+	asCScriptEngine&            engine = static_cast<asCScriptEngine&>(m_script_engine);
+	asSSystemFunctionInterface& sys_fn = *fn.sysFuncIntf;
+
+	if (call.is_internal_call) {
+		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle callsystemfunction from VM yet"};
+	}
+
+	if (sys_fn.baseOffset != 0) {
+		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle multiple inheritance yet"};
+	}
+
+	if (sys_fn.callConv >= ICC_THISCALL) {
+		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle method calls yet"};
+	}
+
+	if (sys_fn.auxiliary != nullptr || sys_fn.callConv >= ICC_THISCALL_OBJLAST) {
+		return {.ok = false, .fail_reason = "Direct native call failed: Cannot make sense of auxiliary functions yet"};
+	}
+
+	// determine return type (and early fail on unsupported types)
+	if (((fn.returnType.IsObject() || fn.returnType.IsFuncdef()) && !fn.returnType.IsReference())) {
+		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle returning objects yet"};
+	}
+
+	if (fn.DoesReturnOnStack()) {
+		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle returning on stack yet"};
+	}
+
+	// TODO: don't use it since upstream AS has a TODO to remove it
+	for (std::size_t i = 0; i < sys_fn.paramAutoHandles.GetLength(); ++i) {
+		if (sys_fn.paramAutoHandles[i]) {
+			return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle auto handles in params yet"};
+		}
+	}
+
+	if (sys_fn.returnAutoHandle) {
+		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle auto handles in return yet"};
+	}
+
+	if (sys_fn.cleanArgs.GetLength() > 0) {
+		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle arg cleanup yet"};
+	}
+
+	// TODO: move to new function and take into account the ability to declare structs and such
+	const auto get_c_type = [](const asCDataType& type) -> std::string {
+		if (type.IsReference() || type.IsObjectHandle()) {
+			return "void*";
+		} else {
+			switch (type.GetSizeInMemoryDWords()) {
+			case 0: return "void"; break;
+			case 1:
+				return std::string{
+				    type.IsEqualExceptConst(asCDataType::CreatePrimitive(ttFloat, true)) ? var_types::f32.c
+				                                                                         : var_types::u32.c
+				};
+			case 2:
+				return std::string{
+				    type.IsEqualExceptConst(asCDataType::CreatePrimitive(ttDouble, true)) ? var_types::f64.c
+				                                                                          : var_types::u64.c
+				};
+			}
+		}
+
+		return {};
+	};
+
+	std::string return_type = get_c_type(fn.returnType);
+	if (return_type.empty()) {
+		return {.ok = false, .fail_reason = "Direct native call failed: Return type cannot be handled"};
+	}
+
+	// FIXME: set m_callingsystemfunction when config requests
+
+	switch (sys_fn.callConv) {
+	case ICC_CDECL: break;
+	default:        return {.ok = false, .fail_reason = "Unsupported calling convention"};
+	}
+
+	// gather arguments to build C signature (and early fail on unsupported types)
+
+	std::vector<std::string> arg_types;
+	std::vector<std::string> arg_exprs;
+
+	std::size_t current_arg_dwords = 0;
+	std::size_t current_arg_pwords = 0;
+
+	const auto arg_current_stack_ptr_expr = [&] {
+		return fmt::format(
+		    "\n\t\t\t((asea_var*)((asDWORD*)sp + {DWORDS} + {PWORDS}*(sizeof(asPWORD)/4)))",
+		    fmt::arg("DWORDS", current_arg_dwords),
+		    fmt::arg("PWORDS", current_arg_pwords)
+		);
+	};
+
+	for (std::size_t i = 0; i < fn.parameterTypes.GetLength(); ++i) {
+		const auto& param_type = fn.parameterTypes[i];
+
+		/*if (param_type.IsFloatType() && !param_type.IsReference()) {
+		    arg_types.emplace_back(var_types::f32.c);
+		    arg_exprs.emplace_back(fmt::format("{}.as_float"));
+		    current_arg_dwords += 1;
+		} else if (param_type.IsDoubleType() && !param_type.IsReference()) {
+		    arg_types.emplace_back(var_types::f64.c);
+		    current_arg_dwords += 2;
+		} else */
+		if (param_type.GetTokenType() == ttQuestion) {
+			return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle variable arguments yet"};
+		} else if (param_type.IsReference() || param_type.IsObjectHandle()) {
+			arg_types.emplace_back("void*");
+			arg_exprs.emplace_back(fmt::format("{}->as_ptr", arg_current_stack_ptr_expr()));
+			current_arg_pwords += 1;
+		} else if (param_type.IsPrimitive()) {
+			arg_types.emplace_back(get_c_type(param_type));
+			// FIXME: pop from stack
+			const auto& c_type = arg_types.back();
+			arg_exprs.emplace_back(fmt::format("{}->as_{}", arg_current_stack_ptr_expr(), c_type));
+			current_arg_dwords += param_type.GetSizeOnStackDWords();
+		} else {
+			return {
+			    .ok          = false,
+			    .fail_reason = "Direct native call failed: Unknown parameter type (probably object by value)"
+			};
+		}
+	}
+
+	// can start emit()s from this point on
+
+	emit(
+	    "\t\tasDWORD* args = &sp->as_asDWORD;\n"
+	    "\t\tint pop_size = {INIT_POP_SIZE};\n",
+	    fmt::arg("INIT_POP_SIZE", sys_fn.paramSize)
+	);
+
+	emit(
+	    "\t\textern {RETTYPE} {FNCALLABLE}({ARGTYPES});\n",
+	    fmt::arg("RETTYPE", return_type),
+	    fmt::arg("FNCALLABLE", fn_callable_symbol),
+	    fmt::arg("ARGTYPES", fmt::join(arg_types, ","))
+	);
+
+	if (return_type != "void") {
+		emit(
+		    "\t\t{RETTYPE} ret = {FNCALLABLE}({ARGEXPRS});\n",
+		    fmt::arg("RETTYPE", return_type),
+		    fmt::arg("FNCALLABLE", fn_callable_symbol),
+		    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ","))
+		);
+	} else {
+		emit(
+		    "\t\t{FNCALLABLE}({ARGEXPRS});\n",
+		    fmt::arg("FNCALLABLE", fn_callable_symbol),
+		    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ","))
+		);
+	}
+	emit("\t\tsp = (asea_var*)((asDWORD*)sp + pop_size);\n");
+
+	// Store the returned value in our stack
+	if ((fn.returnType.IsObject() || fn.returnType.IsFuncdef()) && !fn.returnType.IsReference()) {
+		if (fn.returnType.IsObjectHandle()) {
+			emit("\t\tregs->obj = ret;\n");
+			// TODO: auto handles
+			angelsea_assert(!sys_fn.returnAutoHandle);
+		}
+		// TODO: return on stack logic
+		angelsea_assert(false);
+	} else if (return_type != "void") {
+		// Store value in value register
+		emit("\t\tregs->value.as_{RETTYPE} = ret;\n", fmt::arg("RETTYPE", return_type));
+	}
+
+	return {.ok = true, .fail_reason = {}};
 }
 
 BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
