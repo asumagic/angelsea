@@ -265,12 +265,10 @@ some things are not covered).
 
 We provide very preliminary support for the native calling conventions, but for
 now, `asCALL_GENERIC` is a probably more performant and stable option.  
+The native calling convention is significantly more complicated to completely
+support and the generic calling convention can actually be fairly fast.  
 Unsupported calls will fall back to emitting the call via the VM.
 
-Angelsea currently only supports the generic calling convention because it is
-the easiest to support without falling back to the interpreter, because it can
-be made reasonably fast, and because the primary downstream user of angelsea
-uses it exclusively.  
 As of writing, `asIScriptGeneric` is not a particularly efficient interface (see
 below), but when the time comes, we may try to contribute back design
 improvements for it.
