@@ -106,7 +106,7 @@ TEST_CASE("generic calling convention", "[abi][conv_generic]") {
 }
 
 TEST_CASE("generic abi benchmark", "[abi][conv_generic][benchmark]") {
-	EngineContext context{angelsea::JitConfig{.log_targets{.performance_warning = asEMsgType(-1)}}};
+	EngineContext context;
 	bind_generic_functions(*context.engine);
 
 	out = {};

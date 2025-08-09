@@ -52,7 +52,7 @@ uint64_t fib_iterative(uint64_t n) {
 }
 
 TEST_CASE("fib benchmark", "[fib][benchmark]") {
-	EngineContext context{angelsea::JitConfig{.log_targets{.performance_warning = asEMsgType(-1)}}};
+	EngineContext context;
 
 	out = {};
 

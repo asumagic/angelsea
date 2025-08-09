@@ -116,13 +116,24 @@ don't want to rely on Angelsea building it), see the optional step.
 > [unofficial AngelScript](https://github.com/codecat/angelscript-mirror) git repository
 > mirror by codecat.
 
-> [!NOTE]
-> We provide a downstream fork of MIR to work around the following issues:
-> - [Integer sign-extension miscompile](https://github.com/vnmakarov/mir/issues/423)
+> [!WARNING]
+> As an user, you should know that upstream MIR has not seen activity in a year.
+> I provide a downstream fork of MIR to work around specific problems, and we
+> hope the defaults to be fully stable.
+>
+> The contents of the fork is:
+> - The load/store optimizations of GVN pass broke on various occasions with our
+> generated code. It just seems to intensely dislike the constant AS stack back
+> and forth we are doing.
+> We worked around some issues (see below), but it is frankly more trouble than
+> it is worth.
+> Thus we moved it to a "-O3" level; and we default to
+> `config.mir_optimization_level = 2`, and strongly discourage changing this.
+> - Solve [Integer sign-extension miscompile](https://github.com/vnmakarov/mir/issues/423)
 > (workaround if using upstream: set `config.mir_optimization_level = 1;`)
-> - [Jump optimization can cause use-after-free when using label references](https://github.com/vnmakarov/mir/issues/424)
+> - Solve [Jump optimization can cause use-after-free when using label references](https://github.com/vnmakarov/mir/issues/424)
 > (workaround if using upstream: set `config.mir_optimization_level = 1;`)
-> - High memory usage: implemented a hack; see `config.hack_mir_minimize` (defaults to true)
+> - Solve high memory usage: implemented a hack; see `config.hack_mir_minimize` (defaults to true)
 
 ```bash
 git submodule update --init --recursive vendor/angelscript
@@ -249,14 +260,12 @@ in source **and** binary distributions!
 
 ### What is the best supported calling convention?
 
-Currently, only the `asCALL_GENERIC` calling convention is supported (and not
-all of it yet). They will perform _much_ faster than native conventions, so we
-strongly recommend it for angelsea (for now), as otherwise all your native calls
-will fall back to the VM.
+Currently, the `asCALL_GENERIC` calling convention is the best supported (though
+some things are not covered).
 
-In contrast, the BlindMindStudios JIT implements the native calling conventions
-to the extent that it can. This is much more complicated to support because it
-more or less involves reinventing the C++ ABI.
+We provide very preliminary support for the native calling conventions, but for
+now, `asCALL_GENERIC` is a probably more performant and stable option.  
+Unsupported calls will fall back to emitting the call via the VM.
 
 Angelsea currently only supports the generic calling convention because it is
 the easiest to support without falling back to the interpreter, because it can

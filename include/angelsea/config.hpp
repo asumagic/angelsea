@@ -78,10 +78,15 @@ struct JitConfig {
 	};
 	CompileTriggers triggers;
 
-	/// MIR optimization level, as passed to `MIR_gen_set_optimize_level`, to
-	/// balance between runtime speed and compile times (higher improves
-	/// codegen).
-	/// MIR default is `2`. Meaningful values are 0 through 2.
+	/// MIR optimization level, as passed to `MIR_gen_set_optimize_level`, to balance between runtime speed and compile
+	/// times (higher improves codegen).
+	///
+	/// MIR default is `2`. Meaningful values are 0 through 3, but `3` is known broken and *very* discouraged.
+	/// `3` is not actually a meaningful option in upstream MIR. The Angelsea fork of MIR neutralizes Global Value
+	/// Numbering memory optimizations for anything but level `3`, should you really want to try. The reason for it
+	/// is that it has caused numerous complex bugs (interactions across several correct instructions), and still has
+	/// unresolved issues that can result in corruption and crashes. From some testing, our generated code doesn't seem
+	/// to care all that much performance-wise.
 	int mir_optimization_level = 2;
 
 	/// Gross hack that frees a bunch of memory internally used by MIR that is not really used after the code generation

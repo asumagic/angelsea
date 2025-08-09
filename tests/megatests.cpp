@@ -5,7 +5,7 @@
 TEST_CASE("brainfuck interpreter", "[megatest][bf]") { REQUIRE(run("scripts/bfint.as") == "hello world"); }
 
 TEST_CASE("brainfuck benchmark", "[benchmark]") {
-	EngineContext context{angelsea::JitConfig{.log_targets{.performance_warning = asEMsgType(-1)}}};
+	EngineContext context;
 
 	out = {};
 
