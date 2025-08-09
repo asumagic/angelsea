@@ -1183,12 +1183,12 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle callsystemfunction from VM yet"};
 	}
 
-	if (sys_fn.baseOffset != 0) {
-		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle multiple inheritance yet"};
+	if (sys_fn.isCompositeIndirect) {
+		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle compositeIndirect yet"};
 	}
 
-	if (sys_fn.callConv >= ICC_THISCALL) {
-		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle method calls yet"};
+	if (sys_fn.baseOffset != 0) {
+		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle multiple inheritance yet"};
 	}
 
 	if (sys_fn.auxiliary != nullptr || sys_fn.callConv >= ICC_THISCALL_OBJLAST) {
@@ -1250,8 +1250,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	// FIXME: set m_callingsystemfunction when config requests
 
 	switch (sys_fn.callConv) {
-	case ICC_CDECL: break;
-	default:        return {.ok = false, .fail_reason = "Unsupported calling convention"};
+	case ICC_CDECL:
+	case ICC_THISCALL: break;
+	default:           return {.ok = false, .fail_reason = "Unsupported calling convention"};
 	}
 
 	// gather arguments to build C signature (and early fail on unsupported types)
@@ -1269,6 +1270,12 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		    fmt::arg("PWORDS", current_arg_pwords)
 		);
 	};
+
+	if (sys_fn.callConv >= ICC_THISCALL) {
+		arg_types.emplace_back("void*");
+		arg_exprs.emplace_back("obj");
+		current_arg_pwords += 1;
+	}
 
 	for (std::size_t i = 0; i < fn.parameterTypes.GetLength(); ++i) {
 		const auto& param_type = fn.parameterTypes[i];
@@ -1304,10 +1311,19 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	// can start emit()s from this point on
 
 	emit(
-	    "\t\tasDWORD* args = &sp->as_asDWORD;\n"
+	    // "\t\tasDWORD* args = &sp->as_asDWORD;\n"
 	    "\t\tint pop_size = {INIT_POP_SIZE};\n",
 	    fmt::arg("INIT_POP_SIZE", sys_fn.paramSize)
 	);
+
+	if (sys_fn.callConv == ICC_THISCALL) {
+		emit(
+		    "\t\tvoid *obj = sp->as_ptr;\n"
+		    "\t\tif (obj == 0) {{ goto err_null; }}\n"
+		    "\t\tpop_size += sizeof(asPWORD) / 4;\n"
+		);
+		state.error_handlers.null = true;
+	}
 
 	emit(
 	    "\t\textern {RETTYPE} {FNCALLABLE}({ARGTYPES});\n",
@@ -1343,7 +1359,10 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		angelsea_assert(false);
 	} else if (return_type != "void") {
 		// Store value in value register
-		emit("\t\tregs->value.as_{RETTYPE} = ret;\n", fmt::arg("RETTYPE", return_type));
+		emit(
+		    "\t\tregs->value.as_{RETTYPE} = ret;\n",
+		    fmt::arg("RETTYPE", return_type == "void*" ? "ptr" : return_type)
+		);
 	}
 
 	return {.ok = true, .fail_reason = {}};
