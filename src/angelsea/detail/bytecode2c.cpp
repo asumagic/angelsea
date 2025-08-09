@@ -724,7 +724,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_NOT: {
 		emit(
 		    "\t\tasea_var *var = {VARPTR};\n"
-		    "\t\tasDWORD value = var->as_asDWORD;\n"
+		    "\t\tasDWORD value = var->as_asBYTE;\n"
 		    "\t\tvar->as_asDWORD = 0;\n"
 		    "\t\tvar->as_asBYTE = !value;\n",
 		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
