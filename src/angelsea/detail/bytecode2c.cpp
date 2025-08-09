@@ -1251,8 +1251,10 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	switch (sys_fn.callConv) {
 	case ICC_CDECL:
-	case ICC_THISCALL: break;
-	default:           return {.ok = false, .fail_reason = "Unsupported calling convention"};
+	case ICC_CDECL_OBJFIRST:
+	case ICC_CDECL_OBJLAST:
+	case ICC_THISCALL:       break;
+	default:                 return {.ok = false, .fail_reason = "Unsupported calling convention"};
 	}
 
 	// gather arguments to build C signature (and early fail on unsupported types)
@@ -1265,16 +1267,21 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	const auto arg_current_stack_ptr_expr = [&] {
 		return fmt::format(
-		    "\n\t\t\t((asea_var*)((asDWORD*)sp + {DWORDS} + {PWORDS}*(sizeof(asPWORD)/4)))",
+		    "((asea_var*)((asDWORD*)sp + {DWORDS} + {PWORDS}*(sizeof(asPWORD)/4)))",
 		    fmt::arg("DWORDS", current_arg_dwords),
 		    fmt::arg("PWORDS", current_arg_pwords)
 		);
 	};
 
 	if (sys_fn.callConv >= ICC_THISCALL) {
+		// always load `this` from the first position in the stack
+		current_arg_pwords += 1;
+	}
+
+	if (sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_CDECL_OBJFIRST) {
+		// where the argument actually lands depends on the convention
 		arg_types.emplace_back("void*");
 		arg_exprs.emplace_back("obj");
-		current_arg_pwords += 1;
 	}
 
 	for (std::size_t i = 0; i < fn.parameterTypes.GetLength(); ++i) {
@@ -1300,6 +1307,12 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		}
 	}
 
+	if (sys_fn.callConv == ICC_CDECL_OBJLAST) {
+		arg_types.emplace_back("void*");
+		arg_exprs.emplace_back("obj");
+		current_arg_pwords += 1;
+	}
+
 	// can start emit()s from this point on
 
 	emit(
@@ -1308,7 +1321,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	    fmt::arg("INIT_POP_SIZE", sys_fn.paramSize)
 	);
 
-	if (sys_fn.callConv == ICC_THISCALL) {
+	if (sys_fn.callConv >= ICC_THISCALL) {
 		emit(
 		    "\t\tvoid *obj = sp->as_ptr;\n"
 		    "\t\tif (obj == 0) {{ goto err_null; }}\n"
@@ -1326,16 +1339,16 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	if (return_type != "void") {
 		emit(
-		    "\t\t{RETTYPE} ret = {FNCALLABLE}({ARGEXPRS});\n",
+		    "\t\t{RETTYPE} ret = {FNCALLABLE}(\n\t\t\t{ARGEXPRS});\n",
 		    fmt::arg("RETTYPE", return_type),
 		    fmt::arg("FNCALLABLE", fn_callable_symbol),
-		    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ","))
+		    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ",\n\t\t\t"))
 		);
 	} else {
 		emit(
-		    "\t\t{FNCALLABLE}({ARGEXPRS});\n",
+		    "\t\t{FNCALLABLE}(\n\t\t\t{ARGEXPRS});\n",
 		    fmt::arg("FNCALLABLE", fn_callable_symbol),
-		    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ","))
+		    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ",\n\t\t\t"))
 		);
 	}
 	emit("\t\tsp = (asea_var*)((asDWORD*)sp + pop_size);\n");
