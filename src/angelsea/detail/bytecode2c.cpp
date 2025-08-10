@@ -770,8 +770,8 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_ADDSi: {
-		// FIXME: concerning wtf: if we store &ASEA_STACK_TOP.as_asPWORD to a temporary and use it, then we get
-		// corruption with -O2 (not if disabling load GVN), again.
+		// NOTE: memory GVN: if we store &ASEA_STACK_TOP.as_asPWORD to a temporary and use it, then we get corruption
+		// with load GVN (angelsea -O3 mode as of writing), again.
 		emit(
 		    "\t\tif (sp->as_asPWORD == 0) {{ goto err_null; }}\n"
 		    "\t\tsp->as_asPWORD += {SWORD0};\n",
