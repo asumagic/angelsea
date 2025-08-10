@@ -232,8 +232,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 
 		// consider skipping some JitEntry we believe the VM should never be hitting. this is useful to avoid
 		// pessimizing optimizations, so that the optimizer can merge subsequent basic blocks.
-		// TODO: we could also eliminate or comment out the label in many cases once we build in some knowledge of
-		// branch targets (including switches, so JMPP), which may avoid emitting many basic blocks to start with
 		switch (ins.info->bc) {
 		case asBC_SUSPEND: // TODO: falls back as of writing, remove when fixed
 			is_trace_supported = m_config->hack_ignore_suspend;
