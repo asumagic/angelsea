@@ -46,6 +46,6 @@ void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text)
 /// to calling ref release or destruct behaviors.
 void asea_clean_args(asSVMRegisters* vm_registers, asCScriptFunction& fn, asDWORD* args);
 
-float asea_fmodf(float a, float b);
-float asea_fmod(float a, float b);
+float  asea_fmodf(float a, float b);
+double asea_fmod(double a, double b);
 }

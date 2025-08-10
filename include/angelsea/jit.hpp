@@ -16,10 +16,17 @@ class MirJit;
 class Jit final : public asIJITCompilerV2 {
 	public:
 	Jit(const JitConfig& config, asIScriptEngine& engine);
-	~Jit();
 
-	virtual void NewFunction(asIScriptFunction* scriptFunc) override;
-	virtual void CleanFunction(asIScriptFunction* scriptFunc, asJITFunction jitFunc) override;
+	Jit(const Jit&)            = delete;
+	Jit& operator=(const Jit&) = delete;
+
+	Jit(Jit&&)            = default;
+	Jit& operator=(Jit&&) = default;
+
+	~Jit() override;
+
+	void NewFunction(asIScriptFunction* scriptFunc) override;
+	void CleanFunction(asIScriptFunction* scriptFunc, asJITFunction jitFunc) override;
 
 	using CompileFunc = void(void* ud);
 

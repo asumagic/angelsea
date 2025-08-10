@@ -69,16 +69,6 @@ typedef __UINT32_TYPE__  asDWORD;
 typedef __UINT64_TYPE__  asQWORD;
 typedef __UINTPTR_TYPE__ asPWORD;
 
-#define asASSERT
-
-#if __SIZEOF_POINTER__ == 4
-	#define AS_PTR_SIZE 1
-#else
-	#define AS_PTR_SIZE 2
-#endif
-
-#define VALUE_OF_BOOLEAN_TRUE 1
-
 typedef enum
 {
 	asEXECUTION_FINISHED        = 0,
@@ -171,7 +161,7 @@ int asea_prepare_script_stack(asSVMRegisters* vm_registers, void* function, void
 void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
 void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text);
 float asea_fmodf(float a, float b);
-float asea_fmod(float a, float b);
+double asea_fmod(double a, double b);
 void asea_clean_args(asSVMRegisters* vm_registers, void* function, asDWORD* args);
 int asea_call_system_function(asSVMRegisters* vm_registers, int fn);
 int asea_call_object_method(asSVMRegisters* vm_registers, void* obj, int fn);

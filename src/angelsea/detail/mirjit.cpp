@@ -17,14 +17,14 @@
 
 namespace angelsea::detail {
 
-Mir::Mir(MIR_alloc_t alloc, MIR_code_alloc_t code_alloc) { m_ctx = MIR_init2(alloc, code_alloc); }
+Mir::Mir(MIR_alloc_t alloc, MIR_code_alloc_t code_alloc) : m_ctx(MIR_init2(alloc, code_alloc)) {}
 Mir::~Mir() { MIR_finish(m_ctx); }
 
 C2Mir::C2Mir(Mir& mir) : m_ctx(mir) { c2mir_init(m_ctx); }
 C2Mir::~C2Mir() { c2mir_finish(m_ctx); }
 
 static void bind_runtime(Mir& mir) {
-#define ASEA_BIND_MIR(name) MIR_load_external(mir, #name, reinterpret_cast<void*>(name))
+#define ASEA_BIND_MIR(name) MIR_load_external(mir, #name, std::bit_cast<void*>(&(name)))
 	ASEA_BIND_MIR(asea_call_script_function);
 	ASEA_BIND_MIR(asea_call_system_function);
 	ASEA_BIND_MIR(asea_call_object_method);
@@ -40,7 +40,7 @@ static void bind_runtime(Mir& mir) {
 }
 
 void jit_entry_function_counter(asSVMRegisters* regs, asPWORD lazy_fn_raw) {
-	auto& lazy_fn = *reinterpret_cast<LazyMirFunction*>(lazy_fn_raw);
+	auto& lazy_fn = *std::bit_cast<LazyMirFunction*>(lazy_fn_raw);
 
 	if (lazy_fn.hits_before_compile == 0) {
 		lazy_fn.jit_engine->translate_lazy_function(lazy_fn);
@@ -52,7 +52,7 @@ void jit_entry_function_counter(asSVMRegisters* regs, asPWORD lazy_fn_raw) {
 }
 
 void jit_entry_await_async(asSVMRegisters* regs, asPWORD pending_fn_raw) {
-	auto& lazy_fn = *reinterpret_cast<AsyncMirFunction*>(pending_fn_raw);
+	auto& lazy_fn = *std::bit_cast<AsyncMirFunction*>(pending_fn_raw);
 
 	if (lazy_fn.ready.load()) {
 		lazy_fn.jit_engine->transfer_compiled_modules();
@@ -65,7 +65,6 @@ void jit_entry_await_async(asSVMRegisters* regs, asPWORD pending_fn_raw) {
 MirJit::MirJit(const JitConfig& config, asIScriptEngine& engine) :
     m_config(config),
     m_engine(&engine),
-    m_mir{},
     m_c_generator{m_config, *m_engine},
     m_ignore_unregister{nullptr},
     m_registered_engine_globals{false} {
@@ -138,7 +137,7 @@ void MirJit::bind_engine_globals(asIScriptEngine& engine) {
 		// gross hack to initialize the vtable ptr of asCGeneric properly in JITted functions
 		// unsure how to support that for AOT from the C side
 		asCGeneric generic{nullptr, nullptr, nullptr, nullptr};
-		void*      generic_vtable = *reinterpret_cast<void**>(&generic);
+		void*      generic_vtable = *std::bit_cast<void**>(&generic);
 		MIR_load_external(m_mir, "asea_generic_vtable", generic_vtable);
 	}
 }
@@ -146,8 +145,6 @@ void MirJit::bind_engine_globals(asIScriptEngine& engine) {
 struct InputData {
 	std::string* c_source;
 	std::size_t  current_offset;
-
-	InputData(std::string& source) : c_source{&source}, current_offset{0} {}
 };
 
 static int c2mir_getc_callback(void* user_data) {
@@ -190,7 +187,7 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 
 	if (config().debug.dump_c_code) {
 		angelsea_assert(config().debug.dump_c_code_file != nullptr);
-		fputs(m_c_generator.source().c_str(), config().debug.dump_c_code_file);
+		[[maybe_unused]] auto _written = fputs(m_c_generator.source().c_str(), config().debug.dump_c_code_file);
 	}
 
 	auto [async_fn_it, success]
@@ -220,7 +217,7 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 	if (m_compile_callback) {
 		m_compile_callback(
 		    +[](void* ud) {
-			    auto& async_fn = *reinterpret_cast<AsyncMirFunction*>(ud);
+			    auto& async_fn = *static_cast<AsyncMirFunction*>(ud);
 			    async_fn.jit_engine->codegen_async_function(async_fn);
 		    },
 		    &async_fn
@@ -237,20 +234,20 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 
 		// TODO: what the hell is clang-format doing to this
 		std::array<c2mir_macro_command, 1> macros{{// Trigger the various definitions and macros of the generated header
-		                                           {.def_p = true, .name = "ASEA_SUPPORT", .def = "1"}
+		                                           {.def_p = int(true), .name = "ASEA_SUPPORT", .def = "1"}
 		}};
 
 		c2mir_options c_options{
 		    .message_file       = config().debug.c2mir_diagnostic_file,
-		    .debug_p            = false,
-		    .verbose_p          = false,
-		    .ignore_warnings_p  = false,
-		    .no_prepro_p        = false,
-		    .prepro_only_p      = false,
-		    .syntax_only_p      = false,
-		    .pedantic_p         = false, // seems to break compile..?
-		    .asm_p              = false,
-		    .object_p           = false,
+		    .debug_p            = int(false),
+		    .verbose_p          = int(false),
+		    .ignore_warnings_p  = int(false),
+		    .no_prepro_p        = int(false),
+		    .prepro_only_p      = int(false),
+		    .syntax_only_p      = int(false),
+		    .pedantic_p         = int(false), // seems to break compile..?
+		    .asm_p              = int(false),
+		    .object_p           = int(false),
 		    .module_num         = 0, // ?
 		    .prepro_output_file = nullptr,
 		    .output_file_name   = nullptr,
@@ -260,15 +257,9 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 		    .include_dirs       = nullptr,
 		};
 
-		InputData input_data(fn.c_source);
-		if (!c2mir_compile(
-		        compile_mir,
-		        &c_options,
-		        c2mir_getc_callback,
-		        &input_data,
-		        fn.pretty_name.c_str(),
-		        nullptr
-		    )) {
+		InputData input_data{.c_source = &fn.c_source, .current_offset = 0};
+		if (c2mir_compile(compile_mir, &c_options, c2mir_getc_callback, &input_data, fn.pretty_name.c_str(), nullptr)
+		    == 0) {
 			log(config(), engine(), LogSeverity::ERROR, "Failed to compile C for \"{}\"", fn.pretty_name.c_str());
 			angelsea_assert(false); // FIXME: error handling
 		}
@@ -348,7 +339,7 @@ void MirJit::transfer_and_destroy(AsyncMirFunction& fn) {
 
 	MIR_link(m_mir, MIR_set_gen_interface, nullptr);
 
-	auto* entry_point = reinterpret_cast<asJITFunction>(MIR_gen(m_mir, mir_entry_fn));
+	auto* entry_point = std::bit_cast<asJITFunction>(MIR_gen(m_mir, mir_entry_fn));
 
 	m_ignore_unregister             = fn.script_function;
 	[[maybe_unused]] const auto err = fn.script_function->SetJITFunction(entry_point);

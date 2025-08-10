@@ -62,7 +62,7 @@ class BytecodeToC {
 
 	void prepare_new_context();
 
-	void translate_function(std::string_view internal_module_name, asIScriptFunction& function);
+	void translate_function(std::string_view internal_module_name, asIScriptFunction& fn);
 
 	std::string& source() { return m_module_state.buffer; }
 
@@ -90,7 +90,7 @@ class BytecodeToC {
 
 	private:
 	struct FnState {
-		asIScriptFunction& fn;
+		asIScriptFunction* fn;
 		/// Current instruction being translated (if in a callee of translate_instruction)
 		BytecodeInstruction ins;
 
@@ -127,7 +127,7 @@ class BytecodeToC {
 
 	void emit_auto_bc_inc(FnState& state);
 
-	std::string emit_global_lookup(FnState& state, void** pointer, bool global_var_only);
+	std::string emit_global_lookup(FnState& state, void* pointer, bool global_var_only);
 	std::string emit_type_info_lookup(FnState& state, asITypeInfo& type);
 
 	struct SystemCall {
@@ -249,8 +249,8 @@ class BytecodeToC {
 
 	std::string stack_var(int offset, VarType type);
 
-	const JitConfig& m_config;
-	asIScriptEngine& m_script_engine;
+	const JitConfig* m_config;
+	asIScriptEngine* m_script_engine;
 	std::string      m_c_symbol_prefix;
 
 	OnMapFunctionCallback m_on_map_function_callback;

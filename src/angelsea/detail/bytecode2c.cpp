@@ -36,8 +36,8 @@ static constexpr std::string_view save_registers_sequence
 template<typename T> static std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
 
 BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix) :
-    m_config(config), m_script_engine(engine), m_c_symbol_prefix(std::move(c_symbol_prefix)), m_module_idx(-1) {
-	m_module_state.buffer.reserve(1024 * 64);
+    m_config(&config), m_script_engine(&engine), m_c_symbol_prefix(std::move(c_symbol_prefix)), m_module_idx(-1) {
+	m_module_state.buffer.reserve(std::size_t(1024) * 64);
 }
 
 void BytecodeToC::prepare_new_context() {
@@ -48,7 +48,7 @@ void BytecodeToC::prepare_new_context() {
 	m_module_state.fn_idx              = 0;
 
 	m_module_state.buffer.clear();
-	if (m_config.c.copyright_header) {
+	if (m_config->c.copyright_header) {
 		m_module_state.buffer += angelsea_c_header_copyright;
 	}
 	m_module_state.buffer += angelsea_c_header;
@@ -61,7 +61,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		m_on_map_function_callback(fn, m_module_state.fn_name);
 	}
 
-	if (m_config.c.human_readable) {
+	if (m_config->c.human_readable) {
 		const char* section_name;
 		int         row, col;
 		fn.GetDeclaredAt(&section_name, &row, &col);
@@ -93,7 +93,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	    // "#endif\n",
 	);
 
-	if (m_config.experimental_direct_generic_call) {
+	if (m_config->experimental_direct_generic_call) {
 		// TODO: detect if there are any generic calls, should be easy in a prepass
 		emit(
 		    "\tasea_generic g;\n"
@@ -154,7 +154,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	//     etc.
 	// }
 
-	if (m_config.debug.trace_functions) {
+	if (m_config->debug.trace_functions) {
 		const char* section;
 		int         row, col;
 		fn.GetDeclaredAt(&section, &row, &col);
@@ -169,7 +169,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		);
 	}
 
-	FnState state{.fn = fn, .ins = {}, .switch_map = {}, .error_handlers = {}};
+	FnState state{.fn = &fn, .ins = {}, .switch_map = {}, .error_handlers = {}};
 
 	discover_switch_map(state);
 	configure_jit_entries(state);
@@ -203,7 +203,7 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 	// answers: is the sequence of instructions since the last jit entry likely supported?
 	bool is_trace_supported = true;
 
-	auto bytecode = get_bytecode(state.fn);
+	auto bytecode = get_bytecode(*state.fn);
 	for (auto it = bytecode.begin(), prev = it; it != bytecode.end(); prev = it, ++it) {
 		BytecodeInstruction ins = *it;
 
@@ -234,7 +234,7 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		// branch targets (including switches, so JMPP), which may avoid emitting many basic blocks to start with
 		switch (ins.info->bc) {
 		case asBC_SUSPEND: // TODO: falls back as of writing, remove when fixed
-			is_trace_supported = m_config.hack_ignore_suspend;
+			is_trace_supported = m_config->hack_ignore_suspend;
 			break;
 
 			// assume asBC_CALL can always fallback
@@ -293,7 +293,7 @@ void BytecodeToC::discover_switch_map(FnState& state) {
 	// discover mappings from the offset of every asBC_JMPP instruction and the branch targets
 	std::vector<std::size_t>* current_mapping = nullptr;
 
-	for (BytecodeInstruction ins : get_bytecode(state.fn)) {
+	for (BytecodeInstruction ins : get_bytecode(*state.fn)) {
 		if (ins.info->bc == asBC_JMPP) {
 			current_mapping = &state.switch_map[ins.offset]; // create
 		} else if (ins.info->bc == asBC_JMP) {
@@ -308,18 +308,18 @@ void BytecodeToC::discover_switch_map(FnState& state) {
 
 void BytecodeToC::emit_entry_dispatch(FnState& state) {
 	if (!state.has_any_late_jit_entries) {
-		if (m_config.c.human_readable) {
+		if (m_config->c.human_readable) {
 			emit("\t/* only one jit entry! not generating dispatch */\n");
 		}
 		return;
 	}
 
-	if (m_config.c.use_gnu_label_as_value) {
+	if (m_config->c.use_gnu_label_as_value) {
 		emit(
 		    "\tstatic const void *const entry[] = {{\n"
 		    "\t\t&&bc0,\n" // because index 0 is meaningless
 		);
-		for (BytecodeInstruction ins : get_bytecode(state.fn)) {
+		for (BytecodeInstruction ins : get_bytecode(*state.fn)) {
 			if (ins.info->bc == asBC_JitEntry && ins.pword0() != 0) {
 				emit("\t\t&&bc{},\n", ins.offset);
 			}
@@ -330,7 +330,7 @@ void BytecodeToC::emit_entry_dispatch(FnState& state) {
 		);
 	} else {
 		emit("\tswitch(entryLabel) {{\n");
-		for (BytecodeInstruction ins : get_bytecode(state.fn)) {
+		for (BytecodeInstruction ins : get_bytecode(*state.fn)) {
 			if (ins.info->bc == asBC_JitEntry && ins.pword0() != 0) {
 				emit("\tcase {}: goto bc{};\n", ins.pword0(), ins.offset);
 			}
@@ -387,8 +387,8 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 }
 
 bool BytecodeToC::is_instruction_blacklisted(asEBCInstr bc) const {
-	return std::find(m_config.debug.blacklist_instructions.begin(), m_config.debug.blacklist_instructions.end(), bc)
-	    != m_config.debug.blacklist_instructions.end();
+	return std::find(m_config->debug.blacklist_instructions.begin(), m_config->debug.blacklist_instructions.end(), bc)
+	    != m_config->debug.blacklist_instructions.end();
 }
 
 void BytecodeToC::translate_instruction(FnState& state) {
@@ -397,8 +397,8 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	// asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
 
-	if (m_config.c.human_readable) {
-		emit("\t/* bytecode: {} */\n", disassemble(m_script_engine, ins));
+	if (m_config->c.human_readable) {
+		emit("\t/* bytecode: {} */\n", disassemble(*m_script_engine, ins));
 	}
 
 	emit("\tbc{}: {{\n", ins.offset);
@@ -414,7 +414,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_STR:      emit_vm_fallback(state, "deprecated instruction"); break;
 
 	case asBC_SUSPEND:  {
-		if (m_config.hack_ignore_suspend) {
+		if (m_config->hack_ignore_suspend) {
 			emit_auto_bc_inc(state);
 			break;
 		}
@@ -442,13 +442,13 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_PSF: emit_stack_push_ins(state, fmt::format("(asPWORD){}", frame_ptr(ins.sword0())), pword); break;
 
 	case asBC_PGA: {
-		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), false);
+		std::string symbol = emit_global_lookup(state, std::bit_cast<void*>(ins.pword0()), false);
 		emit_stack_push_ins(state, fmt::format("(asPWORD)&{}", symbol), pword);
 		break;
 	}
 
 	case asBC_PshGPtr: {
-		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), false);
+		std::string symbol = emit_global_lookup(state, std::bit_cast<void*>(ins.pword0()), false);
 		emit_stack_push_ins(state, fmt::format("(asPWORD){}", symbol), pword);
 		break;
 	}
@@ -478,9 +478,9 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_OBJTYPE: {
-		asPWORD        objtype_raw    = ins.pword0();
-		asCObjectType* objtype_ptr    = std::bit_cast<asCObjectType*>(objtype_raw);
-		const auto     objtype_symbol = emit_type_info_lookup(state, *objtype_ptr);
+		asPWORD    objtype_raw    = ins.pword0();
+		auto*      objtype_ptr    = std::bit_cast<asCObjectType*>(objtype_raw);
+		const auto objtype_symbol = emit_type_info_lookup(state, *objtype_ptr);
 		emit_stack_push_ins(state, fmt::format("(asPWORD)&{}", objtype_symbol), pword);
 		break;
 	}
@@ -502,20 +502,20 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 
 	case asBC_SetG4: {
-		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), true);
+		std::string symbol = emit_global_lookup(state, std::bit_cast<void*>(ins.pword0()), true);
 		emit_assign_ins(state, fmt::format("*(asDWORD*)&{}", symbol), fmt::to_string(ins.dword0(AS_PTR_SIZE)));
 		break;
 	}
 
 	case asBC_LDG: {
-		std::string symbol = emit_global_lookup(state, reinterpret_cast<void**>(ins.pword0()), true);
+		std::string symbol = emit_global_lookup(state, std::bit_cast<void*>(ins.pword0()), true);
 		emit("\t\tregs->value.as_asPWORD = (asPWORD)&{};\n", symbol);
 		emit_auto_bc_inc(state);
 		break;
 	}
 
 	case asBC_RefCpyV: {
-		asCObjectType*    type = reinterpret_cast<asCObjectType*>(ins.pword0());
+		auto*             type = std::bit_cast<asCObjectType*>(ins.pword0());
 		asSTypeBehaviour& beh  = type->beh;
 
 		emit(
@@ -524,7 +524,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    fmt::arg("DST", frame_var(ins.sword0(), pword))
 		);
 
-		if (!(type->flags & (asOBJ_NOCOUNT | asOBJ_VALUE))) {
+		if ((type->flags & (asOBJ_NOCOUNT | asOBJ_VALUE)) == 0) {
 			// TODO: fix indent within call
 			if (beh.release != 0) {
 				emit("\t\tif (*dst != 0) {{\n");
@@ -552,10 +552,10 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_REFCPY: {
-		asCObjectType* type = reinterpret_cast<asCObjectType*>(ins.pword0());
+		auto* type = std::bit_cast<asCObjectType*>(ins.pword0());
 		// asSTypeBehaviour& beh  = type->beh;
 
-		if (!(type->flags & (asOBJ_NOCOUNT | asOBJ_VALUE))) {
+		if ((type->flags & (asOBJ_NOCOUNT | asOBJ_VALUE)) == 0) {
 			emit_vm_fallback(state, "can't handle release/addref for RefCpy calls yet");
 			break;
 		}
@@ -702,7 +702,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tpc += {BRANCH_OFFSET};\n"
 		    "\t\tgoto bc{BRANCH_TARGET};\n",
 		    fmt::arg("BRANCH_OFFSET", ins.int0() + ins.size),
-		    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + ins.size))
+		    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + int(ins.size)))
 		);
 		break;
 	}
@@ -938,7 +938,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 	}
 
-	if (ins.info->bc == m_config.debug.fallback_after_instruction) {
+	if (ins.info->bc == m_config->debug.fallback_after_instruction) {
 		emit_vm_fallback(state, "debug.fallback_after_instruction");
 	}
 
@@ -951,7 +951,7 @@ void BytecodeToC::emit_vm_fallback(FnState& state, std::string_view reason) {
 	++m_module_state.fallback_count;
 	state.error_handlers.vm_fallback = true;
 
-	if (m_config.c.human_readable) {
+	if (m_config->c.human_readable) {
 		emit("\t\tgoto vm; /* {} */\n", reason);
 	} else {
 		emit("\t\tgoto vm;\n");
@@ -978,12 +978,9 @@ void BytecodeToC::emit_primitive_cast_var_ins(FnState& state, VarType src, VarTy
 	emit_assign_ins(state, frame_var(ins.sword0(), dst), frame_var(in_place ? ins.sword0() : ins.sword1(), src));
 }
 
-std::string BytecodeToC::emit_global_lookup(
-    [[maybe_unused]] FnState& state,
-    void**                    pointer,
-    [[maybe_unused]] bool     global_var_only
-) {
-	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
+std::string
+BytecodeToC::emit_global_lookup([[maybe_unused]] FnState& state, void* pointer, [[maybe_unused]] bool global_var_only) {
+	auto& engine = *static_cast<asCScriptEngine*>(m_script_engine);
 
 	std::string                            fn_symbol;
 	asSMapNode<void*, asCGlobalProperty*>* var_cursor = nullptr;
@@ -1010,7 +1007,7 @@ std::string BytecodeToC::emit_global_lookup(
 		fn_symbol = fmt::format("{}_mod{}_str{}", m_c_symbol_prefix, m_module_idx, m_module_state.string_constant_idx);
 
 		if (m_on_map_extern_callback) {
-			m_on_map_extern_callback(fn_symbol.c_str(), ExternStringConstant{*pointer}, pointer);
+			m_on_map_extern_callback(fn_symbol.c_str(), ExternStringConstant{pointer}, pointer);
 		}
 
 		++m_module_state.string_constant_idx;
@@ -1025,7 +1022,7 @@ std::string BytecodeToC::emit_type_info_lookup([[maybe_unused]] FnState& state, 
 	    = fmt::format("{}_mod{}_typeinfo{}", m_c_symbol_prefix, m_module_idx, m_module_state.type_info_idx);
 	++m_module_state.type_info_idx;
 
-	if (m_config.c.human_readable) {
+	if (m_config->c.human_readable) {
 		emit("\t\t/* type info `{}` */\n", type.GetName());
 	}
 	emit("\t\textern void* {};\n", type_info_symbol);
@@ -1043,7 +1040,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, int fn_idx) {
 	// important to create a shim so that we don't have to go through the
 	// regular AS functions since we have better knowledge of the callee.
 
-	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
+	auto& engine = *static_cast<asCScriptEngine*>(m_script_engine);
 
 	const std::string  fn_symbol = fmt::format("{}_scriptfn{}", m_c_symbol_prefix, fn_idx);
 	asCScriptFunction* callee    = engine.scriptFunctions[fn_idx];
@@ -1052,7 +1049,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, int fn_idx) {
 		m_on_map_extern_callback(fn_symbol.c_str(), ExternScriptFunction{fn_idx}, callee);
 	}
 
-	if (m_config.experimental_fast_script_call && m_config.hack_ignore_suspend) {
+	if (m_config->experimental_fast_script_call && m_config->hack_ignore_suspend) {
 		emit(
 		    "\t\textern char {FN};\n"
 		    "\t\tpc += 2;\n"
@@ -1069,7 +1066,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, int fn_idx) {
 			}
 
 			if (var->onHeap && (var->type.IsObject() || var->type.IsFuncdef())) {
-				if (m_config.c.human_readable) {
+				if (m_config->c.human_readable) {
 					emit("\t\t/* arg {} requires clearing @ stack pos {}*/\n", n, -var->stackOffset);
 				}
 
@@ -1078,14 +1075,14 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, int fn_idx) {
 		}
 
 		if (callee->scriptData->variableSpace != 0) {
-			if (m_config.c.human_readable) {
+			if (m_config->c.human_readable) {
 				emit("\t\t/* make space for variables */\n");
 			}
 			emit("\t\tregs->sp = (asDWORD*)(regs->sp) - {};\n", callee->scriptData->variableSpace);
 		}
 
-		if (callee == &state.fn) {
-			if (m_config.c.human_readable) {
+		if (callee == state.fn) {
+			if (m_config->c.human_readable) {
 				emit("\t\t/* recursive call */\n");
 			}
 			emit(
@@ -1116,7 +1113,7 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 	const auto result = emit_direct_system_call(state, call);
 	if (!result.ok) {
 		// fallback approach to ensure the call always succeeds even if we cannot emit a direct call
-		if (m_config.c.human_readable) {
+		if (m_config->c.human_readable) {
 			emit("\t\t/* Fallback to VM call: {} */\n", result.fail_reason);
 		}
 
@@ -1139,15 +1136,15 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 }
 
 BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& state, SystemCall call) {
-	if (!m_config.hack_ignore_exceptions) {
+	if (!m_config->hack_ignore_exceptions) {
 		return {.ok = false, .fail_reason = "Direct system call failed: hack_ignore_exceptions == false"};
 	}
 
-	if (!m_config.hack_ignore_suspend) {
+	if (!m_config->hack_ignore_suspend) {
 		return {.ok = false, .fail_reason = "Direct system call failed: hack_ignore_suspend == false"};
 	}
 
-	asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
+	auto& engine = *static_cast<asCScriptEngine*>(m_script_engine);
 
 	const std::string           fn_callable_symbol = fmt::format("{}_sysfnptr{}", m_c_symbol_prefix, call.fn_idx);
 	const std::string           fn_desc_symbol     = fmt::format("{}_sysfn{}", m_c_symbol_prefix, call.fn_idx);
@@ -1160,7 +1157,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& 
 		m_on_map_extern_callback(
 		    fn_callable_symbol.c_str(),
 		    ExternSystemFunction{call.fn_idx},
-		    reinterpret_cast<void**>(sys_fn.func)
+		    std::bit_cast<void*>(sys_fn.func)
 		);
 	}
 
@@ -1178,11 +1175,11 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
     std::string_view   fn_desc_symbol,
     std::string_view   fn_callable_symbol
 ) {
-	if (!m_config.experimental_direct_native_call) {
+	if (!m_config->experimental_direct_native_call) {
 		return {.ok = false, .fail_reason = "Direct native call failed: experimental_direct_native_call == false"};
 	}
 
-	asCScriptEngine&            engine = static_cast<asCScriptEngine&>(m_script_engine);
+	auto&                       engine = *static_cast<asCScriptEngine*>(m_script_engine);
 	asSSystemFunctionInterface& sys_fn = *fn.sysFuncIntf;
 
 	if (call.is_internal_call) {
@@ -1229,23 +1226,22 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	const auto get_c_type = [](const asCDataType& type) -> std::string {
 		if (type.IsReference() || type.IsObjectHandle()) {
 			return "void*";
-		} else {
-			switch (type.GetSizeInMemoryDWords()) {
-			case 0: return "void"; break;
-			case 1:
-				return std::string{
-				    type.IsEqualExceptConst(asCDataType::CreatePrimitive(ttFloat, true)) ? var_types::f32.c
-				                                                                         : var_types::u32.c
-				};
-			case 2:
-				return std::string{
-				    type.IsEqualExceptConst(asCDataType::CreatePrimitive(ttDouble, true)) ? var_types::f64.c
-				                                                                          : var_types::u64.c
-				};
-			}
 		}
 
-		return {};
+		switch (type.GetSizeInMemoryDWords()) {
+		case 0: return "void"; break;
+		case 1:
+			return std::string{
+			    type.IsEqualExceptConst(asCDataType::CreatePrimitive(ttFloat, true)) ? var_types::f32.c
+			                                                                         : var_types::u32.c
+			};
+		case 2:
+			return std::string{
+			    type.IsEqualExceptConst(asCDataType::CreatePrimitive(ttDouble, true)) ? var_types::f64.c
+			                                                                          : var_types::u64.c
+			};
+		default: return {};
+		}
 	};
 
 	std::string return_type = get_c_type(fn.returnType);
@@ -1386,11 +1382,11 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
     std::string_view   fn_desc_symbol,
     std::string_view   fn_callable_symbol
 ) {
-	if (!m_config.experimental_direct_generic_call) {
+	if (!m_config->experimental_direct_generic_call) {
 		return {.ok = false, .fail_reason = "Direct generic call failed: experimental_direct_generic_call == false"};
 	}
 
-	asCScriptEngine&            engine = static_cast<asCScriptEngine&>(m_script_engine);
+	auto&                       engine = *static_cast<asCScriptEngine*>(m_script_engine);
 	asSSystemFunctionInterface& sys_fn = *fn.sysFuncIntf;
 
 	const internalCallConv abi = sys_fn.callConv;
@@ -1407,7 +1403,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 		}
 	}
 
-	if (!m_config.hack_ignore_context_inspect) {
+	if (!m_config->hack_ignore_context_inspect) {
 		emit("{}", save_registers_sequence);
 	}
 
@@ -1457,7 +1453,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 	    fmt::arg("FNCALLABLE", fn_callable_symbol)
 	);
 
-	if (!m_config.hack_generic_assume_callee_correctness) {
+	if (!m_config->hack_generic_assume_callee_correctness) {
 		emit(
 		    "\t\tg.objectRegister = 0;\n"
 		    "\t\tg.returnVal = 0;\n"
@@ -1520,7 +1516,7 @@ void BytecodeToC::emit_cond_branch_ins(FnState& state, std::string_view test) {
 	    fmt::arg("TEST", test),
 	    fmt::arg("INSTRUCTION_LENGTH", ins.size),
 	    fmt::arg("BRANCH_OFFSET", ins.int0() + (long)ins.size),
-	    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + (long)ins.size))
+	    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + int(ins.size)))
 	);
 }
 
@@ -1546,8 +1542,7 @@ void BytecodeToC::emit_test_ins(FnState& state, std::string_view op_with_rhs_0) 
 	emit(
 	    "\t\tasINT32 value = regs->value.as_asINT32;\n"
 	    "\t\tregs->value.as_asQWORD = 0;\n"
-	    "\t\tregs->value.as_asBYTE = (value {OP} 0) ? "
-	    "VALUE_OF_BOOLEAN_TRUE : 0;\n",
+	    "\t\tregs->value.as_asBYTE = (value {OP} 0) ? 1 : 0;\n",
 	    fmt::arg("OP", op_with_rhs_0)
 	);
 	emit_auto_bc_inc(state);

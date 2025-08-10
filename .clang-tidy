@@ -1,0 +1,26 @@
+Checks: |
+  -*,
+  bugprone-*,
+  cert-*,
+  cppcoreguidelines-*,
+  clang-analyzer-*,
+  hicpp-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -hicpp-signed-bitwise,
+  -readability-identifier-length,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-type-union-access,
+  -readability-magic-numbers,
+  -readability-convert-member-functions-to-static,
+  -readability-isolate-declaration,
+  -cppcoreguidelines-init-variables,
+  -cppcoreguidelines-pro-type-static-cast-downcast,
+  -hicpp-static-assert,
+  -cert-dcl03-c,
+  -bugprone-easily-swappable-parameters,
+  -readability-static-accessed-through-instance
+
+HeaderFilterRegex: 'include/*'

@@ -18,7 +18,7 @@ std::string disassemble(asIScriptEngine& engine, BytecodeInstruction instruction
 	case asBC_CALL:
 	case asBC_CALLSYS:
 	case asBC_Thiscall1: {
-		auto* func = static_cast<asIScriptFunction*>(engine.GetFunctionById(instruction.int0()));
+		auto* func = engine.GetFunctionById(instruction.int0());
 
 		angelsea_assert(func != nullptr);
 
@@ -52,7 +52,7 @@ std::string disassemble(asIScriptEngine& engine, BytecodeInstruction instruction
 
 	case asBCTYPE_rW_DW_ARG:
 	case asBCTYPE_wW_DW_ARG:
-	case asBCTYPE_W_DW_ARG: {
+	case asBCTYPE_W_DW_ARG:  {
 		return fmt::format("{} {} {}", instruction.info->name, instruction.sword0(), instruction.int0());
 	}
 
@@ -81,12 +81,12 @@ std::string disassemble(asIScriptEngine& engine, BytecodeInstruction instruction
 
 	case asBCTYPE_wW_rW_ARG:
 	case asBCTYPE_rW_rW_ARG:
-	case asBCTYPE_wW_W_ARG: {
+	case asBCTYPE_wW_W_ARG:  {
 		return fmt::format("{} {} {}", instruction.info->name, instruction.sword0(), instruction.sword1());
 	}
 
 	case asBCTYPE_wW_rW_DW_ARG:
-	case asBCTYPE_rW_W_DW_ARG: {
+	case asBCTYPE_rW_W_DW_ARG:  {
 		return fmt::format(
 		    "{} {} {} {}",
 		    instruction.info->name,

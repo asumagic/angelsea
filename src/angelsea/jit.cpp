@@ -8,7 +8,8 @@ namespace angelsea {
 Jit::Jit(const JitConfig& config, asIScriptEngine& engine) :
     m_compiler(std::make_unique<detail::MirJit>(config, engine)) {}
 
-Jit::~Jit() {}
+Jit::~Jit() {} // NOLINT: we'd rather not force the user to see the detail/ TUs, so for unique_ptr purposes we need the
+               // destructor in this TU
 
 void Jit::NewFunction(asIScriptFunction* scriptFunc) { m_compiler->register_function(*scriptFunc); }
 
