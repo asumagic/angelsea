@@ -724,7 +724,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_CALL:      emit_direct_script_call_ins(state, ins.int0()); break;
-	// TODO: asBC_Thiscall1 is much slower than it should be in case of a fallback here
 	case asBC_Thiscall1:
 	case asBC_CALLSYS:   {
 		emit_system_call(
