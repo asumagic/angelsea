@@ -10,6 +10,7 @@
 #include <angelsea/detail/mirjit.hpp>
 #include <angelsea/detail/runtime.hpp>
 #include <as_generic.h>
+#include <bit>
 #include <mir-gen.h>
 #include <mir.h>
 #include <string>

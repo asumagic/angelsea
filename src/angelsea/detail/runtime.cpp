@@ -8,6 +8,7 @@
 #include <as_objecttype.h>
 #include <as_scriptengine.h>
 #include <as_scriptfunction.h>
+#include <bit>
 #include <cmath>
 
 static asCContext&      asea_get_context(asSVMRegisters* regs) { return static_cast<asCContext&>(*regs->ctx); }

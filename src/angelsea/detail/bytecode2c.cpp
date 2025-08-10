@@ -15,6 +15,7 @@
 #include <as_property.h>
 #include <as_scriptengine.h>
 #include <as_texts.h>
+#include <bit>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
