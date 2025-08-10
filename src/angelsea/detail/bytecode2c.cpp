@@ -169,10 +169,11 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		);
 	}
 
-	FnState state{.fn = &fn, .ins = {}, .switch_map = {}, .error_handlers = {}};
+	FnState state{.fn = &fn, .ins = {}, .switch_map = {}, .branch_targets = {}, .error_handlers = {}};
 
 	discover_switch_map(state);
 	configure_jit_entries(state);
+	discover_branch_targets(state);
 
 	emit_entry_dispatch(state);
 
@@ -306,6 +307,18 @@ void BytecodeToC::discover_switch_map(FnState& state) {
 	}
 }
 
+void BytecodeToC::discover_branch_targets(FnState& state) {
+	for (BytecodeInstruction ins : get_bytecode(*state.fn)) {
+		if (ins.info->bc == asBC_JitEntry && ins.pword0() != 0) {
+			state.branch_targets.emplace(ins.offset);
+		}
+
+		if (auto jmp = bcins::try_as<bcins::Jump>(ins); jmp.has_value()) {
+			state.branch_targets.emplace(jmp->target_offset());
+		}
+	}
+}
+
 void BytecodeToC::emit_entry_dispatch(FnState& state) {
 	if (!state.has_any_late_jit_entries) {
 		if (m_config->c.human_readable) {
@@ -401,7 +414,15 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit("\t/* bytecode: {} */\n", disassemble(*m_script_engine, ins));
 	}
 
-	emit("\tbc{}: {{\n", ins.offset);
+	if (state.branch_targets.contains(ins.offset)) {
+		emit("\tbc{}: {{\n", ins.offset);
+	} else {
+		if (m_config->c.human_readable) {
+			emit("\t/* bc{}: */ {{\n", ins.offset);
+		} else {
+			emit("\t{{\n");
+		}
+	}
 
 	if (is_instruction_blacklisted(ins.info->bc)) {
 		emit_vm_fallback(state, "instruction blacklisted by config.debug, force fallback");
@@ -698,11 +719,12 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_JMP: {
+		bcins::Jump jmp{ins};
 		emit(
 		    "\t\tpc += {BRANCH_OFFSET};\n"
 		    "\t\tgoto bc{BRANCH_TARGET};\n",
-		    fmt::arg("BRANCH_OFFSET", ins.int0() + ins.size),
-		    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + int(ins.size)))
+		    fmt::arg("BRANCH_OFFSET", jmp.relative_offset()),
+		    fmt::arg("BRANCH_TARGET", jmp.target_offset())
 		);
 		break;
 	}
@@ -1506,7 +1528,7 @@ void BytecodeToC::emit_assign_ins(FnState& state, std::string_view dst, std::str
 }
 
 void BytecodeToC::emit_cond_branch_ins(FnState& state, std::string_view test) {
-	BytecodeInstruction& ins = state.ins;
+	bcins::Jump jmp{state.ins};
 	emit(
 	    "\t\tif( {TEST} ) {{\n"
 	    "\t\t\tpc += {BRANCH_OFFSET};\n"
@@ -1514,9 +1536,9 @@ void BytecodeToC::emit_cond_branch_ins(FnState& state, std::string_view test) {
 	    "\t\t}}\n"
 	    "\t\tpc += {INSTRUCTION_LENGTH};\n",
 	    fmt::arg("TEST", test),
-	    fmt::arg("INSTRUCTION_LENGTH", ins.size),
-	    fmt::arg("BRANCH_OFFSET", ins.int0() + (long)ins.size),
-	    fmt::arg("BRANCH_TARGET", relative_jump_target(ins.offset, ins.int0() + int(ins.size)))
+	    fmt::arg("INSTRUCTION_LENGTH", jmp.size),
+	    fmt::arg("BRANCH_OFFSET", jmp.relative_offset()),
+	    fmt::arg("BRANCH_TARGET", jmp.target_offset())
 	);
 }
 

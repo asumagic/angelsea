@@ -2,8 +2,12 @@
 
 #pragma once
 
+#include <algorithm>
 #include <angelscript.h>
+#include <angelsea/detail/debug.hpp>
+#include <array>
 #include <cstddef>
+#include <optional>
 
 namespace angelsea::detail {
 struct BytecodeInstruction {
@@ -23,4 +27,27 @@ struct BytecodeInstruction {
 	short&   sword1(std::size_t offset = 0) { return asBC_SWORDARG1(pointer + offset); }
 	short&   sword2(std::size_t offset = 0) { return asBC_SWORDARG2(pointer + offset); }
 };
+
+namespace bcins {
+template<typename T> bool is_specific_ins(const BytecodeInstruction& bc) {
+	return std::find(T::valid_opcodes.begin(), T::valid_opcodes.end(), bc.info->bc) != T::valid_opcodes.end();
+}
+
+template<typename T> std::optional<T> try_as(BytecodeInstruction& ins) {
+	if (is_specific_ins<T>(ins)) {
+		return T{ins};
+	}
+	return {};
+}
+
+struct Jump : BytecodeInstruction {
+	public:
+	static constexpr std::array valid_opcodes
+	    = {asBC_JMP, asBC_JZ, asBC_JLowZ, asBC_JNZ, asBC_JLowNZ, asBC_JS, asBC_JNS, asBC_JP, asBC_JNP};
+	Jump(BytecodeInstruction& ins) : BytecodeInstruction(ins) { angelsea_assert(is_specific_ins<Jump>(ins)); } // NOLINT
+
+	int relative_offset() { return int0() + int(size); }
+	int target_offset() { return int(offset) + relative_offset(); }
+};
+} // namespace bcins
 } // namespace angelsea::detail

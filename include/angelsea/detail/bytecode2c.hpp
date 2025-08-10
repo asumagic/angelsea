@@ -12,6 +12,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <variant>
 
 namespace angelsea::detail {
@@ -100,6 +101,10 @@ class BytecodeToC {
 		/// Map from switch bytecode offset (asBC_JMPP) to all its targets
 		std::unordered_map<std::size_t, std::vector<std::size_t>> switch_map;
 
+		/// Set of targets that may be branched to (via `goto bcXX;`), whether from relative jump instructions or JIT
+		/// entry points
+		std::unordered_set<std::size_t> branch_targets;
+
 		struct {
 			bool null : 1            = false;
 			bool divide_by_zero : 1  = false;
@@ -119,6 +124,7 @@ class BytecodeToC {
 
 	void configure_jit_entries(FnState& state);
 	void discover_switch_map(FnState& state);
+	void discover_branch_targets(FnState& state);
 
 	void emit_entry_dispatch(FnState& state);
 	void emit_error_handlers(FnState& state);
