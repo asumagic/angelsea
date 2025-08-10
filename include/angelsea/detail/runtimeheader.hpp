@@ -112,6 +112,7 @@ typedef struct asCScriptFunction_t asCScriptFunction;
 typedef struct asCObjectType_t asCObjectType;
 typedef struct asITypeInfo_t asITypeInfo;
 typedef struct asCScriptEngine_t asCScriptEngine;
+typedef struct asCScriptObject_t asCScriptObject;
 typedef struct asSTypeBehaviour_t asSTypeBehaviour;
 
 #endif
@@ -165,6 +166,7 @@ double asea_fmod(double a, double b);
 void asea_clean_args(asSVMRegisters* vm_registers, void* function, asDWORD* args);
 int asea_call_system_function(asSVMRegisters* vm_registers, int fn);
 int asea_call_object_method(asSVMRegisters* vm_registers, void* obj, int fn);
+void asea_cast(asSVMRegisters* vm_registers, asCScriptObject* obj, asDWORD type_id);
 
 extern void asea_engine;
 extern void asea_generic_vtable;

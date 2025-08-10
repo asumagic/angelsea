@@ -258,7 +258,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		case asBC_CpyVtoG4:
 		case asBC_CpyGtoV4:
 		case asBC_ChkRefS:
-		case asBC_Cast:
 		case asBC_ChkNullS:
 		case asBC_ClrHi:
 		case asBC_FuncPtr:
@@ -710,8 +709,19 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		emit_auto_bc_inc(state);
 		break;
 	}
-	case asBC_RDR4:      emit_assign_ins(state, frame_var(ins.sword0(), u32), "regs->value.as_var_ptr->as_asDWORD"); break;
-	case asBC_RDR8:      emit_assign_ins(state, frame_var(ins.sword0(), u64), "regs->value.as_var_ptr->as_asQWORD"); break;
+	case asBC_RDR4: emit_assign_ins(state, frame_var(ins.sword0(), u32), "regs->value.as_var_ptr->as_asDWORD"); break;
+	case asBC_RDR8: emit_assign_ins(state, frame_var(ins.sword0(), u64), "regs->value.as_var_ptr->as_asQWORD"); break;
+
+	case asBC_Cast: {
+		emit(
+		    "\t\tasCScriptObject** h = (asCScriptObject**)sp->as_ptr;\n"
+		    "\t\tif (h && *h) {{ asea_cast(_regs, *h, {TYPEID}); }}\n"
+		    "\t\tsp = (asea_var*)((char*)sp + sizeof(asPWORD));\n",
+		    fmt::arg("TYPEID", ins.dword0())
+		);
+		emit_auto_bc_inc(state);
+		break;
+	}
 
 	case asBC_CALL:      emit_direct_script_call_ins(state, ins.int0()); break;
 	// TODO: asBC_Thiscall1 is much slower than it should be in case of a fallback here
@@ -938,7 +948,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CpyVtoG4:     // TODO: find way to emit
 	case asBC_CpyGtoV4:     // TODO: implement
 	case asBC_ChkRefS:      // TODO: find way to emit
-	case asBC_Cast:         // TODO: find way to emit (well. not the hardest to imagine)
 	case asBC_ChkNullS:     // TODO: find way to emit
 	case asBC_ClrHi:        // TODO: find way to emit
 	case asBC_FuncPtr:      // TODO: find way to emit

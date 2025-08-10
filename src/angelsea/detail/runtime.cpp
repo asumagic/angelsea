@@ -8,6 +8,7 @@
 #include <as_objecttype.h>
 #include <as_scriptengine.h>
 #include <as_scriptfunction.h>
+#include <as_scriptobject.h>
 #include <bit>
 #include <cmath>
 
@@ -98,6 +99,19 @@ void asea_clean_args(asSVMRegisters* vm_registers, asCScriptFunction& fn, asDWOR
 
 			engine.CallFree(*addr);
 		}
+	}
+}
+
+void asea_cast(asSVMRegisters* vm_registers, asCScriptObject* obj, asDWORD type_id) {
+	asCScriptEngine& engine = asea_get_engine(vm_registers);
+
+	asCObjectType& type = *obj->objType;
+	asCObjectType& to   = *engine.GetObjectTypeFromTypeId(type_id);
+
+	if (type.Implements(&to) || type.DerivesFrom(&to)) {
+		vm_registers->objectType     = nullptr;
+		vm_registers->objectRegister = obj;
+		obj->AddRef();
 	}
 }
 }

@@ -5,6 +5,7 @@
 #include <angelscript.h>
 
 class asCScriptFunction;
+class asCScriptObject;
 
 // NOTE: all of these function declarations should be:
 // - mirrored in the generated header in runtimeheader.hpp
@@ -45,6 +46,9 @@ void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text)
 /// \brief Performs cleanup for arguments of a function. This generally amounts
 /// to calling ref release or destruct behaviors.
 void asea_clean_args(asSVMRegisters* vm_registers, asCScriptFunction& fn, asDWORD* args);
+
+/// \brief Casts script object \ref obj to the requested \ref type_id; stores result in object register
+void asea_cast(asSVMRegisters* vm_registers, asCScriptObject* obj, asDWORD type_id);
 
 float  asea_fmodf(float a, float b);
 double asea_fmod(double a, double b);

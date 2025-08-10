@@ -57,6 +57,10 @@ TEST_CASE("user class Vec3f", "[userclass][vec3f]") {
 	REQUIRE(run("scripts/vec3f.as") == "150\nx: -50; y: 100; z: -50\nx: 10; y: 7.5; z: 5\n");
 }
 
+TEST_CASE("user class inheritance", "[userclass][inheritance]") {
+	REQUIRE(run("scripts/classinheritance.as", "void downcast()") == "");
+}
+
 class PgaTestBase {
 	public:
 	virtual void foo() { out << bar << '\n'; }
