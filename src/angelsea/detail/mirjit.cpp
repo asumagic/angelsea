@@ -270,17 +270,12 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 
 		fn.compiled.module = DLIST_TAIL(MIR_module_t, *MIR_get_module_list(compile_mir));
 
-		// transfer to main MIR
-		{
-			std::lock_guard lk{m_mir_lock};
-			MIR_change_module_ctx(compile_mir, fn.compiled.module, m_mir);
-		}
-
 		// trigger MIR linking and codegen
 		// this MUST in all circumstances be a full compile as the called code should never ever call into MIR code from
 		// thunks, which would not be thread safe
 		{
 			std::lock_guard lk{m_mir_lock};
+			MIR_change_module_ctx(compile_mir, fn.compiled.module, m_mir);
 			MIR_load_module(m_mir, fn.compiled.module);
 
 			MIR_item_t mir_entry_fn;
@@ -361,9 +356,9 @@ void MirJit::link_ready_functions() {
 	}
 	m_async_finished_functions.clear();
 
-	if (config().hack_mir_minimize) {
-		MIR_minimize(m_mir);
-	}
+	// if (config().hack_mir_minimize) {
+	// 	MIR_minimize(m_mir);
+	// }
 }
 
 void MirJit::link_function(AsyncMirFunction& fn) {
