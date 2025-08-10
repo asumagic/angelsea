@@ -64,20 +64,18 @@ struct LazyMirFunction {
 	std::size_t        hits_before_compile;
 };
 
-struct TransferableModule {
-	Mir          mir;
-	MIR_module_t module;
-};
-
 struct AsyncMirFunction {
 	MirJit*                                   jit_engine;
 	asIScriptFunction*                        script_function;
-	std::atomic<bool>                         ready;
-	TransferableModule                        compiled;
 	std::vector<std::pair<asPWORD*, asPWORD>> jit_entry_args;
 	std::string                               c_name;
 	std::string                               c_source;
 	std::string                               pretty_name;
+	struct {
+		std::atomic<bool> ready;
+		asJITFunction     jit_function;
+		MIR_module_t      module;
+	} compiled;
 };
 
 class MirJit {
@@ -99,8 +97,8 @@ class MirJit {
 
 	void translate_lazy_function(LazyMirFunction& fn);
 	void codegen_async_function(AsyncMirFunction& fn);
-	void transfer_compiled_modules();
-	void transfer_and_destroy(AsyncMirFunction& fn);
+	void link_ready_functions();
+	void link_function(AsyncMirFunction& fn);
 
 	/// Configure a JIT entry callback to a function, where the asPWORD arg will be equal to `ud`
 	void setup_jit_callback(asIScriptFunction& function, asJITFunction callback, void* ud, bool ignore_unregister);
@@ -114,7 +112,8 @@ class MirJit {
 	JitConfig        m_config;
 	asIScriptEngine* m_engine;
 
-	Mir m_mir;
+	Mir        m_mir;
+	std::mutex m_mir_lock;
 
 	BytecodeToC m_c_generator;
 

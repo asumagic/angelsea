@@ -55,8 +55,8 @@ void jit_entry_function_counter(asSVMRegisters* regs, asPWORD lazy_fn_raw) {
 void jit_entry_await_async(asSVMRegisters* regs, asPWORD pending_fn_raw) {
 	auto& lazy_fn = *std::bit_cast<AsyncMirFunction*>(pending_fn_raw);
 
-	if (lazy_fn.ready.load()) {
-		lazy_fn.jit_engine->transfer_compiled_modules();
+	if (lazy_fn.compiled.ready.load()) {
+		lazy_fn.jit_engine->link_ready_functions();
 		return; // let jitentry rerun
 	}
 
@@ -117,7 +117,7 @@ void MirJit::unregister_function(asIScriptFunction& script_function) {
 
 		// is the async callback still running?
 		// (we're locking m_async_destruct_mutex, so this is safe)
-		if (!async_fn->ready.load()) {
+		if (!async_fn->compiled.ready.load()) {
 			m_async_cancelled_functions.emplace_back(std::move(async_fn));
 		}
 		// if not, let the async_fn die
@@ -172,9 +172,15 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 
 	// TODO: b2c in thread as well
 	m_c_generator.prepare_new_context();
-	m_c_generator.set_map_extern_callback([&](const char*                                        c_name,
-	                                          [[maybe_unused]] const BytecodeToC::ExternMapping& mapping,
-	                                          void* raw_value) { MIR_load_external(m_mir, c_name, raw_value); });
+	m_c_generator.set_map_extern_callback(
+	    [&](const char* c_name, [[maybe_unused]] const BytecodeToC::ExternMapping& mapping, void* raw_value) {
+		    MIR_load_external(
+		        m_mir,
+		        c_name,
+		        raw_value
+		    ); /* FIXME: thread safety!! must be put in some list when we codegen instead - probably on main context */
+	    }
+	);
 	m_c_generator.translate_function(name, *fn.script_function);
 
 	if (m_c_generator.get_fallback_count() > 0) {
@@ -229,7 +235,7 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 }
 
 void MirJit::codegen_async_function(AsyncMirFunction& fn) {
-	Mir& compile_mir = fn.compiled.mir;
+	Mir compile_mir;
 	{
 		C2Mir c2mir{compile_mir};
 
@@ -264,6 +270,58 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 			log(config(), engine(), LogSeverity::ERROR, "Failed to compile C for \"{}\"", fn.pretty_name.c_str());
 			angelsea_assert(false); // FIXME: error handling
 		}
+
+		fn.compiled.module = DLIST_TAIL(MIR_module_t, *MIR_get_module_list(compile_mir));
+
+		// transfer to main MIR
+		{
+			std::lock_guard lk{m_mir_lock};
+			MIR_change_module_ctx(compile_mir, fn.compiled.module, m_mir);
+		}
+
+		// trigger MIR linking and codegen
+		// this MUST in all circumstances be a full compile as the called code should never ever call into MIR code from
+		// thunks, which would not be thread safe
+		{
+			std::lock_guard lk{m_mir_lock};
+			MIR_load_module(m_mir, fn.compiled.module);
+
+			MIR_item_t mir_entry_fn;
+			bool       found = false;
+			for (MIR_item_t mir_fn = DLIST_HEAD(MIR_item_t, fn.compiled.module->items); mir_fn != nullptr;
+			     mir_fn            = DLIST_NEXT(MIR_item_t, mir_fn)) {
+				if (mir_fn->item_type == MIR_func_item && std::string_view{mir_fn->u.func->name} == fn.c_name) {
+					found        = true;
+					mir_entry_fn = mir_fn;
+					break;
+				}
+			}
+
+			if (!found) {
+				log(config(), engine(), LogSeverity::ERROR, "Function compile failed!");
+				setup_jit_callback(*fn.script_function, nullptr, nullptr, true);
+				m_async_codegen_functions.erase(fn.script_function);
+				return;
+			}
+
+			MIR_gen_init(m_mir);
+
+			MIR_gen_set_debug_file(m_mir, config().debug.mir_diagnostic_file);
+			MIR_gen_set_debug_level(m_mir, config().debug.mir_debug_level);
+
+			MIR_gen_set_optimize_level(m_mir, config().mir_optimization_level);
+
+			MIR_link(m_mir, MIR_set_gen_interface, nullptr);
+
+			fn.compiled.jit_function = std::bit_cast<asJITFunction>(MIR_gen(m_mir, mir_entry_fn));
+
+			if (config().debug.dump_mir_code) {
+				angelsea_assert(config().debug.dump_mir_code_file != nullptr);
+				MIR_output(m_mir, config().debug.dump_mir_code_file);
+			}
+
+			MIR_gen_finish(m_mir);
+		}
 	} // must destroy C2Mir before MirJit potentially gets destroyed
 
 	{
@@ -276,8 +334,7 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 		    destruct_it != m_async_cancelled_functions.end()) {
 			m_async_cancelled_functions.erase(destruct_it);
 		} else {
-			fn.compiled.module = DLIST_TAIL(MIR_module_t, *MIR_get_module_list(compile_mir));
-			fn.ready.store(true);
+			fn.compiled.ready.store(true);
 
 			// move self to finished list
 			auto it = m_async_codegen_functions.find(fn.script_function);
@@ -291,11 +348,11 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 	m_termination_cv.notify_one();
 }
 
-void MirJit::transfer_compiled_modules() {
+void MirJit::link_ready_functions() {
 	// FIXME: locking more than necessary
 	std::lock_guard lk{m_async_destruct_mutex};
 	for (auto& [script_fn, finished_fn] : m_async_finished_functions) {
-		transfer_and_destroy(*finished_fn);
+		link_function(*finished_fn);
 	}
 	m_async_finished_functions.clear();
 
@@ -304,55 +361,16 @@ void MirJit::transfer_compiled_modules() {
 	}
 }
 
-void MirJit::transfer_and_destroy(AsyncMirFunction& fn) {
-	MIR_change_module_ctx(fn.compiled.mir, fn.compiled.module, m_mir);
+void MirJit::link_function(AsyncMirFunction& fn) {
 
 	for (auto [ptr, arg] : fn.jit_entry_args) {
 		*ptr = arg;
 	}
 
-	MIR_load_module(m_mir, fn.compiled.module);
-
-	MIR_item_t mir_entry_fn;
-	bool       found = false;
-	for (MIR_item_t mir_fn = DLIST_HEAD(MIR_item_t, fn.compiled.module->items); mir_fn != nullptr;
-	     mir_fn            = DLIST_NEXT(MIR_item_t, mir_fn)) {
-		if (mir_fn->item_type == MIR_func_item && std::string_view{mir_fn->u.func->name} == fn.c_name) {
-			found        = true;
-			mir_entry_fn = mir_fn;
-			break;
-		}
-	}
-
-	if (!found) {
-		log(config(), engine(), LogSeverity::ERROR, "Function compile failed!");
-		setup_jit_callback(*fn.script_function, nullptr, nullptr, true);
-		m_async_codegen_functions.erase(fn.script_function);
-		return;
-	}
-
-	MIR_gen_init(m_mir);
-
-	MIR_gen_set_debug_file(m_mir, config().debug.mir_diagnostic_file);
-	MIR_gen_set_debug_level(m_mir, config().debug.mir_debug_level);
-
-	MIR_gen_set_optimize_level(m_mir, config().mir_optimization_level);
-
-	MIR_link(m_mir, MIR_set_gen_interface, nullptr);
-
-	auto* entry_point = std::bit_cast<asJITFunction>(MIR_gen(m_mir, mir_entry_fn));
-
 	m_ignore_unregister             = fn.script_function;
-	[[maybe_unused]] const auto err = fn.script_function->SetJITFunction(entry_point);
+	[[maybe_unused]] const auto err = fn.script_function->SetJITFunction(fn.compiled.jit_function);
 	angelsea_assert(err == asSUCCESS);
 	m_ignore_unregister = nullptr;
-
-	if (config().debug.dump_mir_code) {
-		angelsea_assert(config().debug.dump_mir_code_file != nullptr);
-		MIR_output(m_mir, config().debug.dump_mir_code_file);
-	}
-
-	MIR_gen_finish(m_mir);
 
 	if (config().hack_mir_minimize) {
 		MIR_minimize_module(m_mir, fn.compiled.module);
