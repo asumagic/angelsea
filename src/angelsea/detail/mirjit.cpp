@@ -322,6 +322,10 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 			}
 
 			MIR_gen_finish(m_mir);
+
+			if (config().hack_mir_minimize) {
+				MIR_minimize_module(m_mir, fn.compiled.module);
+			}
 		}
 	} // must destroy C2Mir before MirJit potentially gets destroyed
 
@@ -372,10 +376,6 @@ void MirJit::link_function(AsyncMirFunction& fn) {
 	[[maybe_unused]] const auto err = fn.script_function->SetJITFunction(fn.compiled.jit_function);
 	angelsea_assert(err == asSUCCESS);
 	m_ignore_unregister = nullptr;
-
-	if (config().hack_mir_minimize) {
-		MIR_minimize_module(m_mir, fn.compiled.module);
-	}
 }
 
 void MirJit::setup_jit_callback(asIScriptFunction& function, asJITFunction callback, void* ud, bool ignore_unregister) {
