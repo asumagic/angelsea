@@ -258,7 +258,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		case asBC_CpyVtoG4:
 		case asBC_CpyGtoV4:
 		case asBC_ChkRefS:
-		case asBC_ChkNullV:
 		case asBC_Cast:
 		case asBC_ChkNullS:
 		case asBC_ClrHi:
@@ -493,6 +492,13 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_CHKREF: {
 		emit("\t\tif (sp->as_asPWORD == 0) {{ goto err_null; }}\n");
+		state.error_handlers.null = true;
+		emit_auto_bc_inc(state);
+		break;
+	}
+
+	case asBC_ChkNullV: {
+		emit("\t\tif ({VAR} == 0) {{ goto err_null; }}\n", fmt::arg("VAR", frame_var(ins.sword0(), pword)));
 		state.error_handlers.null = true;
 		emit_auto_bc_inc(state);
 		break;
@@ -932,7 +938,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CpyVtoG4:     // TODO: find way to emit
 	case asBC_CpyGtoV4:     // TODO: implement
 	case asBC_ChkRefS:      // TODO: find way to emit
-	case asBC_ChkNullV:     // TODO: implement
 	case asBC_Cast:         // TODO: find way to emit (well. not the hardest to imagine)
 	case asBC_ChkNullS:     // TODO: find way to emit
 	case asBC_ClrHi:        // TODO: find way to emit
