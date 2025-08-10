@@ -371,7 +371,6 @@ void MirJit::link_ready_functions() {
 }
 
 void MirJit::link_function(AsyncMirFunction& fn) {
-
 	for (auto [ptr, arg] : fn.jit_entry_args) {
 		*ptr = arg;
 	}
