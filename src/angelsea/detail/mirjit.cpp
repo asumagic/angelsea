@@ -273,6 +273,7 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 		// trigger MIR linking and codegen
 		// this MUST in all circumstances be a full compile as the called code should never ever call into MIR code from
 		// thunks, which would not be thread safe
+		// TODO: move this to its own task in a way that allows more threading
 		{
 			std::lock_guard lk{m_mir_lock};
 			MIR_change_module_ctx(compile_mir, fn.compiled.module, m_mir);
@@ -320,6 +321,7 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 
 			if (config().hack_mir_minimize) {
 				MIR_minimize_module(m_mir, fn.compiled.module);
+				MIR_minimize(m_mir);
 			}
 		}
 	} // must destroy C2Mir before MirJit potentially gets destroyed
@@ -355,10 +357,6 @@ void MirJit::link_ready_functions() {
 		link_function(*finished_fn);
 	}
 	m_async_finished_functions.clear();
-
-	// if (config().hack_mir_minimize) {
-	// 	MIR_minimize(m_mir);
-	// }
 }
 
 void MirJit::link_function(AsyncMirFunction& fn) {
