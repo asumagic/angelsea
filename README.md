@@ -10,18 +10,13 @@ compiler.
 ## Design
 
 Angelsea compiles AngelScript bytecode to C functions that are JIT compiled by
-c2mir and invoked by the usual JIT entry points in AngelScript.
+c2mir to MIR and ultimately machine code and invoked by the usual JIT entry
+points in AngelScript.
 
-C code generation amounts to pasting simple C that closely matches
-AngelScript behavior.  
-It can fallback to the interpreter at any point, and may be invoked from any JIT
+C code generation amounts to pasting simple C that closely matches the
+AngelScript interpreter.  
+It can fallback to it in unsupported cases, and may be invoked from any JIT
 entry point (e.g. inserted by AS at the start of the function or after calls).
-
-The compile process has three steps:
-
-- Bytecode to C (can be triggered by a heuristic for functions called enough times)
-- C to MIR (can be async)
-- MIR optimization and codegen (can't be async yet; investigating.)
 
 ## Current status
 
@@ -29,15 +24,22 @@ The JIT compiler can already be used: The test suite is constantly checked and
 it is regularly tested against a test development build of
 [King Arthur's Gold](https://store.steampowered.com/app/219830/King_Arthurs_Gold).
 
+### Performance
+
 Early benchmarks show the JIT exceeding interpreter performance for now.
 However, instruction support is partial and some features (such as native calls)
 fall back to the VM, which is rather detrimental to real-world performance.
 
-The last point hurts performance-wise for real-time apps. The following issues
-may be showstoppers for you:
+The compiler in itself is not particularly fast, and currently has more memory
+overhead than we'd like. However:
 
-- https://github.com/asumagic/angelsea/issues/5: Blocking compile times are not great for real-time
-- https://github.com/asumagic/angelsea/issues/6: Memory usage is somewhat high (greatly reduced recently)
+- It supports lazy compilation. Functions can be allowed to compile only after
+a certain number of JitEntry hits. This has the caveat that, in some cases, the
+function has to be re-entered to finalize JIT compilation, but this is OK in
+most cases.
+- You can enable asynchronous compilation using `Jit::SetCompileCallback` to
+make heavy compiler jobs run in their own thread. Currently, this can bottleneck
+on a single thread, but it will not block the main thread.
 
 ## Supported platforms
 
@@ -58,7 +60,8 @@ the project is more functional):
 - macOS x86-64
 - MSVC x86-64
 
-32-bit x86 is not planned as it is not supported by MIR.
+32-bit platform support are not planned as it is not supported by MIR.  
+If you require 32-bit support, you may have to use [BlindMindStudio's JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler).
 
 ## Clone & Build
 
@@ -234,8 +237,6 @@ angelsea::JitConfig config {
 angelsea::Jit jit(config, *engine);
 assert(engine->SetJITCompiler(&jit) >= 0);
 ```
-
-Some of the compile process can be run asynchronously/in a multi-threaded fashion. You only have to provide a function that will invoke compiler tasks as they are requested by the JIT engine (`Jit::SetCompileCallback`).
 
 NOTE: The JIT compiler is not thread-safe yet; you will likely face issues if
 there are several AngelScript contexts running concurrently.

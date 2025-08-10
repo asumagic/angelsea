@@ -111,7 +111,7 @@ void MirJit::unregister_function(asIScriptFunction& script_function) {
 
 	auto async_it = m_async_codegen_functions.find(&script_function);
 	if (async_it != m_async_codegen_functions.end()) {
-		std::lock_guard lk{m_async_destruct_mutex};
+		std::lock_guard lk{m_async_finalize_mutex};
 		auto            async_fn = std::move(async_it->second);
 		m_async_codegen_functions.erase(&script_function);
 
@@ -124,7 +124,7 @@ void MirJit::unregister_function(asIScriptFunction& script_function) {
 	}
 
 	{
-		std::lock_guard lk{m_async_destruct_mutex};
+		std::lock_guard lk{m_async_finalize_mutex};
 		m_async_finished_functions.erase(&script_function);
 	}
 
@@ -271,9 +271,20 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 		fn.compiled.module = DLIST_TAIL(MIR_module_t, *MIR_get_module_list(compile_mir));
 
 		// trigger MIR linking and codegen
+		//
 		// this MUST in all circumstances be a full compile as the called code should never ever call into MIR code from
-		// thunks, which would not be thread safe
+		// thunks, which would not be thread safe!
+		//
+		// this code is on the edge of reasonableness, because I don't think MIR really intends you to execute code in a
+		// context that is having new stuff generated for it. at the same time, it doesn't seem like MIR ever
+		// manipulates data actively pointed at by already generated code.
+		// so long as lazy generation thunks are not being used, it looks like it should be ok, and it doesn't cause
+		// issues with a commercial app.
+		//
 		// TODO: move this to its own task in a way that allows more threading
+		// TODO: pool of MIR contexts to allow parallelizing further?
+		// TODO: moving parts of the opt pipeline so more stuff can be done in the original context in MIR? might be
+		// easy, might be complicated.
 		{
 			std::lock_guard lk{m_mir_lock};
 			MIR_change_module_ctx(compile_mir, fn.compiled.module, m_mir);
@@ -327,7 +338,7 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 	} // must destroy C2Mir before MirJit potentially gets destroyed
 
 	{
-		std::unique_lock lk{m_async_destruct_mutex};
+		std::unique_lock lk{m_async_finalize_mutex};
 		if (auto destruct_it = std::find_if(
 		        m_async_cancelled_functions.begin(),
 		        m_async_cancelled_functions.end(),
@@ -352,7 +363,7 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 
 void MirJit::link_ready_functions() {
 	// FIXME: locking more than necessary
-	std::lock_guard lk{m_async_destruct_mutex};
+	std::lock_guard lk{m_async_finalize_mutex};
 	for (auto& [script_fn, finished_fn] : m_async_finished_functions) {
 		link_function(*finished_fn);
 	}

@@ -127,7 +127,7 @@ class MirJit {
 	std::unordered_map<asIScriptFunction*, std::unique_ptr<AsyncMirFunction>> m_async_codegen_functions;
 	std::unordered_map<asIScriptFunction*, std::unique_ptr<AsyncMirFunction>> m_async_finished_functions;
 	std::vector<std::unique_ptr<AsyncMirFunction>>                            m_async_cancelled_functions;
-	std::mutex                                                                m_async_destruct_mutex;
+	std::mutex                                                                m_async_finalize_mutex;
 
 	std::mutex              m_termination_mutex;
 	std::condition_variable m_termination_cv;
