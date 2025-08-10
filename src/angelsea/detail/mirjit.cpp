@@ -170,17 +170,13 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 
 	const char* name = script_module != nullptr ? script_module->GetName() : "<anon>";
 
+	std::vector<std::pair<std::string, void*>> deferred_bindings;
+
 	// TODO: b2c in thread as well
 	m_c_generator.prepare_new_context();
-	m_c_generator.set_map_extern_callback(
-	    [&](const char* c_name, [[maybe_unused]] const BytecodeToC::ExternMapping& mapping, void* raw_value) {
-		    MIR_load_external(
-		        m_mir,
-		        c_name,
-		        raw_value
-		    ); /* FIXME: thread safety!! must be put in some list when we codegen instead - probably on main context */
-	    }
-	);
+	m_c_generator.set_map_extern_callback([&](const char*                                        c_name,
+	                                          [[maybe_unused]] const BytecodeToC::ExternMapping& mapping,
+	                                          void* raw_value) { deferred_bindings.emplace_back(c_name, raw_value); });
 	m_c_generator.translate_function(name, *fn.script_function);
 
 	if (m_c_generator.get_fallback_count() > 0) {
@@ -206,6 +202,7 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 	async_fn.c_name            = c_name;
 	async_fn.c_source          = m_c_generator.source();
 	async_fn.pretty_name       = name;
+	async_fn.deferred_bindings = std::move(deferred_bindings);
 
 	for (BytecodeInstruction ins : get_bytecode(*fn.script_function)) {
 		if (ins.info->bc == asBC_JitEntry) {
@@ -310,6 +307,10 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 			MIR_gen_set_debug_level(m_mir, config().debug.mir_debug_level);
 
 			MIR_gen_set_optimize_level(m_mir, config().mir_optimization_level);
+
+			for (const auto& [c_name, raw_value] : fn.deferred_bindings) {
+				MIR_load_external(m_mir, c_name.c_str(), raw_value);
+			}
 
 			MIR_link(m_mir, MIR_set_gen_interface, nullptr);
 

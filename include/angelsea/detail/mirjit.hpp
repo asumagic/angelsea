@@ -65,12 +65,13 @@ struct LazyMirFunction {
 };
 
 struct AsyncMirFunction {
-	MirJit*                                   jit_engine;
-	asIScriptFunction*                        script_function;
-	std::vector<std::pair<asPWORD*, asPWORD>> jit_entry_args;
-	std::string                               c_name;
-	std::string                               c_source;
-	std::string                               pretty_name;
+	MirJit*                                    jit_engine;
+	asIScriptFunction*                         script_function;
+	std::vector<std::pair<asPWORD*, asPWORD>>  jit_entry_args;
+	std::vector<std::pair<std::string, void*>> deferred_bindings;
+	std::string                                c_name;
+	std::string                                c_source;
+	std::string                                pretty_name;
 	struct {
 		std::atomic<bool> ready;
 		asJITFunction     jit_function;
