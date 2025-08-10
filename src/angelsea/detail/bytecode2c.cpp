@@ -255,7 +255,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		case asBC_ALLOC:
 		case asBC_FREE:
 		case asBC_ClrVPtr:
-		case asBC_CpyVtoR8:
 		case asBC_CpyVtoG4:
 		case asBC_CpyGtoV4:
 		case asBC_ChkRefS:
@@ -515,6 +514,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_CpyVtoR4: emit_assign_ins(state, "regs->value.as_asDWORD", frame_var(ins.sword0(), u32)); break;
 	case asBC_CpyRtoV4: emit_assign_ins(state, frame_var(ins.sword0(), u32), "regs->value.as_asDWORD"); break;
+	case asBC_CpyVtoR8: emit_assign_ins(state, "regs->value.as_asQWORD", frame_var(ins.sword0(), u64)); break;
 	case asBC_CpyRtoV8: emit_assign_ins(state, frame_var(ins.sword0(), u64), "regs->value.as_asDWORD"); break;
 	case asBC_CpyVtoV4: emit_assign_ins(state, frame_var(ins.sword0(), u32), frame_var(ins.sword1(), u32)); break;
 	case asBC_CpyVtoV8: emit_assign_ins(state, frame_var(ins.sword0(), u64), frame_var(ins.sword1(), u64)); break;
@@ -929,7 +929,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_ALLOC:        // TODO: implement
 	case asBC_FREE:         // TODO: implement
 	case asBC_ClrVPtr:      // TODO: find way to emit (maybe asOBJ_SCOPED?)
-	case asBC_CpyVtoR8:     // TODO: find way to emit (probably easy and similar to CpyVtoR4)
 	case asBC_CpyVtoG4:     // TODO: find way to emit
 	case asBC_CpyGtoV4:     // TODO: implement
 	case asBC_ChkRefS:      // TODO: find way to emit
