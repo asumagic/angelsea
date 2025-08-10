@@ -109,7 +109,7 @@ struct JitConfig {
 
 	/// Speeds up script calls by replacing complex call runtime logic with code generation. Does not enable inlining
 	/// yet. This is subject to breakage with AngelScript updates.
-	bool experimental_fast_script_call = false;
+	bool experimental_fast_script_call = true;
 
 	/// Speeds up the generic calling convention by replacing complex call runtime logic with code generation. This is
 	/// subject to breakage with AngelScript updates. It also tries to be clever with the C++ ABI (as it has to populate
