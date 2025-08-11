@@ -371,10 +371,9 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 	if (state.error_handlers.null) {
 		emit(
 		    "\terr_null:\n"
-		    "{SAVE_REGS}"
 		    "\t\tasea_set_internal_exception(_regs, \"" TXT_NULL_POINTER_ACCESS
 		    "\");\n"
-		    "\t\treturn;\n"
+		    "\t\tgoto vm;\n"
 		    "\t\n",
 		    fmt::arg("SAVE_REGS", save_registers_sequence)
 		);
@@ -383,10 +382,9 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 	if (state.error_handlers.divide_by_zero) {
 		emit(
 		    "\terr_divide_by_zero:\n"
-		    "{SAVE_REGS}"
 		    "\t\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_BY_ZERO
 		    "\");\n"
-		    "\t\treturn;\n"
+		    "\t\tgoto vm;\n"
 		    "\t\n",
 		    fmt::arg("SAVE_REGS", save_registers_sequence)
 		);
@@ -395,10 +393,9 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 	if (state.error_handlers.divide_overflow) {
 		emit(
 		    "\terr_divide_overflow:\n"
-		    "{SAVE_REGS}"
 		    "\t\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_OVERFLOW
 		    "\");\n"
-		    "\t\treturn;\n"
+		    "\t\tgoto vm;\n"
 		    "\t\n",
 		    fmt::arg("SAVE_REGS", save_registers_sequence)
 		);
