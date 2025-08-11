@@ -108,7 +108,8 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	    "\tasea_var value_reg = regs->value;\n"
 	);
 
-	if (m_config->experimental_direct_generic_call && state.has_direct_generic_call) {
+	if (m_config->experimental_direct_generic_call /* && state.has_direct_generic_call*/) {
+		// FIXME: has_direct_generic_call is broken with refcpyv
 		emit(
 		    "\tasea_generic g;\n"
 		    "\tg._vtable = &asea_generic_vtable;\n"
