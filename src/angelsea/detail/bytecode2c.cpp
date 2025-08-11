@@ -1193,6 +1193,15 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, int fn_idx) {
 }
 
 void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
+	if (m_config->c.human_readable) {
+		emit(
+		    "\t\t/* Attempt direct system call for `{}` */\n",
+		    static_cast<asCScriptEngine*>(m_script_engine)
+		        ->scriptFunctions[call.fn_idx]
+		        ->GetDeclaration(true, true, true)
+		);
+	}
+
 	const auto result = emit_direct_system_call(state, call);
 	if (!result.ok) {
 		// fallback approach to ensure the call always succeeds even if we cannot emit a direct call
@@ -1267,10 +1276,6 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	auto&                       engine = *static_cast<asCScriptEngine*>(m_script_engine);
 	asSSystemFunctionInterface& sys_fn = *fn.sysFuncIntf;
 
-	if (call.is_internal_call) {
-		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle callsystemfunction from VM yet"};
-	}
-
 	if (sys_fn.isCompositeIndirect) {
 		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle compositeIndirect yet"};
 	}
@@ -1340,8 +1345,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	case ICC_CDECL:
 	case ICC_CDECL_OBJFIRST:
 	case ICC_CDECL_OBJLAST:
-	case ICC_THISCALL:       break;
-	default:                 return {.ok = false, .fail_reason = "Unsupported calling convention"};
+	case ICC_VIRTUAL_THISCALL:
+	case ICC_THISCALL:         break;
+	default:                   return {.ok = false, .fail_reason = "Unsupported calling convention"};
 	}
 
 	// gather arguments to build C signature (and early fail on unsupported types)
@@ -1365,7 +1371,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		current_arg_pwords += 1;
 	}
 
-	if (sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_CDECL_OBJFIRST) {
+	if (sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
+	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST || sys_fn.callConv == ICC_CDECL_OBJFIRST) {
 		// where the argument actually lands depends on the convention
 		arg_types.emplace_back("void*");
 		arg_exprs.emplace_back("obj");
@@ -1401,44 +1408,80 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	}
 
 	// can start emit()s from this point on
-
-	emit(
-	    // "\t\tasDWORD* args = &sp->as_asDWORD;\n"
-	    "\t\tint pop_size = {INIT_POP_SIZE};\n",
-	    fmt::arg("INIT_POP_SIZE", sys_fn.paramSize)
-	);
-
-	if (sys_fn.callConv >= ICC_THISCALL) {
-		emit(
-		    "\t\tvoid *obj = sp->as_ptr;\n"
-		    "\t\tif (obj == 0) {{ goto err_null; }}\n"
-		    "\t\tpop_size += sizeof(asPWORD) / 4;\n"
-		);
-		state.error_handlers.null = true;
+	if (!call.is_internal_call) {
+		emit("\t\tint pop_size = {INIT_POP_SIZE};\n", fmt::arg("INIT_POP_SIZE", sys_fn.paramSize));
 	}
 
-	emit(
-	    "\t\textern {RETTYPE} {FNCALLABLE}({ARGTYPES});\n",
-	    fmt::arg("RETTYPE", return_type),
-	    fmt::arg("FNCALLABLE", fn_callable_symbol),
-	    fmt::arg("ARGTYPES", fmt::join(arg_types, ","))
-	);
+	if (sys_fn.callConv >= ICC_THISCALL) {
+		if (call.object_pointer_override.empty()) {
+			emit(
+			    "\t\tvoid *obj = sp->as_ptr;\n"
+			    "\t\tif (obj == 0) {{ goto err_null; }}\n"
+			    "\t\tpop_size += sizeof(asPWORD) / 4;\n"
+			);
+			state.error_handlers.null = true;
+		} else {
+			emit("\t\tvoid *obj = {};\n", call.object_pointer_override);
+		}
+	}
 
-	if (return_type != "void") {
+	std::string final_callable_name;
+
+	if (sys_fn.callConv == ICC_VIRTUAL_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL_RETURNINMEM
+	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST
+	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST_RETURNINMEM
+	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJLAST
+	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJLAST_RETURNINMEM) {
+		// dereference pointer via the vtable. this is janky! we are in C, so we essentially have to emulate the C++ ABI
+		// here. TODO: option to disable virtual calls specifically?
+
+		// NOTE: we have a MSVC codepath but realistically it is untested! it happens to be modelled after what most
+		// ABIs AS supports, with the exception of MSVC. we also don't check for clang as if it identifies self as
+		// _MSC_VER then it is implementing the MSVC ABI.
 		emit(
-		    "\t\t{RETTYPE} ret = {FNCALLABLE}(\n\t\t\t{ARGEXPRS});\n",
+		    "\t\textern char {FNCALLABLE}[];\n"
+		    "\t\ttypedef {RETTYPE} (*virtfn)({ARGTYPES});\n"
+		    "#ifdef _MSC_VER\n"
+		    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
+		    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} >> 2];\n"
+		    "#else\n"
+		    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
+		    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} / sizeof(void*)];\n"
+		    "#endif\n",
+		    fmt::arg("RETTYPE", return_type),
+		    fmt::arg("ARGTYPES", fmt::join(arg_types, ",")),
+		    fmt::arg("FNCALLABLE", fn_callable_symbol)
+		);
+		final_callable_name = "fn";
+	} else {
+		emit(
+		    "\t\textern {RETTYPE} {FNCALLABLE}({ARGTYPES});\n",
 		    fmt::arg("RETTYPE", return_type),
 		    fmt::arg("FNCALLABLE", fn_callable_symbol),
+		    fmt::arg("ARGTYPES", fmt::join(arg_types, ","))
+		);
+		final_callable_name = fn_callable_symbol;
+	}
+
+	// emit function call -- format differently if it returns anything or not
+	if (return_type != "void") {
+		emit(
+		    "\t\t{RETTYPE} ret = {FN}(\n\t\t\t{ARGEXPRS});\n",
+		    fmt::arg("RETTYPE", return_type),
+		    fmt::arg("FN", final_callable_name),
 		    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ",\n\t\t\t"))
 		);
 	} else {
 		emit(
-		    "\t\t{FNCALLABLE}(\n\t\t\t{ARGEXPRS});\n",
-		    fmt::arg("FNCALLABLE", fn_callable_symbol),
+		    "\t\t{FN}(\n\t\t\t{ARGEXPRS});\n",
+		    fmt::arg("FN", final_callable_name),
 		    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ",\n\t\t\t"))
 		);
 	}
-	emit("\t\tsp = (asea_var*)((asDWORD*)sp + pop_size);\n");
+
+	if (!call.is_internal_call) {
+		emit("\t\tsp = (asea_var*)((asDWORD*)sp + pop_size);\n");
+	}
 
 	// Store the returned value in our stack
 	if ((fn.returnType.IsObject() || fn.returnType.IsFuncdef()) && !fn.returnType.IsReference()) {
