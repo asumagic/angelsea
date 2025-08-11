@@ -107,7 +107,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	emit(
 	    "\tasDWORD* pc = regs->pc;\n"
 	    "\tasea_var* sp = regs->sp;\n"
-	    "\tasea_var* fp = regs->fp;\n"
+	    "\tasea_var *const fp = regs->fp;\n"
 	    "\tasea_var value_reg = regs->value;\n"
 	    // "\tvoid* obj_reg = regs->obj;\n"
 	    // "\tasITypeInfo *obj_type = regs->obj_type;\n"
