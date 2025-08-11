@@ -113,7 +113,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		emit(
 		    "\tasea_generic g;\n"
 		    "\tg._vtable = &asea_generic_vtable;\n"
-		    "\tg.engine = (asCScriptEngine*)((char*)regs->ctx + {OFF_ENGINE});\n",
+		    "\tg.engine = *(asCScriptEngine**)((char*)regs->ctx + {OFF_ENGINE});\n",
 		    fmt::arg("OFF_ENGINE", DIRECT_VALUE_IF_POSSIBLE(asea_offset_ctx_engine))
 		);
 	}
@@ -1588,10 +1588,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 
 	if (!call.is_internal_call) {
 		// TODO: we can probably statically tell which regs need to be written to and which don't
-		emit(
-		    "\t\tvalue_reg.as_asPWORD = g.returnVal;\n"
-		    "\t\tsp = (asea_var*)((asDWORD*)sp + pop_size);\n"
-		);
+		emit("\t\tsp = (asea_var*)((asDWORD*)sp + pop_size);\n");
 
 		if (asITypeInfo* ret_type_info = fn.returnType.GetTypeInfo(); ret_type_info != nullptr) {
 			const auto ret_type_info_expr = emit_type_info_lookup(state, *ret_type_info);
@@ -1601,6 +1598,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 			                                             // (thankfully)
 			    fmt::arg("RETTYPEINFO", ret_type_info_expr)
 			);
+		} else {
+			emit("\t\tvalue_reg.as_asPWORD = g.returnVal;\n");
 		}
 
 		// TODO: JIT compile this, but it probably isn't *that* important since frees are likely to be moderately
