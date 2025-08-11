@@ -3,6 +3,7 @@
 #pragma once
 
 #include <angelscript.h>
+#include <as_context.h>
 
 class asCScriptFunction;
 class asCScriptObject;
@@ -39,6 +40,9 @@ int asea_prepare_script_stack(
 /// \brief Prints a debug message via the engine, only enabled when debugging.
 void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
 
+/// \brief Prints a debug message via the engine, only enabled when debugging.
+void asea_debug_int(asSVMRegisters* vm_registers, int x);
+
 /// \brief Wrapper for asCContext::SetInternalException. `text` should typically
 /// be use one of the TXT_* AngelScript macros for the relevant exception.
 void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text);
@@ -50,6 +54,13 @@ void asea_clean_args(asSVMRegisters* vm_registers, asCScriptFunction& fn, asDWOR
 /// \brief Casts script object \ref obj to the requested \ref type_id; stores result in object register
 void asea_cast(asSVMRegisters* vm_registers, asCScriptObject* obj, asDWORD type_id);
 
-float  asea_fmodf(float a, float b);
-double asea_fmod(double a, double b);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+// yes, it's not great to rely on offsetof given this is not a POD type; but AS does this all over the place and the
+// involved types don't require multiple inheritance
+static constexpr asPWORD asea_offset_ctx_callstack  = offsetof(asCContext, m_callStack);
+static constexpr asPWORD asea_offset_ctx_status     = offsetof(asCContext, m_status);
+static constexpr asPWORD asea_offset_ctx_currentfn  = offsetof(asCContext, m_currentFunction);
+static constexpr asPWORD asea_offset_ctx_stackindex = offsetof(asCContext, m_stackIndex);
+#pragma GCC diagnostic pop
 }

@@ -11,6 +11,7 @@
 #include <as_scriptobject.h>
 #include <bit>
 #include <cmath>
+#include <fmt/core.h>
 
 static asCContext&      asea_get_context(asSVMRegisters* regs) { return static_cast<asCContext&>(*regs->ctx); }
 static asCScriptEngine& asea_get_engine(asSVMRegisters* regs) {
@@ -74,12 +75,14 @@ void asea_debug_message(asSVMRegisters* vm_registers, const char* text) {
 	asea_get_engine(vm_registers).WriteMessage("<angelsea_debug>", 0, 0, asMSGTYPE_INFORMATION, text);
 }
 
+void asea_debug_int(asSVMRegisters* vm_registers, int x) {
+	asea_get_engine(vm_registers)
+	    .WriteMessage("<angelsea_debug>", 0, 0, asMSGTYPE_INFORMATION, fmt::to_string(x).c_str());
+}
+
 void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text) {
 	asea_get_context(vm_registers).SetInternalException(text);
 }
-
-float  asea_fmodf(float a, float b) { return fmodf(a, b); }
-double asea_fmod(double a, double b) { return fmod(a, b); }
 
 void asea_clean_args(asSVMRegisters* vm_registers, asCScriptFunction& fn, asDWORD* args) {
 	asCScriptEngine& engine = asea_get_engine(vm_registers);

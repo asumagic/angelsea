@@ -123,6 +123,10 @@ struct JitConfig {
 	/// fall back to the VM.
 	bool experimental_direct_native_call = true;
 
+	/// Creates native code for the asBC_RET instruction, instead of falling back to the VM. Disabled by default as it
+	/// was found to regress performance in microbenchmarks.
+	bool experimental_fast_script_return = false;
+
 	/// Speeds up the generic calling convention if \ref experimental_direct_generic_call is true by assuming that the
 	/// called system functions will always set the return value. If the callee fails to do so when this function is
 	/// set, uninitialized reads can happen script-side, which may result in crashes with pointers.
@@ -137,6 +141,11 @@ struct JitConfig {
 		bool use_gnu_label_as_value = false;
 		bool human_readable         = false;
 		bool copyright_header       = false;
+
+		/// Emits direct values to determine the offset of fields within e.g. `asCContext` as opposed to using external
+		/// globals in C code. This results in less portable code (which does not matter for JIT). When using MIR JIT
+		/// the only allowed value is `true`.
+		bool emit_hardcoded_vm_offsets = true;
 	};
 	CGeneratorConfig c;
 };
