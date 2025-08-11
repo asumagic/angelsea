@@ -32,10 +32,7 @@ static constexpr std::string_view save_registers_sequence
     = "\t\tregs->pc = pc;\n"
       "\t\tregs->sp = sp;\n"
       "\t\tregs->fp = fp;\n"
-      "\t\tregs->value = value_reg;\n"
-    //   "\t\tregs->obj = obj_reg;\n"
-    //   "\t\tregs->obj_type = obj_type;\n"
-    ;
+      "\t\tregs->value = value_reg;\n";
 
 template<typename T> static std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
 
@@ -109,8 +106,6 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	    "\tasea_var* sp = regs->sp;\n"
 	    "\tasea_var *const fp = regs->fp;\n"
 	    "\tasea_var value_reg = regs->value;\n"
-	    // "\tvoid* obj_reg = regs->obj;\n"
-	    // "\tasITypeInfo *obj_type = regs->obj_type;\n"
 	);
 
 	if (m_config->experimental_direct_generic_call && state.has_direct_generic_call) {
