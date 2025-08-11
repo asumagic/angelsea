@@ -175,8 +175,8 @@ int asea_call_system_function(asSVMRegisters* vm_registers, int fn);
 int asea_call_object_method(asSVMRegisters* vm_registers, void* obj, int fn);
 void asea_cast(asSVMRegisters* vm_registers, asCScriptObject* obj, asDWORD type_id);
 
-extern void asea_engine;
-extern void asea_generic_vtable;
+extern char asea_engine[];
+extern char asea_generic_vtable[];
 )___"
 
     // Helper macros

@@ -105,6 +105,8 @@ class BytecodeToC {
 		/// entry points
 		std::unordered_set<std::size_t> branch_targets;
 
+		bool has_direct_generic_call;
+
 		struct {
 			bool null : 1            = false;
 			bool divide_by_zero : 1  = false;
@@ -125,6 +127,7 @@ class BytecodeToC {
 	void configure_jit_entries(FnState& state);
 	void discover_switch_map(FnState& state);
 	void discover_branch_targets(FnState& state);
+	void discover_function_calls(FnState& state);
 
 	void emit_entry_dispatch(FnState& state);
 	void emit_error_handlers(FnState& state);

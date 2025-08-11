@@ -70,6 +70,21 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		m_on_map_function_callback(fn, m_module_state.fn_name);
 	}
 
+	FnState state{
+	    .fn                       = &fn,   // TODO: move to module state
+	    .ins                      = {},    // populated before translate_instruction
+	    .has_any_late_jit_entries = true,  // populated by has_any_late_jit_entries
+	    .switch_map               = {},    // populated by discover_branch_targets
+	    .branch_targets           = {},    // populated by discover_function_calls
+	    .has_direct_generic_call  = false, // populated by discover_function_calls
+	    .error_handlers           = {},    // populated by any translate_instruction
+	};
+
+	discover_switch_map(state);
+	configure_jit_entries(state);
+	discover_branch_targets(state);
+	discover_function_calls(state);
+
 	if (m_config->c.human_readable) {
 		const char* section_name;
 		int         row, col;
@@ -91,23 +106,17 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	emit("\tasea_vm_registers *regs = (asea_vm_registers *)_regs;\n");
 
 	emit(
-	    // "#ifdef __MIRC__\n"
-	    // "\tasDWORD *l_bc __attribute__((antialias(bc_sp)));\n"
-	    // "\tvoid *l_sp __attribute__((antialias(bc_sp)));\n"
-	    // "\tvoid *l_fp;\n"
-	    // "#else\n"
-	    "\tasDWORD *pc = regs->pc;\n"
-	    "\tasea_var *sp = regs->sp;\n"
-	    "\tasea_var *fp = regs->fp;\n"
-	    // "#endif\n",
+	    "\tasDWORD* pc = regs->pc;\n"
+	    "\tasea_var* sp = regs->sp;\n"
+	    "\tasea_var* fp = regs->fp;\n"
 	);
 
-	if (m_config->experimental_direct_generic_call) {
-		// TODO: detect if there are any generic calls, should be easy in a prepass
+	if (m_config->experimental_direct_generic_call && state.has_direct_generic_call) {
 		emit(
 		    "\tasea_generic g;\n"
 		    "\tg._vtable = &asea_generic_vtable;\n"
-		    "\tg.engine = &asea_engine;\n"
+		    "\tg.engine = (asCScriptEngine*)((char*)regs->ctx + {OFF_ENGINE});\n",
+		    fmt::arg("OFF_ENGINE", DIRECT_VALUE_IF_POSSIBLE(asea_offset_ctx_engine))
 		);
 	}
 
@@ -177,12 +186,6 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		    escape_c_literal(fn.GetDeclaration(true, true, true))
 		);
 	}
-
-	FnState state{.fn = &fn, .ins = {}, .switch_map = {}, .branch_targets = {}, .error_handlers = {}};
-
-	discover_switch_map(state);
-	configure_jit_entries(state);
-	discover_branch_targets(state);
 
 	emit_entry_dispatch(state);
 
@@ -318,6 +321,17 @@ void BytecodeToC::discover_branch_targets(FnState& state) {
 
 		if (auto jmp = bcins::try_as<bcins::Jump>(ins); jmp.has_value()) {
 			state.branch_targets.emplace(jmp->target_offset());
+		}
+	}
+}
+
+void BytecodeToC::discover_function_calls(FnState& state) {
+	for (BytecodeInstruction ins : get_bytecode(*state.fn)) {
+		if (auto call = bcins::try_as<bcins::CallSystemDirect>(ins); call.has_value()) {
+			const auto& fn = call->function(*static_cast<asCScriptEngine*>(m_script_engine));
+			if (fn.sysFuncIntf->callConv == ICC_GENERIC_FUNC || fn.sysFuncIntf->callConv == ICC_GENERIC_METHOD) {
+				state.has_direct_generic_call = true;
+			}
 		}
 	}
 }
@@ -1607,8 +1621,7 @@ void BytecodeToC::emit_compare_var_expr_ins(FnState& state, VarType type, std::s
 void BytecodeToC::emit_test_ins(FnState& state, std::string_view op_with_rhs_0) {
 	emit(
 	    "\t\tasINT32 value = regs->value.as_asINT32;\n"
-	    "\t\tregs->value.as_asQWORD = 0;\n"
-	    "\t\tregs->value.as_asBYTE = (value {OP} 0) ? 1 : 0;\n",
+	    "\t\tregs->value.as_asQWORD = (value {OP} 0) ? 1 : 0;\n",
 	    fmt::arg("OP", op_with_rhs_0)
 	);
 	emit_auto_bc_inc(state);

@@ -62,5 +62,6 @@ static constexpr asPWORD asea_offset_ctx_callstack  = offsetof(asCContext, m_cal
 static constexpr asPWORD asea_offset_ctx_status     = offsetof(asCContext, m_status);
 static constexpr asPWORD asea_offset_ctx_currentfn  = offsetof(asCContext, m_currentFunction);
 static constexpr asPWORD asea_offset_ctx_stackindex = offsetof(asCContext, m_stackIndex);
+static constexpr asPWORD asea_offset_ctx_engine     = offsetof(asCContext, m_engine);
 #pragma GCC diagnostic pop
 }

@@ -6,6 +6,8 @@
 #include <angelscript.h>
 #include <angelsea/detail/debug.hpp>
 #include <array>
+#include <as_scriptengine.h>
+#include <as_scriptfunction.h>
 #include <cstddef>
 #include <optional>
 
@@ -44,10 +46,24 @@ struct Jump : BytecodeInstruction {
 	public:
 	static constexpr std::array valid_opcodes
 	    = {asBC_JMP, asBC_JZ, asBC_JLowZ, asBC_JNZ, asBC_JLowNZ, asBC_JS, asBC_JNS, asBC_JP, asBC_JNP};
-	Jump(BytecodeInstruction& ins) : BytecodeInstruction(ins) { angelsea_assert(is_specific_ins<Jump>(ins)); } // NOLINT
+	Jump(BytecodeInstruction& ins) : BytecodeInstruction(ins) { // NOLINT
+		angelsea_assert(is_specific_ins<Jump>(ins));
+	}
 
 	int relative_offset() { return int0() + int(size); }
 	int target_offset() { return int(offset) + relative_offset(); }
 };
+
+struct CallSystemDirect : BytecodeInstruction {
+	public:
+	static constexpr std::array valid_opcodes = {asBC_CALLSYS, asBC_Thiscall1};
+	CallSystemDirect(BytecodeInstruction& ins) : BytecodeInstruction(ins) { // NOLINT
+		angelsea_assert(is_specific_ins<Jump>(ins));
+	}
+
+	int                function_index() { return int0(); }
+	asCScriptFunction& function(asCScriptEngine& engine) { return *engine.scriptFunctions[function_index()]; }
+};
+
 } // namespace bcins
 } // namespace angelsea::detail
