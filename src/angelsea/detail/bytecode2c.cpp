@@ -37,15 +37,6 @@ static constexpr std::string_view save_registers_sequence
     //   "\t\tregs->obj_type = obj_type;\n"
     ;
 
-static constexpr std::string_view load_registers_sequence
-    = "\t\tpc = regs->pc;\n"
-      "\t\tsp = regs->sp;\n"
-      "\t\tfp = regs->fp;\n"
-      "\t\tvalue_reg = regs->value;\n"
-    //   "\t\tobj_reg = regs->obj;\n"
-    //   "\t\tobj_type = regs->obj_type;\n"
-    ;
-
 template<typename T> static std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
 
 BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix) :
@@ -773,6 +764,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tasPWORD* cs_ptr = (asPWORD*)(cs->ptr);\n"
 		    "\t\tif (cs->len == 0 || cs_ptr[cs->len - {FRAMESIZE}] == 0) {{\n"
 		    "\t\t\t*(int*)((char*)regs->ctx + {OFF_STATUS}) = asEXECUTION_FINISHED;\n"
+		    "\t\t\tregs->value = value_reg;\n"
 		    "\t\t\treturn;\n"
 		    "\t\t}}\n"
 		    "\t\tasUINT new_len = cs->len - {FRAMESIZE};\n"
@@ -783,6 +775,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tregs->sp = (asDWORD*)tmp[3] + {POP};\n"
 		    "\t\t*(asUINT*)((char*)regs->ctx + {OFF_STACKINDEX}) = (asUINT)tmp[4];\n"
 		    "\t\tcs->len = new_len;\n"
+		    "\t\tregs->value = value_reg;\n"
 		    "\t\treturn;\n",
 		    fmt::arg("OFF_CALLSTACK", DIRECT_VALUE_IF_POSSIBLE(asea_offset_ctx_callstack)),
 		    fmt::arg("OFF_STATUS", DIRECT_VALUE_IF_POSSIBLE(asea_offset_ctx_status)),
@@ -1180,8 +1173,11 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, int fn_idx) {
 			if (m_config->c.human_readable) {
 				emit("\t\t/* recursive call */\n");
 			}
-			emit("{}", load_registers_sequence);
-			emit("\t\tgoto bc0;\n");
+			emit(
+			    "\t\t{SELF}(_regs, 1);\n"
+			    "\t\treturn;\n",
+			    fmt::arg("SELF", m_module_state.fn_name)
+			);
 		} else {
 			// TODO: immediately branch into jitfn if possible
 			emit("\t\treturn;\n");
