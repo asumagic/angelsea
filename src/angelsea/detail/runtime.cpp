@@ -75,9 +75,15 @@ void asea_debug_message(asSVMRegisters* vm_registers, const char* text) {
 	asea_get_engine(vm_registers).WriteMessage("<angelsea_debug>", 0, 0, asMSGTYPE_INFORMATION, text);
 }
 
-void asea_debug_int(asSVMRegisters* vm_registers, int x) {
+void asea_debug_int(asSVMRegisters* vm_registers, asPWORD x) {
 	asea_get_engine(vm_registers)
-	    .WriteMessage("<angelsea_debug>", 0, 0, asMSGTYPE_INFORMATION, fmt::to_string(x).c_str());
+	    .WriteMessage(
+	        "<angelsea_debug>",
+	        0,
+	        0,
+	        asMSGTYPE_INFORMATION,
+	        fmt::format("0x{:0>16x} / {} / '{}'", x, x, char(x)).c_str()
+	    );
 }
 
 void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text) {
