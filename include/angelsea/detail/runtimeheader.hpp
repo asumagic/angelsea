@@ -87,7 +87,6 @@ typedef enum
     // not C++'s) This is only _fully_ legal and could theoretically break if the compiler can  see beyond its compile
     // unit (e.g. with LTO) but it should be otherwise unproblematic (and AS itself does worse, anyway).
     R"___(
-union asea_var_u;
 union asea_var_u {
 	asINT8 as_asINT8;
 	asINT16 as_asINT16;
