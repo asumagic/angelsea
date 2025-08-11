@@ -182,8 +182,6 @@ extern void asea_generic_vtable;
     // Helper macros
     R"___(
 #define ASEA_FDIV(lhs, rhs) lhs / rhs
-#define ASEA_FMOD32(lhs, rhs) asea_fmodf(lhs, rhs)
-#define ASEA_FMOD64(lhs, rhs) asea_fmod(lhs, rhs)
 )___";
 
 constexpr std::string_view angelsea_c_header_offsets =

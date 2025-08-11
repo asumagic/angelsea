@@ -904,8 +904,8 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_DIVf:   emit_divmod_var_float_ins(state, "ASEA_FDIV", f32); break;
 	case asBC_DIVd:   emit_divmod_var_float_ins(state, "ASEA_FDIV", f64); break;
-	case asBC_MODf:   emit_divmod_var_float_ins(state, "ASEA_FMOD32", f32); break;
-	case asBC_MODd:   emit_divmod_var_float_ins(state, "ASEA_FMOD64", f64); break;
+	case asBC_MODf:   emit_divmod_var_float_ins(state, "fmodf", f32); break;
+	case asBC_MODd:   emit_divmod_var_float_ins(state, "fmod", f64); break;
 
 	case asBC_BNOT64: emit_unop_var_inplace_ins(state, "~", u64); break;
 	case asBC_BAND64: emit_binop_var_var_ins(state, "&", u64, u64, u64); break;
