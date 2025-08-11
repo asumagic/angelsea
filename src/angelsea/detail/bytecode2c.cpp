@@ -697,8 +697,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_RDR1:  {
 		emit(
 		    "\t\tasea_var* var = {VARPTR};\n"
-		    "\t\tvar->as_asDWORD = 0;\n"
-		    "\t\tvar->as_asBYTE = regs->value.as_var_ptr->as_asBYTE;\n",
+		    "\t\tvar->as_asDWORD = regs->value.as_var_ptr->as_asBYTE;\n",
 		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
 		);
 		emit_auto_bc_inc(state);
@@ -707,8 +706,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_RDR2: {
 		emit(
 		    "\t\tasea_var* var = {VARPTR};\n"
-		    "\t\tvar->as_asDWORD = 0;\n"
-		    "\t\tvar->as_asWORD = regs->value.as_var_ptr->as_asWORD;\n",
+		    "\t\tvar->as_asDWORD = regs->value.as_var_ptr->as_asWORD;\n",
 		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
 		);
 		emit_auto_bc_inc(state);
