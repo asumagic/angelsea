@@ -33,10 +33,10 @@ static constexpr std::string_view save_registers_sequence
       "\t\tregs->sp = sp;\n"
       "\t\tregs->fp = fp;\n";
 
-// static constexpr std::string_view load_registers_sequence
-//     = "\t\tpc = regs->pc;\n"
-//       "\t\tsp = regs->sp;\n"
-//       "\t\tfp = regs->fp;\n";
+static constexpr std::string_view load_registers_sequence
+    = "\t\tpc = regs->pc;\n"
+      "\t\tsp = regs->sp;\n"
+      "\t\tfp = regs->fp;\n";
 
 template<typename T> static std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
 
@@ -1156,11 +1156,8 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, int fn_idx) {
 			if (m_config->c.human_readable) {
 				emit("\t\t/* recursive call */\n");
 			}
-			emit(
-			    "\t\t{SELF}(_regs, 1);\n"
-			    "\t\treturn;\n",
-			    fmt::arg("SELF", m_module_state.fn_name)
-			);
+			emit("{}", load_registers_sequence);
+			emit("\t\tgoto bc0;\n");
 		} else {
 			// TODO: immediately branch into jitfn if possible
 			emit("\t\treturn;\n");
