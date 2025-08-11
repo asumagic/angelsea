@@ -1214,7 +1214,8 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 			// to write most registers anyway
 			emit("{}", save_registers_sequence);
 			emit(
-			    "\t\tsp = (asea_var*)((asDWORD*)sp + asea_call_system_function(_regs, {FN}));\n",
+			    "\t\tsp = (asea_var*)((asDWORD*)sp + asea_call_system_function(_regs, {FN}));\n"
+			    "\t\tvalue_reg = regs->value;\n",
 			    fmt::arg("FN", call.fn_idx)
 			);
 
