@@ -58,7 +58,7 @@ struct CallSystemDirect : BytecodeInstruction {
 	public:
 	static constexpr std::array valid_opcodes = {asBC_CALLSYS, asBC_Thiscall1};
 	CallSystemDirect(BytecodeInstruction& ins) : BytecodeInstruction(ins) { // NOLINT
-		angelsea_assert(is_specific_ins<Jump>(ins));
+		angelsea_assert(is_specific_ins<CallSystemDirect>(ins));
 	}
 
 	int                function_index() { return int0(); }
