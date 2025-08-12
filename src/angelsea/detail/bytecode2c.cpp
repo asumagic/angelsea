@@ -372,6 +372,7 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 		    "\t\n",
 		    fmt::arg("SAVE_REGS", save_registers_sequence)
 		);
+		state.error_handlers.vm_fallback = true;
 	}
 
 	if (state.error_handlers.divide_by_zero) {
@@ -383,6 +384,7 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 		    "\t\n",
 		    fmt::arg("SAVE_REGS", save_registers_sequence)
 		);
+		state.error_handlers.vm_fallback = true;
 	}
 
 	if (state.error_handlers.divide_overflow) {
@@ -394,6 +396,7 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 		    "\t\n",
 		    fmt::arg("SAVE_REGS", save_registers_sequence)
 		);
+		state.error_handlers.vm_fallback = true;
 	}
 
 	if (state.error_handlers.vm_fallback) {
