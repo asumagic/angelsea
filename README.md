@@ -47,6 +47,9 @@ Currently, only x86-64 Linux is being developed on and tested. However, MIR
 supports many other platforms and CPU architectures, and Angelsea should be
 generating fairly portable C code, so it shouldn't be hard to port.
 
+Generated code is not tested on big-endian architectures and is very likely
+broken.
+
 (Ideally, we would setup CI to automatically test other platforms; perhaps even
 using qemu integration with containers to test aarch64 etc.)
 
