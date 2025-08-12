@@ -16,4 +16,16 @@ void assign_read()
     print(g16);
     print(g32);
     print(g64);
+
+    print(return_global());
+    g32 = return_whatever();
+    print(g32);
+}
+
+int return_global() {
+    return g32;
+}
+
+int return_whatever() {
+    return 456;
 }

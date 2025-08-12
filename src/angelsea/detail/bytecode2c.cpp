@@ -261,8 +261,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		case asBC_ALLOC:
 		case asBC_FREE:
 		case asBC_ClrVPtr:
-		case asBC_CpyVtoG4:
-		case asBC_CpyGtoV4:
 		case asBC_ChkRefS:
 		case asBC_ChkNullS:
 		case asBC_ClrHi:
@@ -537,6 +535,17 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CpyRtoV8: emit_assign_ins(state, frame_var(ins.sword0(), u64), "value_reg.as_asDWORD"); break;
 	case asBC_CpyVtoV4: emit_assign_ins(state, frame_var(ins.sword0(), u32), frame_var(ins.sword1(), u32)); break;
 	case asBC_CpyVtoV8: emit_assign_ins(state, frame_var(ins.sword0(), u64), frame_var(ins.sword1(), u64)); break;
+
+	case asBC_CpyVtoG4: {
+		std::string symbol = emit_global_lookup(state, std::bit_cast<void*>(ins.pword0()), true);
+		emit_assign_ins(state, fmt::format("*(asDWORD*)&{}", symbol), frame_var(ins.sword0(), u32));
+		break;
+	}
+	case asBC_CpyGtoV4: {
+		std::string symbol = emit_global_lookup(state, std::bit_cast<void*>(ins.pword0()), true);
+		emit_assign_ins(state, frame_var(ins.sword0(), u32), fmt::format("*(asDWORD*)&{}", symbol));
+		break;
+	}
 
 	case asBC_LDV:
 		emit_assign_ins(state, "value_reg.as_asPWORD", fmt::format("(asPWORD){}", frame_ptr(ins.sword0())));
@@ -989,8 +998,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_ALLOC:        // TODO: implement
 	case asBC_FREE:         // TODO: implement
 	case asBC_ClrVPtr:      // TODO: find way to emit (maybe asOBJ_SCOPED?)
-	case asBC_CpyVtoG4:     // TODO: find way to emit
-	case asBC_CpyGtoV4:     // TODO: implement
 	case asBC_ChkRefS:      // TODO: find way to emit
 	case asBC_ChkNullS:     // TODO: find way to emit
 	case asBC_ClrHi:        // TODO: find way to emit
