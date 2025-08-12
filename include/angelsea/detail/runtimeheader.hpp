@@ -123,7 +123,7 @@ typedef struct {)___"
     "\tasDWORD *pc;\n"           // points to current bytecode instruction
     "\tvoid *fp;\n"              // function stack frame
     "\tvoid *sp;\n"              // top of stack (grows downward)
-    "\tasea_var value;\n"        // temp register for primitives
+    "\tasQWORD value;\n"         // temp register for primitives
     "\tvoid *obj;\n"             // temp register for objects and handles
     "\tasITypeInfo *obj_type;\n" // type of object held in object register
     // HACK: doProcessSuspend is normally defined as bool in C++; assume char equivalent
