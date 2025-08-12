@@ -248,6 +248,11 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 
 			// assume asBC_CALL can always fallback
 		case asBC_CALL:
+		// TODO: those only have partial support and can fallback to the vm
+		// TODO: asBC_ALLOC should only be considered a possible fallback for script entities even after they are
+		// implemented because we yield back to the VM just like asBC_CALL in that case anyway
+		case asBC_ALLOC:
+		case asBC_FREE:
 		// TODO: all of those are not implemented as of writing, remove when fixed
 		case asBC_SwapPtr:
 		case asBC_LdGRdR4:
@@ -255,7 +260,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		case asBC_CALLBND:
 		case asBC_CALLINTF:
 		case asBC_CallPtr:
-		case asBC_ALLOC:
 		case asBC_ClrVPtr:
 		case asBC_ChkRefS:
 		case asBC_ChkNullS:
@@ -525,6 +529,47 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		auto*      objtype_ptr    = std::bit_cast<asCObjectType*>(objtype_raw);
 		const auto objtype_symbol = emit_type_info_lookup(state, *objtype_ptr);
 		emit_stack_push_ins(state, fmt::format("(asPWORD)&{}", objtype_symbol), pword);
+		break;
+	}
+
+	case asBC_ALLOC: {
+		auto*             type = std::bit_cast<asCObjectType*>(ins.pword0());
+		asSTypeBehaviour& beh  = type->beh;
+		int               func = ins.int0(AS_PTR_SIZE);
+
+		if ((type->flags & asOBJ_SCRIPT_OBJECT) != 0) {
+			emit_vm_fallback(state, "Cannot handle asBC_ALLOC for script entities yet");
+			break;
+		}
+
+		std::size_t alloc_size = type->size;
+		if (alloc_size % 4 != 0) { // up-align to multiple of 4 bytes
+			alloc_size += 4 - (alloc_size % 4);
+		}
+
+		emit("\t\tasDWORD* mem = asea_alloc({ALLOC_SIZE});\n", fmt::arg("ALLOC_SIZE", alloc_size));
+
+		if ((type->flags & asOBJ_SCRIPT_OBJECT) != 0) {
+			const auto objtype_symbol = emit_type_info_lookup(state, *type);
+			emit("\t\tasea_construct_script_object(mem, &{OBJECT_TYPE});\n", fmt::arg("OBJECT_TYPE", objtype_symbol));
+			// TODO
+		} else {
+			if (func != 0) {
+				// define as an internal call, but we'll have to pop from the stack as a consequence
+				emit_system_call(
+				    state,
+				    {.fn_idx = func, .object_pointer_override = {"mem"}, .is_internal_call = false}
+				);
+				emit(
+				    "\t\tasDWORD** a = (asDWORD**)(sp->as_ptr);\n"
+				    "\t\tsp = (asea_var*)((char*)sp + sizeof(asPWORD));\n"
+				    "\t\tif (a) *a = mem;\n"
+				);
+				// FIXME: suspend
+			}
+		}
+
+		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -1055,7 +1100,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CALLBND:      // TODO: find way to emit & implement (calls & syscalls)
 	case asBC_CALLINTF:     // TODO: implement (calls & syscalls)
 	case asBC_CallPtr:      // TODO: find way to emit & implement (calls & syscalls) -- probably just functors
-	case asBC_ALLOC:        // TODO: implement
 	case asBC_ClrVPtr:      // TODO: find way to emit (maybe asOBJ_SCOPED?)
 	case asBC_ChkRefS:      // TODO: find way to emit
 	case asBC_ChkNullS:     // TODO: find way to emit
@@ -1433,7 +1477,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	if (sys_fn.callConv >= ICC_THISCALL) {
 		// always load `this` from the first position in the stack
-		current_arg_pwords += 1;
+		if (call.object_pointer_override.empty()) {
+			current_arg_pwords += 1;
+		}
 	}
 
 	if (sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
@@ -1469,7 +1515,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	if (sys_fn.callConv == ICC_CDECL_OBJLAST) {
 		arg_types.emplace_back("void*");
 		arg_exprs.emplace_back("obj");
-		current_arg_pwords += 1;
+		if (call.object_pointer_override.empty()) {
+			current_arg_pwords += 1;
+		}
 	}
 
 	// can start emit()s from this point on

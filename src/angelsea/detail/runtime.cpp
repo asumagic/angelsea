@@ -11,7 +11,6 @@
 #include <as_scriptfunction.h>
 #include <as_scriptobject.h>
 #include <bit>
-#include <cmath>
 #include <fmt/core.h>
 
 static asCContext&      asea_get_context(asSVMRegisters* regs) { return static_cast<asCContext&>(*regs->ctx); }
