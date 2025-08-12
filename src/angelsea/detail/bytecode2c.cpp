@@ -246,8 +246,9 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 			is_trace_supported = m_config->hack_ignore_suspend;
 			break;
 
-			// assume asBC_CALL can always fallback
+			// assume script calls can always fallback
 		case asBC_CALL:
+		case asBC_CALLINTF:
 		// TODO: those only have partial support and can fallback to the vm
 		// TODO: asBC_ALLOC should only be considered a possible fallback for script entities even after they are
 		// implemented because we yield back to the VM just like asBC_CALL in that case anyway
@@ -258,7 +259,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		case asBC_LdGRdR4:
 		case asBC_COPY:
 		case asBC_CALLBND:
-		case asBC_CALLINTF:
 		case asBC_CallPtr:
 		case asBC_ClrVPtr:
 		case asBC_ChkRefS:
@@ -850,7 +850,30 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
-	case asBC_CALL:      emit_direct_script_call_ins(state, ins.int0()); break;
+	case asBC_CALL:     emit_direct_script_call_ins(state, ScriptCallByIdx{ins.int0()}); break;
+	case asBC_CALLINTF: {
+		emit_vm_fallback(state, "trololo");
+
+		// TODO: devirtualization optimization using `final` like asllvm did -- in fact, could we infer `final`
+		// ourselves? i don't know if we can look at the descendants safely from within our module
+
+		auto& engine = *static_cast<asCScriptEngine*>(m_script_engine);
+
+		const auto fn_idx = ins.int0();
+		// const std::string  fn_symbol = fmt::format("{}_scriptfn{}", m_c_symbol_prefix, fn_idx);
+		asCScriptFunction* callee = engine.scriptFunctions[fn_idx];
+
+		if (callee->funcType == asFUNC_INTERFACE) {
+			// TODO: write tests with a few interfaces then implement
+			emit_vm_fallback(state, "Cannot handle interface calls yet");
+			break;
+		}
+
+		// TODO: handling asFUNC_INTERFACE?
+		emit("\t\t\n");
+		break;
+	}
+
 	case asBC_Thiscall1:
 	case asBC_CALLSYS:   {
 		emit_system_call(
@@ -1098,7 +1121,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_LdGRdR4:      // TODO: find way to emit
 	case asBC_COPY:         // TODO: find way to emit
 	case asBC_CALLBND:      // TODO: find way to emit & implement (calls & syscalls)
-	case asBC_CALLINTF:     // TODO: implement (calls & syscalls)
 	case asBC_CallPtr:      // TODO: find way to emit & implement (calls & syscalls) -- probably just functors
 	case asBC_ClrVPtr:      // TODO: find way to emit (maybe asOBJ_SCOPED?)
 	case asBC_ChkRefS:      // TODO: find way to emit
@@ -1223,56 +1245,75 @@ std::string BytecodeToC::emit_type_info_lookup([[maybe_unused]] FnState& state, 
 	return type_info_symbol;
 }
 
-void BytecodeToC::emit_direct_script_call_ins(FnState& state, int fn_idx) {
+void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<ScriptCallByIdx, ScriptCallByExpr> call) {
 	// TODO: when possible, translate this to a JIT to JIT function call
 	// NOTE: the above is more complicated now because the MIR_cleanup logic
 	// destroys inlining information. then again, it's probably more
 	// important to create a shim so that we don't have to go through the
 	// regular AS functions since we have better knowledge of the callee.
 
-	auto& engine = *static_cast<asCScriptEngine*>(m_script_engine);
+	auto& engine           = *static_cast<asCScriptEngine*>(m_script_engine);
+	bool  will_emit_direct = m_config->experimental_fast_script_call && m_config->hack_ignore_suspend;
 
-	const std::string  fn_symbol = fmt::format("{}_scriptfn{}", m_c_symbol_prefix, fn_idx);
-	asCScriptFunction* callee    = engine.scriptFunctions[fn_idx];
+	std::string        fn_expr;
+	asCScriptFunction* reference_fn;       // reference fn, only its signature is checked
+	asCScriptFunction* known_fn = nullptr; // actual fn, null if unknown
 
-	if (m_on_map_extern_callback) {
-		m_on_map_extern_callback(fn_symbol.c_str(), ExternScriptFunction{fn_idx}, callee);
+	if (const auto* call_by_idx = std::get_if<ScriptCallByIdx>(&call); call_by_idx != nullptr) {
+		std::string fn_raw_name = fmt::format("{}_scriptfn{}", m_c_symbol_prefix, call_by_idx->fn_idx);
+		fn_expr                 = fmt::format("(asCScriptFunction*)&{}", fn_raw_name);
+		known_fn = reference_fn = engine.scriptFunctions[call_by_idx->fn_idx];
+
+		if (m_on_map_extern_callback) {
+			m_on_map_extern_callback(fn_raw_name.c_str(), ExternScriptFunction{call_by_idx->fn_idx}, known_fn);
+		}
+
+		emit("\t\textern char {}[];\n", fn_raw_name);
+	} else if (auto* call_by_expr = std::get_if<ScriptCallByExpr>(&call); call_by_expr != nullptr) {
+		fn_expr      = call_by_expr->expr;
+		reference_fn = call_by_expr->fn_decl;
+	} else {
+		angelsea_assert(false);
 	}
 
-	if (m_config->experimental_fast_script_call && m_config->hack_ignore_suspend) {
+	if (will_emit_direct) {
 		emit(
-		    "\t\textern char {FN};\n"
 		    "\t\tpc += 2;\n"
 		    "\t\tregs->value = value_reg;\n" // TODO: is this necessary?
-		    "\t\tasea_prepare_script_stack(_regs, (asCScriptFunction*)&{FN}, pc, sp, fp);\n",
-		    fmt::arg("FN", fn_symbol)
 		);
 
-		for (asUINT n = callee->scriptData->variables.GetLength(); n-- > 0;) {
-			asSScriptVariable* var = callee->scriptData->variables[n];
+		if (known_fn != nullptr) {
+			emit("\t\tasea_prepare_script_stack(_regs, {FN}, pc, sp, fp);\n", fmt::arg("FN", fn_expr));
+			// setup stack with our knowledge
+			for (asUINT n = known_fn->scriptData->variables.GetLength(); n-- > 0;) {
+				asSScriptVariable* var = known_fn->scriptData->variables[n];
 
-			// don't clear the function arguments
-			if (var->stackOffset <= 0) {
-				continue;
-			}
-
-			if (var->onHeap && (var->type.IsObject() || var->type.IsFuncdef())) {
-				if (m_config->c.human_readable) {
-					emit("\t\t/* arg {} requires clearing @ stack pos {}*/\n", n, -var->stackOffset);
+				// don't clear the function arguments
+				if (var->stackOffset <= 0) {
+					continue;
 				}
 
-				emit("\t\t((asea_var*)((asDWORD*)(regs->fp) + {}))->as_asPWORD = 0;\n", -var->stackOffset);
+				if (var->onHeap && (var->type.IsObject() || var->type.IsFuncdef())) {
+					if (m_config->c.human_readable) {
+						emit("\t\t/* arg {} requires clearing @ stack pos {}*/\n", n, -var->stackOffset);
+					}
+
+					emit("\t\t((asea_var*)((asDWORD*)(regs->fp) + {}))->as_asPWORD = 0;\n", -var->stackOffset);
+				}
 			}
+
+			if (known_fn->scriptData->variableSpace != 0) {
+				if (m_config->c.human_readable) {
+					emit("\t\t/* make space for variables */\n");
+				}
+				emit("\t\tregs->sp = (asDWORD*)(regs->sp) - {};\n", known_fn->scriptData->variableSpace);
+			}
+		} else {
+			// if the function is not known, do the above stack logic dynamically in runtime
+			emit("\t\tasea_prepare_script_stack_and_vars(_regs, {FN}, pc, sp, fp);\n", fmt::arg("FN", fn_expr));
 		}
 
-		if (callee->scriptData->variableSpace != 0) {
-			if (m_config->c.human_readable) {
-				emit("\t\t/* make space for variables */\n");
-			}
-			emit("\t\tregs->sp = (asDWORD*)(regs->sp) - {};\n", callee->scriptData->variableSpace);
-		}
-
-		if (callee == state.fn) {
+		if (known_fn == state.fn) {
 			if (m_config->c.human_readable) {
 				emit("\t\t/* recursive call */\n");
 			}
@@ -1286,15 +1327,14 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, int fn_idx) {
 			emit("\t\treturn;\n");
 		}
 	} else {
-		// Call fallback: We initiate the call from JIT, and the rest of the
-		// JitEntry handler will branch into the correct instruction.
+		// Call fallback: We initiate the call from JIT, and the rest of the JitEntry handler will branch into the
+		// correct instruction.
 		emit(
-		    "\t\textern char {FN};\n"
 		    "\t\tpc += 2;\n"
 		    "{SAVE_REGS}"
-		    "\t\tasea_call_script_function(_regs, (asCScriptFunction*)&{FN});\n"
+		    "\t\tasea_call_script_function(_regs, {FN});\n"
 		    "\t\treturn;\n",
-		    fmt::arg("FN", fn_symbol),
+		    fmt::arg("FN", fn_expr),
 		    fmt::arg("SAVE_REGS", save_registers_sequence)
 		);
 	}

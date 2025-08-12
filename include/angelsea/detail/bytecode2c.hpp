@@ -151,7 +151,18 @@ class BytecodeToC {
 		std::string_view fail_reason;
 	};
 
-	void emit_direct_script_call_ins(FnState& state, int fn_idx);
+	struct ScriptCallByIdx {
+		int fn_idx;
+	};
+
+	/// Script call where the function index is not known, e.g. during virtual or interface calls, but the signature is
+	/// known and provided through an asCScriptFunction pointer.
+	struct ScriptCallByExpr {
+		asCScriptFunction* fn_decl;
+		std::string_view   expr;
+	};
+
+	void emit_direct_script_call_ins(FnState& state, std::variant<ScriptCallByIdx, ScriptCallByExpr> call);
 
 	/// Emit code to perform a system call, potentially directly if config allows. On failure, a direct call is emitted.
 	/// This function never calls emit_vm_fallback; i.e. it may perform calls via the VM but it will never return from
