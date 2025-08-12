@@ -1324,6 +1324,10 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 			);
 		} else {
 			// TODO: immediately branch into jitfn if possible
+
+			// since we don't necessarily JIT all functions, we could make it an indirect call through some persistent
+			// variable in the MIR context or something; we default to a stub in runtime.cpp that does nothing if the
+			// target isn't known or, during actual linking of a function, we set that variable.
 			emit("\t\treturn;\n");
 		}
 	} else {
