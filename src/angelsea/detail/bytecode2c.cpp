@@ -558,7 +558,10 @@ void BytecodeToC::translate_instruction(FnState& state) {
 			} // TODO: LIST_PATTERN
 			emit("\t\t\tasea_free((void*)v);\n");
 		}
-		emit("\t\t}}\n");
+		emit(
+		    "\t\t\t*a = 0;\n"
+		    "\t\t}}\n"
+		);
 
 		emit_auto_bc_inc(state);
 		break;
