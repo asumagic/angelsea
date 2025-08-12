@@ -1524,7 +1524,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		// Store value in value register
 		// FIXME: strict aliasing
 		emit(
-		    "\t\t((asea_var*)&value_reg)->as_{RETTYPE} = ret;\n",
+		    "\t\tasea_var ret_conv;\n"
+		    "\t\tret_conv.as_{RETTYPE} = ret;\n"
+		    "\t\tvalue_reg = ret_conv.as_asQWORD;\n",
 		    fmt::arg("RETTYPE", return_type == "void*" ? "ptr" : return_type)
 		);
 	}
