@@ -32,7 +32,7 @@ static constexpr std::string_view save_registers_sequence
     = "\t\tregs->pc = pc;\n"
       "\t\tregs->sp = sp;\n"
       "\t\tregs->fp = fp;\n"
-      "\t\tregs->value = value_reg;\n";
+      "\t\tregs->value.as_asPWORD = value_reg.as_asPWORD;\n";
 
 template<typename T> static std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
 
@@ -105,7 +105,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	    "\tasDWORD* pc = regs->pc;\n"
 	    "\tasea_var* sp = regs->sp;\n"
 	    "\tasea_var *const fp = regs->fp;\n"
-	    "\tasea_var value_reg = regs->value;\n"
+	    "\tasea_var value_reg; value_reg.as_asPWORD = regs->value.as_asPWORD;\n"
 	);
 
 	if (m_config->experimental_direct_generic_call /* && state.has_direct_generic_call*/) {
@@ -787,7 +787,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tasPWORD* cs_ptr = (asPWORD*)(cs->ptr);\n"
 		    "\t\tif (cs->len == 0 || cs_ptr[cs->len - {FRAMESIZE}] == 0) {{\n"
 		    "\t\t\t*(int*)((char*)regs->ctx + {OFF_STATUS}) = asEXECUTION_FINISHED;\n"
-		    "\t\t\tregs->value = value_reg;\n"
+		    "\t\t\tregs->value.as_asPWORD = value_reg.as_asPWORD;\n"
 		    "\t\t\treturn;\n"
 		    "\t\t}}\n"
 		    "\t\tasUINT new_len = cs->len - {FRAMESIZE};\n"
@@ -798,7 +798,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tregs->sp = (asDWORD*)tmp[3] + {POP};\n"
 		    "\t\t*(asUINT*)((char*)regs->ctx + {OFF_STACKINDEX}) = (asUINT)tmp[4];\n"
 		    "\t\tcs->len = new_len;\n"
-		    "\t\tregs->value = value_reg;\n"
+		    "\t\tregs->value.as_asPWORD = value_reg.as_asPWORD;\n"
 		    "\t\treturn;\n",
 		    fmt::arg("OFF_CALLSTACK", DIRECT_VALUE_IF_POSSIBLE(asea_offset_ctx_callstack)),
 		    fmt::arg("OFF_STATUS", DIRECT_VALUE_IF_POSSIBLE(asea_offset_ctx_status)),
@@ -1160,7 +1160,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, int fn_idx) {
 		emit(
 		    "\t\textern char {FN};\n"
 		    "\t\tpc += 2;\n"
-		    "\t\tregs->value = value_reg;\n" // TODO: is this necessary?
+		    "\t\tregs->value.as_asPWORD = value_reg.as_asPWORD;\n" // TODO: is this necessary?
 		    "\t\tasea_prepare_script_stack(_regs, (asCScriptFunction*)&{FN}, pc, sp, fp);\n",
 		    fmt::arg("FN", fn_symbol)
 		);
@@ -1242,7 +1242,7 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 			emit("{}", save_registers_sequence);
 			emit(
 			    "\t\tsp = (asea_var*)((asDWORD*)sp + asea_call_system_function(_regs, {FN}));\n"
-			    "\t\tvalue_reg = regs->value;\n",
+			    "\t\tvalue_reg.as_asPWORD = regs->value.as_asPWORD;\n",
 			    fmt::arg("FN", call.fn_idx)
 			);
 
