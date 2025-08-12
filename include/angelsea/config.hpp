@@ -125,7 +125,7 @@ struct JitConfig {
 
 	/// Creates native code for the asBC_RET instruction, instead of falling back to the VM. Disabled by default as it
 	/// was found to regress performance in microbenchmarks.
-	bool experimental_fast_script_return = false;
+	bool experimental_fast_script_return = true;
 
 	/// Speeds up the generic calling convention if \ref experimental_direct_generic_call is true by assuming that the
 	/// called system functions will always set the return value. If the callee fails to do so when this function is
