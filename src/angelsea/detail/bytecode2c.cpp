@@ -852,8 +852,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_CALL:     emit_direct_script_call_ins(state, ScriptCallByIdx{ins.int0()}); break;
 	case asBC_CALLINTF: {
-		emit_vm_fallback(state, "trololo");
-
 		// TODO: devirtualization optimization using `final` like asllvm did -- in fact, could we infer `final`
 		// ourselves? i don't know if we can look at the descendants safely from within our module
 
@@ -861,16 +859,26 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 		const auto fn_idx = ins.int0();
 		// const std::string  fn_symbol = fmt::format("{}_scriptfn{}", m_c_symbol_prefix, fn_idx);
-		asCScriptFunction* callee = engine.scriptFunctions[fn_idx];
+		asCScriptFunction* virtual_fn = engine.scriptFunctions[fn_idx];
 
-		if (callee->funcType == asFUNC_INTERFACE) {
+		if (virtual_fn->funcType == asFUNC_INTERFACE) {
 			// TODO: write tests with a few interfaces then implement
 			emit_vm_fallback(state, "Cannot handle interface calls yet");
 			break;
 		}
 
-		// TODO: handling asFUNC_INTERFACE?
-		emit("\t\t\n");
+		// FIXME: if v_obj is null then null exception
+
+		emit(
+		    "\t\tasCScriptObject* v_obj = sp->as_ptr;\n"
+		    "\t\tasITypeInfo* v_obj_type = *(asITypeInfo**)((char*)v_obj + {OFF_SCRIPTOBJ_OBJTYPE});\n"
+		    "\t\tasea_array* v_vftable = (asea_array*)((char*)v_obj_type + {OFF_OBJTYPE_VFTABLE});\n"
+		    "\t\tasCScriptFunction* v_fn = ((asCScriptFunction**)(v_vftable->ptr))[{VTABLE_IDX}];\n",
+		    fmt::arg("OFF_SCRIPTOBJ_OBJTYPE", DIRECT_VALUE_IF_POSSIBLE(asea_offset_scriptobj_objtype)),
+		    fmt::arg("OFF_OBJTYPE_VFTABLE", DIRECT_VALUE_IF_POSSIBLE(asea_offset_objtype_vtable)),
+		    fmt::arg("VTABLE_IDX", virtual_fn->vfTableIdx)
+		);
+		emit_direct_script_call_ins(state, ScriptCallByExpr{.fn_decl = virtual_fn, .expr = "v_fn"});
 		break;
 	}
 
@@ -1295,7 +1303,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 
 				if (var->onHeap && (var->type.IsObject() || var->type.IsFuncdef())) {
 					if (m_config->c.human_readable) {
-						emit("\t\t/* arg {} requires clearing @ stack pos {}*/\n", n, -var->stackOffset);
+						emit("\t\t/* arg {} requires clearing @ stack pos {} */\n", n, -var->stackOffset);
 					}
 
 					emit("\t\t((asea_var*)((asDWORD*)(regs->fp) + {}))->as_asPWORD = 0;\n", -var->stackOffset);

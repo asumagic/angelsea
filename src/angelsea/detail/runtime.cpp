@@ -38,10 +38,10 @@ int asea_prepare_script_stack(
     asDWORD*           sp,
     asDWORD*           fp
 ) {
-	asCContext& ctx              = asea_get_context(vm_registers);
-	ctx.m_regs.programPointer    = pc;
-	ctx.m_regs.stackPointer      = sp;
-	ctx.m_regs.stackFramePointer = fp;
+	asCContext& ctx                 = asea_get_context(vm_registers);
+	vm_registers->programPointer    = pc;
+	vm_registers->stackPointer      = sp;
+	vm_registers->stackFramePointer = fp;
 
 	if (ctx.PushCallState() < 0) {
 		return 1;
@@ -65,9 +65,38 @@ int asea_prepare_script_stack(
 		}
 	}
 
-	ctx.m_regs.programPointer    = fn.scriptData->byteCode.AddressOf();
-	ctx.m_regs.stackFramePointer = ctx.m_regs.stackPointer;
+	vm_registers->programPointer    = fn.scriptData->byteCode.AddressOf();
+	vm_registers->stackFramePointer = vm_registers->stackPointer;
 
+	return 0;
+}
+
+int asea_prepare_script_stack_and_vars(
+    asSVMRegisters*    vm_registers,
+    asCScriptFunction& fn,
+    asDWORD*           pc,
+    asDWORD*           sp,
+    asDWORD*           fp
+) {
+	if (asea_prepare_script_stack(vm_registers, fn, pc, sp, fp) != 0) {
+		return 1;
+	}
+
+	for (std::size_t i = 0; i < fn.scriptData->variables.GetLength(); ++i) {
+		asSScriptVariable* var = fn.scriptData->variables[i];
+
+		// don't clear the function arguments
+		if (var->stackOffset <= 0) {
+			continue;
+		}
+
+		if (var->onHeap && (var->type.IsObject() || var->type.IsFuncdef())) {
+			// TODO: compare perf with full memset of variable space, it's probably faster anyway
+			std::memset(vm_registers->stackFramePointer - var->stackOffset, 0, sizeof(asPWORD));
+		}
+	}
+
+	vm_registers->stackPointer -= fn.scriptData->variableSpace;
 	return 0;
 }
 

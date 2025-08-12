@@ -31,6 +31,7 @@ static void bind_runtime(Mir& mir) {
 	ASEA_BIND_MIR(asea_call_system_function);
 	ASEA_BIND_MIR(asea_call_object_method);
 	ASEA_BIND_MIR(asea_prepare_script_stack);
+	ASEA_BIND_MIR(asea_prepare_script_stack_and_vars);
 	ASEA_BIND_MIR(asea_debug_message);
 	ASEA_BIND_MIR(asea_debug_int);
 	ASEA_BIND_MIR(asea_set_internal_exception);

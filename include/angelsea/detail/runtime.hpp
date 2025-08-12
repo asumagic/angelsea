@@ -4,6 +4,8 @@
 
 #include <angelscript.h>
 #include <as_context.h>
+#include <as_objecttype.h>
+#include <as_scriptobject.h>
 
 class asCScriptFunction;
 class asCScriptObject;
@@ -30,6 +32,17 @@ int asea_call_system_function(asSVMRegisters* vm_registers, int fn);
 void asea_call_object_method(asSVMRegisters* vm_registers, void* obj, int fn);
 
 int asea_prepare_script_stack(
+    asSVMRegisters*    vm_registers,
+    asCScriptFunction& fn,
+    asDWORD*           pc,
+    asDWORD*           sp,
+    asDWORD*           fp
+);
+
+/// \brief Same as \ref asea_prepare_script_stack but also makes space for variables by bumping the stack pointer and
+/// clears out whatever variables needs to be. This function variant is useful when the concrete function is only known
+/// at runtime.
+int asea_prepare_script_stack_and_vars(
     asSVMRegisters*    vm_registers,
     asCScriptFunction& fn,
     asDWORD*           pc,
@@ -66,5 +79,9 @@ static constexpr asPWORD asea_offset_ctx_status     = offsetof(asCContext, m_sta
 static constexpr asPWORD asea_offset_ctx_currentfn  = offsetof(asCContext, m_currentFunction);
 static constexpr asPWORD asea_offset_ctx_stackindex = offsetof(asCContext, m_stackIndex);
 static constexpr asPWORD asea_offset_ctx_engine     = offsetof(asCContext, m_engine);
+
+static constexpr asPWORD asea_offset_scriptobj_objtype = offsetof(asCScriptObject, objType);
+
+static constexpr asPWORD asea_offset_objtype_vtable = offsetof(asCObjectType, virtualFunctionTable);
 #pragma GCC diagnostic pop
 }
