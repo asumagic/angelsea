@@ -54,6 +54,9 @@ void asea_clean_args(asSVMRegisters* vm_registers, asCScriptFunction& fn, asDWOR
 /// \brief Casts script object \ref obj to the requested \ref type_id; stores result in object register
 void asea_cast(asSVMRegisters* vm_registers, asCScriptObject* obj, asDWORD type_id);
 
+void* asea_alloc(asQWORD size);
+void  asea_free(void* ptr);
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 // yes, it's not great to rely on offsetof given this is not a POD type; but AS does this all over the place and the

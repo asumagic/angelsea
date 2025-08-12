@@ -256,7 +256,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		case asBC_CALLINTF:
 		case asBC_CallPtr:
 		case asBC_ALLOC:
-		case asBC_FREE:
 		case asBC_ClrVPtr:
 		case asBC_ChkRefS:
 		case asBC_ChkNullS:
@@ -526,6 +525,42 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		auto*      objtype_ptr    = std::bit_cast<asCObjectType*>(objtype_raw);
 		const auto objtype_symbol = emit_type_info_lookup(state, *objtype_ptr);
 		emit_stack_push_ins(state, fmt::format("(asPWORD)&{}", objtype_symbol), pword);
+		break;
+	}
+
+	case asBC_FREE: {
+		auto*             type = std::bit_cast<asCObjectType*>(ins.pword0());
+		asSTypeBehaviour& beh  = type->beh;
+
+		if ((type->flags & asOBJ_LIST_PATTERN) != 0) {
+			emit_vm_fallback(state, "Can't handle FREE of list patterns yet");
+			break;
+		}
+
+		emit(
+		    "\t\tasPWORD *a = &{}, v = *a;\n"
+		    "\t\tif (v) {{\n",
+		    frame_var(ins.sword0(), pword)
+		);
+		if ((type->flags & asOBJ_REF) != 0) {
+			if (beh.release != 0) {
+				emit_system_call(
+				    state,
+				    {.fn_idx = beh.release, .object_pointer_override = "(void*)v", .is_internal_call = true}
+				);
+			}
+		} else {
+			if (beh.destruct != 0) {
+				emit_system_call(
+				    state,
+				    {.fn_idx = beh.destruct, .object_pointer_override = "(void*)v", .is_internal_call = true}
+				);
+			} // TODO: LIST_PATTERN
+			emit("\t\t\tasea_free((void*)v);\n");
+		}
+		emit("\t\t}}\n");
+
+		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -1018,7 +1053,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CALLINTF:     // TODO: implement (calls & syscalls)
 	case asBC_CallPtr:      // TODO: find way to emit & implement (calls & syscalls) -- probably just functors
 	case asBC_ALLOC:        // TODO: implement
-	case asBC_FREE:         // TODO: implement
 	case asBC_ClrVPtr:      // TODO: find way to emit (maybe asOBJ_SCOPED?)
 	case asBC_ChkRefS:      // TODO: find way to emit
 	case asBC_ChkNullS:     // TODO: find way to emit

@@ -5,6 +5,7 @@
 #include <angelscript.h>
 #include <angelsea/detail/debug.hpp>
 #include <as_context.h>
+#include <as_memory.h>
 #include <as_objecttype.h>
 #include <as_scriptengine.h>
 #include <as_scriptfunction.h>
@@ -123,4 +124,7 @@ void asea_cast(asSVMRegisters* vm_registers, asCScriptObject* obj, asDWORD type_
 		obj->AddRef();
 	}
 }
+
+void* asea_alloc(asQWORD size) { return userAlloc(size); }
+void  asea_free(void* ptr) { userFree(ptr); }
 }
