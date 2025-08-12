@@ -1522,13 +1522,20 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		angelsea_assert(false);
 	} else if (return_type != "void") {
 		// Store value in value register
-		// FIXME: strict aliasing
-		emit(
-		    "\t\tasea_var ret_conv;\n"
-		    "\t\tret_conv.as_{RETTYPE} = ret;\n"
-		    "\t\tvalue_reg = ret_conv.as_asQWORD;\n",
-		    fmt::arg("RETTYPE", return_type == "void*" ? "ptr" : return_type)
-		);
+		if (return_type == "void*") {
+			emit("\t\tvalue_reg = (asPWORD)ret;\n");
+		} else if (fn.returnType.IsIntegerType() && !fn.returnType.IsReference()) {
+			// Straight copy, bypass union that might not be optimized away by MIR
+			emit("\t\tvalue_reg = ret;\n");
+		} else {
+			// Must do a proper conversion via an union in case of floating-point types
+			emit(
+			    "\t\tasea_var ret_conv;\n"
+			    "\t\tret_conv.as_{RETTYPE} = ret;\n"
+			    "\t\tvalue_reg = ret_conv.as_asQWORD;\n",
+			    fmt::arg("RETTYPE", return_type)
+			);
+		}
 	}
 
 	return {.ok = true, .fail_reason = {}};
