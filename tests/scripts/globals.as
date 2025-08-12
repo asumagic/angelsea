@@ -20,6 +20,8 @@ void assign_read()
     print(return_global());
     g32 = return_whatever();
     print(g32);
+
+    print_arg(g32);
 }
 
 int return_global() {
@@ -28,4 +30,8 @@ int return_global() {
 
 int return_whatever() {
     return 456;
+}
+
+void print_arg(int foo) {
+    print(foo);
 }

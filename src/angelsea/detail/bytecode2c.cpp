@@ -252,7 +252,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		case asBC_REFCPY:
 		// TODO: all of those are not implemented as of writing, remove when fixed
 		case asBC_SwapPtr:
-		case asBC_PshG4:
 		case asBC_LdGRdR4:
 		case asBC_COPY:
 		case asBC_CALLBND:
@@ -481,6 +480,12 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_PshGPtr: {
 		std::string symbol = emit_global_lookup(state, std::bit_cast<void*>(ins.pword0()), false);
 		emit_stack_push_ins(state, fmt::format("(asPWORD){}", symbol), pword);
+		break;
+	}
+
+	case asBC_PshG4: {
+		std::string symbol = emit_global_lookup(state, std::bit_cast<void*>(ins.pword0()), false);
+		emit_stack_push_ins(state, fmt::format("*(asDWORD*)&{}", symbol), u32);
 		break;
 	}
 
@@ -989,7 +994,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 
 	case asBC_SwapPtr:      // TODO: find way to emit
-	case asBC_PshG4:        // TODO: find way to emit
 	case asBC_LdGRdR4:      // TODO: find way to emit
 	case asBC_COPY:         // TODO: find way to emit
 	case asBC_CALLBND:      // TODO: find way to emit & implement (calls & syscalls)
