@@ -1319,6 +1319,15 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 
 		// TODO: is writing valuereg ever required here? same question for script calls elsewhere
 
+		// push the self pointer in the fallback case
+		if (!call.object_pointer_override.empty()) {
+			emit(
+			    "\t\tsp = (asea_var*)((char*)sp - sizeof(asPWORD));\n"
+			    "\t\tsp->as_ptr = {};\n",
+			    call.object_pointer_override
+			);
+		}
+
 		if (!call.is_internal_call) {
 			// could condition programPointer and maybe stackFramePointer(?) on hack_ignore_context_inspect but we need
 			// to write most registers anyway
