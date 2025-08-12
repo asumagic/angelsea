@@ -1632,7 +1632,13 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 		// TODO: we can probably statically tell which regs need to be written to and which don't
 		emit("\t\tsp = (asea_var*)((asDWORD*)sp + pop_size);\n");
 
-		if (asITypeInfo* ret_type_info = fn.returnType.GetTypeInfo(); ret_type_info != nullptr) {
+		bool uses_object_register
+		    = (fn.returnType.IsObject() || fn.returnType.IsFuncdef()) && !fn.returnType.IsReference();
+
+		if (uses_object_register) {
+			asITypeInfo* ret_type_info = fn.returnType.GetTypeInfo();
+			angelsea_assert(ret_type_info != nullptr);
+
 			const auto ret_type_info_expr = emit_type_info_lookup(state, *ret_type_info);
 			emit(
 			    "\t\tregs->obj = g.objectRegister;\n"
