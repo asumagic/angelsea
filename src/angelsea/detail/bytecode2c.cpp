@@ -248,8 +248,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 
 			// assume asBC_CALL can always fallback
 		case asBC_CALL:
-			// TODO: all those fall back conditionally as of writing, remove when fixed
-		case asBC_REFCPY:
 		// TODO: all of those are not implemented as of writing, remove when fixed
 		case asBC_SwapPtr:
 		case asBC_LdGRdR4:
@@ -607,21 +605,39 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_REFCPY: {
-		auto* type = std::bit_cast<asCObjectType*>(ins.pword0());
-		// asSTypeBehaviour& beh  = type->beh;
-
-		if ((type->flags & (asOBJ_NOCOUNT | asOBJ_VALUE)) == 0) {
-			emit_vm_fallback(state, "can't handle release/addref for RefCpy calls yet");
-			break;
-		}
+		auto*             type = std::bit_cast<asCObjectType*>(ins.pword0());
+		asSTypeBehaviour& beh  = type->beh;
 
 		emit(
 		    "\t\tasPWORD *dst = (asPWORD*)sp->as_asPWORD;\n"
 		    "\t\tsp = (asea_var*)((char*)sp + sizeof(asPWORD));\n"
-		    "\t\tasPWORD src = sp->as_asPWORD;\n"
-		    "\t\t*dst = src;\n",
+		    "\t\tasPWORD src = sp->as_asPWORD;\n",
 		    fmt::arg("SWORD0", ins.sword0())
 		);
+
+		if ((type->flags & (asOBJ_NOCOUNT | asOBJ_VALUE)) == 0) {
+			// TODO: fix indent within call
+			// TODO: dedup with RefCpyV
+			if (beh.release != 0) {
+				emit("\t\tif (*dst != 0) {{\n");
+				emit_system_call(
+				    state,
+				    {.fn_idx = beh.release, .object_pointer_override = "(void*)*dst", .is_internal_call = true}
+				);
+				emit("\t\t}}\n");
+			}
+
+			if (beh.addref != 0) {
+				emit("\t\tif (src != 0) {{\n");
+				emit_system_call(
+				    state,
+				    {.fn_idx = beh.addref, .object_pointer_override = "(void*)src", .is_internal_call = true}
+				);
+				emit("\t\t}}\n");
+			}
+		}
+
+		emit("\t\t*dst = src;\n");
 		emit_auto_bc_inc(state);
 
 		break;
