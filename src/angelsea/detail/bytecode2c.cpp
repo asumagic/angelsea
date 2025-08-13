@@ -1440,7 +1440,7 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 		}
 
 		// push the self pointer in the fallback case
-		if (!call.object_pointer_override.empty()) {
+		if (!call.is_internal_call && !call.object_pointer_override.empty()) {
 			emit(
 			    "\t\tsp = (asea_var*)((char*)sp - sizeof(asPWORD));\n"
 			    "\t\tsp->as_ptr = {};\n",
