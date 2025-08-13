@@ -366,6 +366,8 @@ void BytecodeToC::discover_function_call_pushes(FnState& state) {
 			current_pushes.clear();
 		} else {
 			switch (ins.info->bc) {
+				// TODO: ChkNullS (and probably others) can appear in the stack push pattern; we should support those
+
 			case asBC_PshC4:
 			case asBC_PshV4:
 			case asBC_PshG4: {

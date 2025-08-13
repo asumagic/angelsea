@@ -108,7 +108,6 @@ int asea_prepare_script_stack_and_vars(
 		return 1;
 	}
 
-	vm_registers->stackPointer -= fn.scriptData->variableSpace;
 	memset(vm_registers->stackPointer, 0, fn.scriptData->variableSpace * sizeof(asDWORD));
 
 	return 0;
