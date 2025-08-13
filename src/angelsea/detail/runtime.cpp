@@ -82,21 +82,9 @@ int asea_prepare_script_stack_and_vars(
 		return 1;
 	}
 
-	for (std::size_t i = 0; i < fn.scriptData->variables.GetLength(); ++i) {
-		asSScriptVariable* var = fn.scriptData->variables[i];
-
-		// don't clear the function arguments
-		if (var->stackOffset <= 0) {
-			continue;
-		}
-
-		if (var->onHeap && (var->type.IsObject() || var->type.IsFuncdef())) {
-			// TODO: compare perf with full memset of variable space, it's probably faster anyway
-			std::memset(vm_registers->stackFramePointer - var->stackOffset, 0, sizeof(asPWORD));
-		}
-	}
-
 	vm_registers->stackPointer -= fn.scriptData->variableSpace;
+	memset(vm_registers->stackPointer, 0, fn.scriptData->variableSpace * sizeof(asDWORD));
+
 	return 0;
 }
 
