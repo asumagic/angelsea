@@ -267,11 +267,15 @@ in source **and** binary distributions!
 Currently, the `asCALL_GENERIC` calling convention is the best supported (though
 some things are not covered).
 
-We provide very preliminary support for the native calling conventions, but for
-now, `asCALL_GENERIC` is a probably more performant and stable option.  
-The native calling convention is significantly more complicated to completely
-support and the generic calling convention can actually be fairly fast.  
-Unsupported calls will fall back to emitting the call via the VM.
+There is experimental support for the native calling convention (on by default),
+but it is early and as such will often fall back to the VM.
+
+For cases that are supported, system calls are much faster with the JIT with
+either the generic or native calling convention.
+
+There is also an experimental "stack elision" optimization
+(`experimental_stack_elision`) that can improve the native calling convention
+performance by bypassing stack pushes entirely when possible.
 
 As of writing, `asIScriptGeneric` is not a particularly efficient interface (see
 below), but when the time comes, we may try to contribute back design
@@ -309,20 +313,7 @@ _for every argument lookup you do_.
 
 When automatically wrapping functions for the generic calling convention, it
 actually is feasible to hack a lot of that complexity away by directly poking at
-`asCGeneric`.  
-I do have some automatic wrappers in use for
-[King Arthur's Gold](https://store.steampowered.com/app/219830/King_Arthurs_Gold/),
-which wrap essentially all of our thousands of bindings, but I believe that 
-AngelScript itself has a similar pile of templates nowadays. If there's interest
-in my generic wrappers, hacks included, I can try cleaning it up and providing
-it standalone and/or as part of angelsea.
-
-For JIT compilers, all of this is not necessarily true. In theory, even somewhat
-naive compilers (like angelsea) could bypass the AngelScript stack for values it
-knows won't need to be manipulated by AS. In this case, the stack could be
-completely bypassed for passing simple arguments, which would result in
-excellent call performance with the native calling convention.  
-At the time of writing, this is not anything angelsea can do, though.
+`asCGeneric`.
 
 Angelsea is able to make generic calls much faster by doing a lot less work than
 the AngelScript VM, though, largely thanks to the fact we can generate code
