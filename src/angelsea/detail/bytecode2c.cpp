@@ -342,7 +342,9 @@ void BytecodeToC::discover_function_call_pushes(FnState& state) {
 
 	std::vector<std::pair<std::size_t, StackPushInfo>> current_pushes;
 	for (BytecodeInstruction ins : bytecode_view) {
-		if (state.branch_targets.contains(ins.offset)) {
+		// TODO: refactor the condition into a function?
+		if (is_instruction_blacklisted(ins.info->bc) || ins.info->bc == m_config->debug.fallback_after_instruction
+		    || state.branch_targets.contains(ins.offset)) {
 			current_pushes.clear();
 		} else if (auto call = bcins::try_as<bcins::CallSystemDirect>(ins); call.has_value()) {
 			// const auto& fn = call->function(*static_cast<asCScriptEngine*>(m_script_engine));
