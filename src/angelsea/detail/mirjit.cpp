@@ -47,23 +47,27 @@ static void bind_runtime(Mir& mir) {
 }
 
 void jit_entry_function_counter(asSVMRegisters* regs, asPWORD lazy_fn_raw) {
-	auto& lazy_fn = *std::bit_cast<LazyMirFunction*>(lazy_fn_raw);
+	if (lazy_fn_raw != 1) { // value 1 can be passed in direct JIT calls; ignore it
+		auto& lazy_fn = *std::bit_cast<LazyMirFunction*>(lazy_fn_raw);
 
-	if (lazy_fn.hits_before_compile == 0) {
-		lazy_fn.jit_engine->translate_lazy_function(lazy_fn);
-		return; // let jitentry rerun in case compilation updated the jit function
+		if (lazy_fn.hits_before_compile == 0) {
+			lazy_fn.jit_engine->translate_lazy_function(lazy_fn);
+			return; // let jitentry rerun in case compilation updated the jit function
+		}
+		--lazy_fn.hits_before_compile;
 	}
-	--lazy_fn.hits_before_compile;
 
 	regs->programPointer += 1 + AS_PTR_SIZE; // skip the jitentry
 }
 
 void jit_entry_await_async(asSVMRegisters* regs, asPWORD pending_fn_raw) {
-	auto& lazy_fn = *std::bit_cast<AsyncMirFunction*>(pending_fn_raw);
+	if (pending_fn_raw != 1) { // value 1 can be passed in direct JIT calls; ignore it
+		auto& lazy_fn = *std::bit_cast<AsyncMirFunction*>(pending_fn_raw);
 
-	if (lazy_fn.compiled.ready.load()) {
-		lazy_fn.jit_engine->link_ready_functions();
-		return; // let jitentry rerun
+		if (lazy_fn.compiled.ready.load()) {
+			lazy_fn.jit_engine->link_ready_functions();
+			return; // let jitentry rerun
+		}
 	}
 
 	regs->programPointer += 1 + AS_PTR_SIZE; // skip the jitentry
