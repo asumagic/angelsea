@@ -164,6 +164,7 @@ typedef struct {
     R"___(
 void asea_call_script_function(asSVMRegisters* vm_registers, void* function);
 int asea_prepare_script_stack(asSVMRegisters* vm_registers, void* function, void* pc, void* sp, void *fp);
+int asea_prepare_script_stack_and_vars(asSVMRegisters* vm_registers, void* function, void* pc, void* sp, void *fp);
 void asea_debug_message(asSVMRegisters* vm_registers, const char* text);
 void asea_debug_int(asSVMRegisters* vm_registers, asPWORD x);
 void asea_set_internal_exception(asSVMRegisters* vm_registers, const char* text);
