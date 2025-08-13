@@ -3,7 +3,7 @@
 	url = ../mir.git
 [submodule "vendor/angelscript"]
 	path = vendor/angelscript
-	url = https://github.com/codecat/angelscript-mirror.git
+	url = https://github.com/anjo76/angelscript.git
 [submodule "vendor/fmt"]
 	path = vendor/fmt
 	url = https://github.com/fmtlib/fmt.git

@@ -117,11 +117,6 @@ target.
 If you want to provide any of dependencies yourself (e.g. you also use them and
 don't want to rely on Angelsea building it), see the optional step.
 
-> [!NOTE]
-> The `vendor/angelscript` submodule points to the
-> [unofficial AngelScript](https://github.com/codecat/angelscript-mirror) git repository
-> mirror by codecat.
-
 > [!WARNING]
 > As an user, you should know that upstream MIR has not seen activity in a year.
 > I provide a downstream fork of MIR to work around specific problems, and we
