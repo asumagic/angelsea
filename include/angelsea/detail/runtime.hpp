@@ -80,6 +80,10 @@ static constexpr asPWORD asea_offset_ctx_currentfn  = offsetof(asCContext, m_cur
 static constexpr asPWORD asea_offset_ctx_stackindex = offsetof(asCContext, m_stackIndex);
 static constexpr asPWORD asea_offset_ctx_engine     = offsetof(asCContext, m_engine);
 
+static constexpr asPWORD asea_offset_scriptfn_scriptdata = offsetof(asCScriptFunction, scriptData);
+static constexpr asPWORD asea_offset_scriptdata_jitfunction
+    = offsetof(asCScriptFunction::ScriptFunctionData, jitFunction);
+
 static constexpr asPWORD asea_offset_scriptobj_objtype = offsetof(asCScriptObject, objType);
 
 static constexpr asPWORD asea_offset_objtype_vtable = offsetof(asCObjectType, virtualFunctionTable);

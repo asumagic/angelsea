@@ -1331,12 +1331,17 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 			    fmt::arg("SELF", m_module_state.fn_name)
 			);
 		} else {
-			// TODO: immediately branch into jitfn if possible
-
-			// since we don't necessarily JIT all functions, we could make it an indirect call through some persistent
-			// variable in the MIR context or something; we default to a stub in runtime.cpp that does nothing if the
-			// target isn't known or, during actual linking of a function, we set that variable.
-			emit("\t\treturn;\n");
+			// look up JITFunction to branch into directly. if it doesn't exist that's fine; in both case we drop to the
+			// vm right after
+			emit(
+			    "\t\tvoid* script_data = *(void**)((char*)({FN}) + {OFF_SCRIPTFN_SCRIPTDATA});\n"
+			    "\t\tasea_jit_fn jit_fn = *(asea_jit_fn*)((char*)script_data + {OFF_SCRIPTDATA_JITFN});\n"
+			    "\t\tif (jit_fn) {{ jit_fn(_regs, 1); return; }}\n"
+			    "\t\treturn;\n",
+			    fmt::arg("FN", fn_expr),
+			    fmt::arg("OFF_SCRIPTFN_SCRIPTDATA", DIRECT_VALUE_IF_POSSIBLE(asea_offset_scriptfn_scriptdata)),
+			    fmt::arg("OFF_SCRIPTDATA_JITFN", DIRECT_VALUE_IF_POSSIBLE(asea_offset_scriptdata_jitfunction))
+			);
 		}
 	} else {
 		// Call fallback: We initiate the call from JIT, and the rest of the JitEntry handler will branch into the

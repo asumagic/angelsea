@@ -176,6 +176,8 @@ void asea_cast(asSVMRegisters* vm_registers, asCScriptObject* obj, asDWORD type_
 void* asea_alloc(asQWORD size);
 void  asea_free(void* ptr);
 
+typedef void (*asea_jit_fn)(asSVMRegisters*, asPWORD);
+
 extern char asea_generic_vtable[];
 )___"
 
