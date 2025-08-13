@@ -1254,11 +1254,8 @@ std::string BytecodeToC::emit_type_info_lookup([[maybe_unused]] FnState& state, 
 }
 
 void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<ScriptCallByIdx, ScriptCallByExpr> call) {
-	// TODO: when possible, translate this to a JIT to JIT function call
-	// NOTE: the above is more complicated now because the MIR_cleanup logic
-	// destroys inlining information. then again, it's probably more
-	// important to create a shim so that we don't have to go through the
-	// regular AS functions since we have better knowledge of the callee.
+	// TODO: figure out a way to inline callees. maybe we can find simple functions and trigger their generation in a
+	// way that ensures they will be compiled? or we can just bring them into our module??
 
 	auto& engine           = *static_cast<asCScriptEngine*>(m_script_engine);
 	bool  will_emit_direct = m_config->experimental_fast_script_call && m_config->hack_ignore_suspend;
