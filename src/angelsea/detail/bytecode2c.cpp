@@ -1285,10 +1285,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 	}
 
 	if (will_emit_direct) {
-		emit(
-		    "\t\tpc += 2;\n"
-		    "\t\tregs->value = value_reg;\n" // TODO: is this necessary?
-		);
+		emit("\t\tpc += 2;\n");
 
 		if (known_fn != nullptr) {
 			emit("\t\tasea_prepare_script_stack(_regs, {FN}, pc, sp, fp);\n", fmt::arg("FN", fn_expr));
