@@ -1283,6 +1283,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 
 		if (known_fn != nullptr) {
 			emit("\t\tasea_prepare_script_stack(_regs, {FN}, pc, sp, fp);\n", fmt::arg("FN", fn_expr));
+			bool emitted_fp_var = false;
 			// setup stack with our knowledge
 			for (asUINT n = known_fn->scriptData->variables.GetLength(); n-- > 0;) {
 				asSScriptVariable* var = known_fn->scriptData->variables[n];
@@ -1293,19 +1294,17 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 				}
 
 				if (var->onHeap && (var->type.IsObject() || var->type.IsFuncdef())) {
+					if (!emitted_fp_var) {
+						emit("\t\tasDWORD* callee_fp = regs->fp;\n");
+						emitted_fp_var = true;
+					}
+
 					if (m_config->c.human_readable) {
 						emit("\t\t/* arg {} requires clearing @ stack pos {} */\n", n, -var->stackOffset);
 					}
 
-					emit("\t\t((asea_var*)((asDWORD*)(regs->fp) + {}))->as_asPWORD = 0;\n", -var->stackOffset);
+					emit("\t\t((asea_var*)(callee_fp + {}))->as_asPWORD = 0;\n", -var->stackOffset);
 				}
-			}
-
-			if (known_fn->scriptData->variableSpace != 0) {
-				if (m_config->c.human_readable) {
-					emit("\t\t/* make space for variables */\n");
-				}
-				emit("\t\tregs->sp = (asDWORD*)(regs->sp) - {};\n", known_fn->scriptData->variableSpace);
 			}
 		} else {
 			// if the function is not known, do the above stack logic dynamically in runtime

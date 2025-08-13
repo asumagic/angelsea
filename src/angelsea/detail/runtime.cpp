@@ -90,6 +90,7 @@ int asea_prepare_script_stack(
 		new_sp = vm_registers->stackPointer;
 	}
 
+	vm_registers->stackPointer -= script_data.variableSpace;
 	vm_registers->programPointer    = script_data.byteCode.AddressOf();
 	vm_registers->stackFramePointer = new_sp;
 
