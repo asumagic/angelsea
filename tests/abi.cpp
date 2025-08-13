@@ -142,6 +142,7 @@ TEST_CASE("generic abi benchmark", "[abi][conv_generic][benchmark]") {
 int native_noarg() { return 123; }
 
 int native_sum3int(int a, int b, int c) { return a + b + c; }
+int native_sum3float(float a, float b, float c) { return a + b + c; }
 
 std::string return_string(int a, int b, const std::string& c) {
 	std::string ret("hello world! ");
@@ -155,6 +156,7 @@ std::string return_string(int a, int b, const std::string& c) {
 void bind_native_functions(asIScriptEngine& e) {
 	e.RegisterGlobalFunction("int noarg()", asFUNCTION(native_noarg), asCALL_CDECL);
 	e.RegisterGlobalFunction("int sum3int(int, int, int)", asFUNCTION(native_sum3int), asCALL_CDECL);
+	e.RegisterGlobalFunction("float sum3float(float, float, float)", asFUNCTION(native_sum3float), asCALL_CDECL);
 	e.RegisterGlobalFunction(
 	    "string return_string(int, int, const string&in)",
 	    asFUNCTION(generic_return_string),
@@ -191,6 +193,8 @@ TEST_CASE("native calling convention", "[abi][conv_native]") {
 
 	// involves the stack pointer
 	REQUIRE(run_string(context, "print(''+sum3int(500, 30, 2))") == "532\n");
+
+	REQUIRE(run_string(context, "print(''+sum3float(500.5, 29.5, 2))") == "532\n");
 }
 
 TEST_CASE("native abi benchmark", "[abi][conv_native][benchmark]") {
