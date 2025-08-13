@@ -66,21 +66,6 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		m_on_map_function_callback(fn, m_module_state.fn_name);
 	}
 
-	FnState state{
-	    .fn                       = &fn,   // TODO: move to module state
-	    .ins                      = {},    // populated before translate_instruction
-	    .has_any_late_jit_entries = true,  // populated by has_any_late_jit_entries
-	    .switch_map               = {},    // populated by discover_branch_targets
-	    .branch_targets           = {},    // populated by discover_function_calls
-	    .has_direct_generic_call  = false, // populated by discover_function_calls
-	    .error_handlers           = {},    // populated by any translate_instruction
-	};
-
-	discover_switch_map(state);
-	configure_jit_entries(state);
-	discover_branch_targets(state);
-	discover_function_calls(state);
-
 	if (m_config->c.human_readable) {
 		const char* section_name;
 		int         row, col;
@@ -107,6 +92,26 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	    "\tasea_var *const fp = regs->fp;\n"
 	    "\tasQWORD value_reg = regs->value;\n"
 	);
+
+	FnState state{
+	    .fn                       = &fn,   // TODO: move to module state
+	    .ins                      = {},    // populated before translate_instruction
+	    .has_any_late_jit_entries = true,  // populated by has_any_late_jit_entries
+	    .switch_map               = {},    // populated by discover_switch_map
+	    .branch_targets           = {},    // populated by discover_branch_targets
+	    .stack_push_infos         = {},    // populated by discover_function_call_pushes
+	    .fn_to_stack_push         = {},    // ^
+	    .has_direct_generic_call  = false, // populated by discover_function_calls
+	    .error_handlers           = {},    // populated by any translate_instruction
+	};
+
+	discover_switch_map(state);
+	configure_jit_entries(state);
+	discover_branch_targets(state);
+	discover_function_calls(state);
+	if (m_config->experimental_stack_elision) {
+		discover_function_call_pushes(state);
+	}
 
 	if (m_config->experimental_direct_generic_call /* && state.has_direct_generic_call*/) {
 		// FIXME: has_direct_generic_call is broken with refcpyv
@@ -327,6 +332,67 @@ void BytecodeToC::discover_function_calls(FnState& state) {
 			const auto& fn = call->function(*static_cast<asCScriptEngine*>(m_script_engine));
 			if (fn.sysFuncIntf->callConv == ICC_GENERIC_FUNC || fn.sysFuncIntf->callConv == ICC_GENERIC_METHOD) {
 				state.has_direct_generic_call = true;
+			}
+		}
+	}
+}
+
+void BytecodeToC::discover_function_call_pushes(FnState& state) {
+	auto bytecode_view = get_bytecode(*state.fn);
+
+	std::vector<std::pair<std::size_t, StackPushInfo>> current_pushes;
+	for (BytecodeInstruction ins : bytecode_view) {
+		if (state.branch_targets.contains(ins.offset)) {
+			current_pushes.clear();
+		} else if (auto call = bcins::try_as<bcins::CallSystemDirect>(ins); call.has_value()) {
+			// const auto& fn = call->function(*static_cast<asCScriptEngine*>(m_script_engine));
+			// printf("call @%d of fn %s:\n", int(ins.offset), fn.GetDeclaration());
+			for (auto& [push_offset, push_info] : current_pushes) {
+				state.stack_push_infos.emplace(push_offset, push_info);
+				emit("\t{TYPE} push_tmp{ID};\n", fmt::arg("TYPE", push_info.type.c), fmt::arg("ID", push_offset));
+				// printf(
+				//     "^^^^ stack push %s\n",
+				//     disassemble(*m_script_engine, *bytecode_view.begin().advanced_by_dwords(push_offset)).c_str()
+				// );
+			}
+
+			// TODO: could be optimized/cleaned up here
+			std::vector<std::size_t> pushes(current_pushes.size());
+			for (std::size_t i = 0; i < current_pushes.size(); ++i) {
+				pushes[i] = current_pushes[i].first;
+			}
+			state.fn_to_stack_push.emplace(ins.offset, std::move(pushes));
+
+			current_pushes.clear();
+		} else {
+			switch (ins.info->bc) {
+			case asBC_PshC4:
+			case asBC_PshV4:
+			case asBC_PshG4: {
+				current_pushes.push_back({ins.offset, StackPushInfo{.type = var_types::u32}});
+				break;
+			}
+				// TODO: when supported
+				// case asBC_FuncPtr:
+				// case asBC_PshListElmnt:
+			case asBC_PshC8:
+			case asBC_PshV8: {
+				current_pushes.push_back({ins.offset, StackPushInfo{.type = var_types::u64}});
+				break;
+			}
+			case asBC_VAR:
+			case asBC_PshNull:
+			case asBC_PshVPtr:
+			case asBC_PshRPtr:
+			case asBC_PSF:
+			case asBC_PGA:
+			case asBC_PshGPtr:
+			case asBC_OBJTYPE: {
+				current_pushes.push_back({ins.offset, StackPushInfo{.type = var_types::pword}});
+				break;
+			}
+
+			default: current_pushes.clear();
 			}
 		}
 	}
@@ -1364,6 +1430,10 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 			emit("\t\t/* Fallback to VM call: {} */\n", result.fail_reason);
 		}
 
+		if (!call.is_internal_call) {
+			flush_stack_push_optimization(state);
+		}
+
 		// TODO: is writing valuereg ever required here? same question for script calls elsewhere
 
 		// push the self pointer in the fallback case
@@ -1478,29 +1548,25 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	}
 
 	// TODO: move to new function and take into account the ability to declare structs and such
-	const auto get_c_type = [](const asCDataType& type) -> std::string {
+	const auto get_var_type = [](const asCDataType& type) -> VarType {
 		if (type.IsReference() || type.IsObjectHandle()) {
-			return "void*";
+			return var_types::void_ptr;
 		}
 
 		switch (type.GetSizeInMemoryDWords()) {
-		case 0: return "void"; break;
+		case 0: return {"void", "void", 0}; break;
 		case 1:
-			return std::string{
-			    type.IsEqualExceptConst(asCDataType::CreatePrimitive(ttFloat, true)) ? var_types::f32.c
-			                                                                         : var_types::u32.c
-			};
+			return type.IsEqualExceptConst(asCDataType::CreatePrimitive(ttFloat, true)) ? var_types::f32
+			                                                                            : var_types::u32;
 		case 2:
-			return std::string{
-			    type.IsEqualExceptConst(asCDataType::CreatePrimitive(ttDouble, true)) ? var_types::f64.c
-			                                                                          : var_types::u64.c
-			};
+			return type.IsEqualExceptConst(asCDataType::CreatePrimitive(ttDouble, true)) ? var_types::f64
+			                                                                             : var_types::u64;
 		default: return {};
 		}
 	};
 
-	std::string return_type = get_c_type(fn.returnType);
-	if (return_type.empty()) {
+	VarType return_type = get_var_type(fn.returnType);
+	if (return_type.c.empty()) {
 		return {.ok = false, .fail_reason = "Direct native call failed: Return type cannot be handled"};
 	}
 
@@ -1517,23 +1583,58 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	// gather arguments to build C signature (and early fail on unsupported types)
 
-	std::vector<std::string> arg_types;
+	std::vector<VarType>     arg_types;
 	std::vector<std::string> arg_exprs;
+	std::string              obj_expr;
 
-	std::size_t current_arg_dwords = 0;
-	std::size_t current_arg_pwords = 0;
+	std::int64_t current_arg_dwords = 0;
+	std::int64_t current_arg_pwords = 0;
 
-	const auto arg_current_stack_ptr_expr = [&] {
+	// TODO: abstract the stack pop logic elsewhere
+
+	// treat it as "virtual" stack on top of the real stack so to speak
+	std::vector<std::size_t>* push_offsets = nullptr;
+	std::int64_t              push_offset_idx;
+
+	if (auto it = state.fn_to_stack_push.find(state.ins.offset); it != state.fn_to_stack_push.end()) {
+		push_offsets    = &it->second;
+		push_offset_idx = std::int64_t(push_offsets->size()) - 1;
+	}
+
+	const auto arg_current_stack_ptr_expr = [&](VarType type) {
+		if (push_offsets != nullptr && push_offset_idx >= 0) {
+			const auto push_ins_offset = (*push_offsets)[push_offset_idx];
+			const auto push_info       = state.stack_push_infos.at(push_ins_offset);
+
+			std::string ret
+			    = fmt::format("({TYPE})push_tmp{ID}", fmt::arg("TYPE", type.c), fmt::arg("ID", push_ins_offset));
+			--push_offset_idx;
+
+			if (push_info.type == var_types::u32) {
+				current_arg_dwords -= 1;
+			} else if (push_info.type == var_types::u64) {
+				current_arg_dwords -= 2;
+			} else if (push_info.type == var_types::pword) {
+				current_arg_pwords -= 1;
+			} else {
+				angelsea_assert(false);
+			}
+
+			return ret;
+		}
+
 		return fmt::format(
-		    "((asea_var*)((asDWORD*)sp + {DWORDS} + {PWORDS}*(sizeof(asPWORD)/4)))",
+		    "((asea_var*)((asDWORD*)sp + {DWORDS} + {PWORDS}*(sizeof(asPWORD)/4)))->as_{ACCESSOR}",
 		    fmt::arg("DWORDS", current_arg_dwords),
-		    fmt::arg("PWORDS", current_arg_pwords)
+		    fmt::arg("PWORDS", current_arg_pwords),
+		    fmt::arg("ACCESSOR", type.var_accessor)
 		);
 	};
 
 	if (sys_fn.callConv >= ICC_THISCALL) {
 		// always load `this` from the first position in the stack
 		if (call.object_pointer_override.empty()) {
+			obj_expr = arg_current_stack_ptr_expr(var_types::void_ptr);
 			current_arg_pwords += 1;
 		}
 	}
@@ -1541,7 +1642,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	if (sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
 	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST || sys_fn.callConv == ICC_CDECL_OBJFIRST) {
 		// where the argument actually lands depends on the convention
-		arg_types.emplace_back("void*");
+		arg_types.emplace_back(var_types::void_ptr);
 		arg_exprs.emplace_back("obj");
 	}
 
@@ -1551,14 +1652,12 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		if (param_type.GetTokenType() == ttQuestion) {
 			return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle variable arguments yet"};
 		} else if (param_type.IsReference() || param_type.IsObjectHandle()) {
-			arg_types.emplace_back("void*");
-			arg_exprs.emplace_back(fmt::format("{}->as_ptr", arg_current_stack_ptr_expr()));
+			arg_types.emplace_back(var_types::void_ptr);
+			arg_exprs.emplace_back(arg_current_stack_ptr_expr(var_types::void_ptr));
 			current_arg_pwords += 1;
 		} else if (param_type.IsPrimitive()) {
-			arg_types.emplace_back(get_c_type(param_type));
-			// FIXME: pop from stack
-			const auto& c_type = arg_types.back();
-			arg_exprs.emplace_back(fmt::format("{}->as_{}", arg_current_stack_ptr_expr(), c_type));
+			arg_types.emplace_back(get_var_type(param_type));
+			arg_exprs.emplace_back(arg_current_stack_ptr_expr(arg_types.back()));
 			current_arg_dwords += param_type.GetSizeOnStackDWords();
 		} else {
 			return {
@@ -1571,22 +1670,33 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	if (sys_fn.callConv == ICC_CDECL_OBJLAST) {
 		arg_types.emplace_back("void*");
 		arg_exprs.emplace_back("obj");
-		if (call.object_pointer_override.empty()) {
-			current_arg_pwords += 1;
+	}
+
+	// restore stack pushes that were *not* for us
+	if (push_offsets != nullptr && push_offset_idx >= 0) {
+		if (m_config->c.human_readable) {
+			emit("\t\t/* Stack elision optimization caught more pushes than intended; pushing them */\n");
+		}
+
+		for (std::size_t i = 0; i <= std::size_t(push_offset_idx); ++i) {
+			const auto push_ins_offset = (*push_offsets)[i];
+			const auto push_info       = state.stack_push_infos.at(push_ins_offset);
+			emit_stack_push(state, fmt::format("push_tmp{}", push_ins_offset), push_info.type);
+		}
+
+		if (m_config->c.human_readable) {
+			emit("\t\t/* Stack elision flush done */\n");
 		}
 	}
 
 	// can start emit()s from this point on
-	if (!call.is_internal_call) {
-		emit("\t\tint pop_size = {INIT_POP_SIZE};\n", fmt::arg("INIT_POP_SIZE", sys_fn.paramSize));
-	}
 
 	if (sys_fn.callConv >= ICC_THISCALL) {
 		if (call.object_pointer_override.empty()) {
 			emit(
-			    "\t\tvoid *obj = sp->as_ptr;\n"
-			    "\t\tif (obj == 0) {{ goto err_null; }}\n"
-			    "\t\tpop_size += sizeof(asPWORD) / 4;\n"
+			    "\t\tvoid *obj = {OBJ_EXPR};\n"
+			    "\t\tif (obj == 0) {{ goto err_null; }}\n",
+			    fmt::arg("OBJ_EXPR", obj_expr)
 			);
 			state.error_handlers.null = true;
 		} else {
@@ -1595,6 +1705,11 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	}
 
 	std::string final_callable_name;
+
+	std::vector<std::string> formatted_arg_types(arg_types.size());
+	for (std::size_t i = 0; i < formatted_arg_types.size(); ++i) {
+		formatted_arg_types[i] = arg_types[i].c;
+	}
 
 	if (sys_fn.callConv == ICC_VIRTUAL_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL_RETURNINMEM
 	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST
@@ -1617,26 +1732,26 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
 		    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} / sizeof(void*)];\n"
 		    "#endif\n",
-		    fmt::arg("RETTYPE", return_type),
-		    fmt::arg("ARGTYPES", fmt::join(arg_types, ",")),
+		    fmt::arg("RETTYPE", return_type.c),
+		    fmt::arg("ARGTYPES", fmt::join(formatted_arg_types, ",")),
 		    fmt::arg("FNCALLABLE", fn_callable_symbol)
 		);
 		final_callable_name = "fn";
 	} else {
 		emit(
 		    "\t\textern {RETTYPE} {FNCALLABLE}({ARGTYPES});\n",
-		    fmt::arg("RETTYPE", return_type),
+		    fmt::arg("RETTYPE", return_type.c),
 		    fmt::arg("FNCALLABLE", fn_callable_symbol),
-		    fmt::arg("ARGTYPES", fmt::join(arg_types, ","))
+		    fmt::arg("ARGTYPES", fmt::join(formatted_arg_types, ","))
 		);
 		final_callable_name = fn_callable_symbol;
 	}
 
 	// emit function call -- format differently if it returns anything or not
-	if (return_type != "void") {
+	if (return_type.c != "void") {
 		emit(
 		    "\t\t{RETTYPE} ret = {FN}(\n\t\t\t{ARGEXPRS});\n",
-		    fmt::arg("RETTYPE", return_type),
+		    fmt::arg("RETTYPE", return_type.c),
 		    fmt::arg("FN", final_callable_name),
 		    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ",\n\t\t\t"))
 		);
@@ -1648,8 +1763,12 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		);
 	}
 
-	if (!call.is_internal_call) {
-		emit("\t\tsp = (asea_var*)((asDWORD*)sp + pop_size);\n");
+	if (!call.is_internal_call && (current_arg_dwords > 0 || current_arg_pwords > 0)) {
+		emit(
+		    "\t\tsp = (asea_var*)((asDWORD*)sp + {STACK_DWORDS} + {STACK_PWORDS} * (sizeof(asPWORD) / 4));\n",
+		    fmt::arg("STACK_DWORDS", current_arg_dwords),
+		    fmt::arg("STACK_PWORDS", current_arg_pwords)
+		);
 	}
 
 	// Store the returned value in our stack
@@ -1661,9 +1780,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		}
 		// TODO: return on stack logic
 		angelsea_assert(false);
-	} else if (return_type != "void") {
+	} else if (return_type.c != "void") {
 		// Store value in value register
-		if (return_type == "void*") {
+		if (return_type.c == "void*") {
 			emit("\t\tvalue_reg = (asPWORD)ret;\n");
 		} else if (fn.returnType.IsIntegerType() && !fn.returnType.IsReference()) {
 			// Straight copy, bypass union that might not be optimized away by MIR
@@ -1674,7 +1793,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 			    "\t\tasea_var ret_conv;\n"
 			    "\t\tret_conv.as_{RETTYPE} = ret;\n"
 			    "\t\tvalue_reg = ret_conv.as_asQWORD;\n",
-			    fmt::arg("RETTYPE", return_type)
+			    fmt::arg("RETTYPE", return_type.c)
 			);
 		}
 	}
@@ -1713,6 +1832,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 	if (!m_config->hack_ignore_context_inspect) {
 		emit("{}", save_registers_sequence);
 	}
+
+	// generic ABI requires arguments etc. to be on stack
+	flush_stack_push_optimization(state);
 
 	emit(
 	    "\t\tasDWORD* args = &sp->as_asDWORD;\n"
@@ -1802,6 +1924,42 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 }
 
 void BytecodeToC::emit_stack_push_ins(FnState& state, std::string_view expr, VarType type) {
+	if (state.stack_push_infos.contains(state.ins.offset)) {
+		// cast ain't gonna cut it if the expression is of float type - if this happen, you'll need to be smarter about
+		// tmp variable declaration, right now they're all QWORD
+		angelsea_assert(type != var_types::f32 && type != var_types::f64);
+
+		emit("\t\tpush_tmp{ID} = {EXPR};\n", fmt::arg("ID", state.ins.offset), fmt::arg("EXPR", expr));
+	} else {
+		emit_stack_push(state, expr, type);
+	}
+
+	emit_auto_bc_inc(state);
+}
+
+void BytecodeToC::flush_stack_push_optimization(FnState& state) {
+	if (m_config->c.human_readable) {
+		emit("\t\t/* Function call fallback can't eliminate stack temporaries; pushing them back */\n");
+	}
+
+	// flush pushes for calls originating from scripts
+	if (auto it = state.fn_to_stack_push.find(state.ins.offset); it != state.fn_to_stack_push.end()) {
+		for (auto push_off : it->second) {
+			emit_stack_push(state, fmt::format("push_tmp{}", push_off), state.stack_push_infos.at(push_off).type);
+		}
+	}
+
+	if (m_config->c.human_readable) {
+		emit("\t\t/* End of flushing stack temporaries */\n\n");
+	}
+}
+
+void BytecodeToC::emit_assign_ins(FnState& state, std::string_view dst, std::string_view src) {
+	emit("\t\t{DST} = {SRC};\n", fmt::arg("DST", dst), fmt::arg("SRC", src));
+	emit_auto_bc_inc(state);
+}
+
+void BytecodeToC::emit_stack_push(FnState& state, std::string_view expr, VarType type) {
 	if (type == var_types::pword) {
 		emit("\t\tsp = (asea_var*)((char*)sp - sizeof(asPWORD));\n");
 	} else {
@@ -1809,12 +1967,6 @@ void BytecodeToC::emit_stack_push_ins(FnState& state, std::string_view expr, Var
 	}
 
 	emit("\t\tsp->as_{TYPE} = {EXPR};\n", fmt::arg("TYPE", type.c), fmt::arg("EXPR", expr));
-	emit_auto_bc_inc(state);
-}
-
-void BytecodeToC::emit_assign_ins(FnState& state, std::string_view dst, std::string_view src) {
-	emit("\t\t{DST} = {SRC};\n", fmt::arg("DST", dst), fmt::arg("SRC", src));
-	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::emit_cond_branch_ins(FnState& state, std::string_view test) {

@@ -123,6 +123,10 @@ struct JitConfig {
 	/// fall back to the VM.
 	bool experimental_direct_native_call = true;
 
+	/// Speeds up the native calling convention (assuming \ref experimental_direct_native_call is set) by skipping the
+	/// AngelScript stack for passing arguments to native functions, when possible.
+	bool experimental_stack_elision = false;
+
 	/// Creates native code for the asBC_RET instruction, instead of falling back to the VM. Disabled by default as it
 	/// was found to regress performance in microbenchmarks.
 	bool experimental_fast_script_return = true;

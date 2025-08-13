@@ -37,6 +37,11 @@ class BytecodeView {
 			++(*this);
 			return tmp;
 		}
+		Iterator advanced_by_dwords(asDWORD offset) const {
+			auto tmp = *this;
+			tmp.bytecode_current += offset;
+			return tmp;
+		}
 		auto operator<=>(const Iterator&) const = default;
 
 		private:

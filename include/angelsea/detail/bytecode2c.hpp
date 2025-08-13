@@ -23,15 +23,19 @@ namespace angelsea::detail {
 struct VarType {
 	/// C type name
 	std::string_view c;
+	/// Accessor name for asea_var
+	/// FIXME: change uses of c where relevant
+	std::string_view var_accessor;
 	std::size_t      size;
 
 	bool operator==(const VarType& other) const { return c == other.c; };
 };
 
 namespace var_types {
-static constexpr VarType s8{"asINT8", 1}, s16{"asINT16", 2}, s32{"asINT32", 4}, s64{"asINT64", 8}, u8{"asBYTE", 1},
-    u16{"asWORD", 2}, u32{"asDWORD", 4}, u64{"asQWORD", 8},
-    pword{"asPWORD", 8 /* should never be used for this type anyway */}, f32{"float", 4}, f64{"double", 8};
+static constexpr VarType s8{"asINT8", "asINT8", 1}, s16{"asINT16", "asINT16", 2}, s32{"asINT32", "asINT32", 4},
+    s64{"asINT64", "asINT64", 8}, u8{"asBYTE", "asBYTE", 1}, u16{"asWORD", "asWORD", 2}, u32{"asDWORD", "asDWORD", 4},
+    u64{"asQWORD", "asQWORD", 8}, pword{"asPWORD", "asPWORD", 8 /* should never be used for this type anyway */},
+    void_ptr{"void*", "ptr", 8 /* same as pword */}, f32{"float", "float", 4}, f64{"double", "double", 8};
 } // namespace var_types
 
 class BytecodeToC {
@@ -90,6 +94,10 @@ class BytecodeToC {
 	std::size_t get_fallback_count() const { return m_module_state.fallback_count; }
 
 	private:
+	struct StackPushInfo {
+		VarType type;
+	};
+
 	struct FnState {
 		asIScriptFunction* fn;
 		/// Current instruction being translated (if in a callee of translate_instruction)
@@ -104,6 +112,13 @@ class BytecodeToC {
 		/// Set of targets that may be branched to (via `goto bcXX;`), whether from relative jump instructions or JIT
 		/// entry points
 		std::unordered_set<std::size_t> branch_targets;
+
+		/// Information for stack pushes related to \ref fn_to_stack_push
+		std::unordered_map<std::size_t, StackPushInfo> stack_push_infos;
+
+		/// Map from call instruction offset to associated stack pushes; order by order of stack push
+		/// Complementary to \ref stack_push_to_fn
+		std::unordered_map<std::size_t, std::vector<std::size_t>> fn_to_stack_push;
 
 		bool has_direct_generic_call;
 
@@ -124,10 +139,40 @@ class BytecodeToC {
 		fmt::format_to(std::back_inserter(m_module_state.buffer), format, std::forward<Ts>(format_args)...);
 	}
 
+	/// Determines which asBC_JitEntry instructions should be valid entry points for the JITted function, and sets the
+	/// JIT asPWORD arguments in the bytecode accordingly (0 for unused entry points, non-zero values otherwise).
+	///
+	/// Populates \ref FnState::has_any_jit_entries
 	void configure_jit_entries(FnState& state);
+
+	/// Discovers all asBC_JMPP instructions in the bytecode, which directly correspond to `switch` statements in source
+	/// code, and populates \ref FnState::switch_map to map all possible branch targets of a specific switch.
 	void discover_switch_map(FnState& state);
+
+	/// Discovers all possible branch targets that may ever be used within JIT code and populates \ref
+	/// FnState::branch_targets.
 	void discover_branch_targets(FnState& state);
+
+	/// Discovers all function calls for basic information storing on function calls to be known early before emitting
+	/// code for the function. Currently, only populates \ref has_direct_generic_call.
 	void discover_function_calls(FnState& state);
+
+	/// Best-effort discovery of all stack pushes associated with a direct system function call and populates \ref
+	/// FnState::stack_push_to_fn and its equivalent \ref FnState::fn_to_stack_push. This information can be used to
+	/// eliminate stack pushes used to fetch function call arguments (e.g. replacing a stack push of a variable to a
+	/// direct reference to the variable).
+	///
+	/// These mappings may be incomplete and miss early stack operations, and these mappings might not actually all be
+	/// stack pushes that can be removed. All the pushes that are there are supported for removal by \ref
+	/// translate_instruction, however.
+	/// Call instructions optimizing based on these mappings should push values that should still make it to the stack
+	/// (e.g. in case of a function call fallback or because the stack offset was not associated with any argument or
+	/// such), and should always compute the stack offset of those pushes.
+	///
+	/// This function does not look at the calling convention of the callee.
+	///
+	/// This function depends on \ref discover_branch_targets being executed prior.
+	void discover_function_call_pushes(FnState& state);
 
 	void emit_entry_dispatch(FnState& state);
 	void emit_error_handlers(FnState& state);
@@ -194,8 +239,17 @@ class BytecodeToC {
 	    std::string_view   fn_callable_symbol
 	);
 
+	/// Emits the complete handler for a stack push instruction. In case of stack pushes that are relevant to a function
+	/// call, the actual stack push may be omitted and instead redirect to a temporary variable, see \ref
+	/// discover_function_call_pushes.
 	void emit_stack_push_ins(FnState& state, std::string_view expr, VarType type);
-	void emit_stack_pop_ins(FnState& state, std::string_view expr, VarType type);
+
+	/// In context of the \ref discover_function_call_pushes optimization, if we failed to emit a direct call, whatever
+	/// fallback option we use will be manipulating arguments via the stack. Thus, this pushes all the push elimination
+	/// candidates back to stack for the current call instruction.
+	void flush_stack_push_optimization(FnState& state);
+
+	void emit_stack_push(FnState& state, std::string_view expr, VarType type);
 
 	void emit_assign_ins(FnState& state, std::string_view dst, std::string_view src);
 
