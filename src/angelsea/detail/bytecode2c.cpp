@@ -1439,8 +1439,6 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 			flush_stack_push_optimization(state);
 		}
 
-		// TODO: is writing valuereg ever required here? same question for script calls elsewhere
-
 		// push the self pointer in the fallback case
 		if (!call.object_pointer_override.empty()) {
 			emit(
