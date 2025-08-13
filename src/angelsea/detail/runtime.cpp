@@ -10,6 +10,7 @@
 #include <as_scriptengine.h>
 #include <as_scriptfunction.h>
 #include <as_scriptobject.h>
+#include <as_texts.h>
 #include <bit>
 #include <fmt/core.h>
 
@@ -38,35 +39,59 @@ int asea_prepare_script_stack(
     asDWORD*           sp,
     asDWORD*           fp
 ) {
-	asCContext& ctx                 = asea_get_context(vm_registers);
-	vm_registers->programPointer    = pc;
-	vm_registers->stackPointer      = sp;
-	vm_registers->stackFramePointer = fp;
+	asCContext& ctx = asea_get_context(vm_registers);
 
-	if (ctx.PushCallState() < 0) {
-		return 1;
+	auto& engine      = asea_get_engine(vm_registers);
+	auto& callstack   = ctx.m_callStack;
+	auto& script_data = *fn.scriptData;
+
+	// update stack size if needed
+	asUINT old_length = callstack.GetLength();
+	if (old_length >= callstack.GetCapacity()) [[unlikely]] {
+		if (engine.ep.maxCallStackSize > 0 && old_length >= engine.ep.maxCallStackSize * CALLSTACK_FRAME_SIZE) {
+			// the call stack is too big to grow further
+			ctx.SetInternalException(TXT_STACK_OVERFLOW);
+			return 1;
+		}
+		callstack.AllocateNoConstruct(old_length + (10 * CALLSTACK_FRAME_SIZE), true);
 	}
+	callstack.SetLengthNoAllocate(old_length + CALLSTACK_FRAME_SIZE);
+
+	asPWORD* target = callstack.AddressOf() + old_length;
+
+	// store call state
+	target[0] = std::bit_cast<asPWORD>(fp);
+	target[1] = std::bit_cast<asPWORD>(ctx.m_currentFunction);
+	target[2] = std::bit_cast<asPWORD>(pc);
+	target[3] = std::bit_cast<asPWORD>(sp);
+	target[4] = ctx.m_stackIndex;
 
 	ctx.m_currentFunction = &fn;
 
-	const asUINT needSize = fn.scriptData->stackNeeded;
+	// pc and fp registers are not manipulated by stack block logic, don't bother storing them.
+	// sp is, though, and we need to write it either way as the caller *does* want us to commit sp
+	vm_registers->stackPointer = sp;
 
-	// TODO: move this to native codegen?
-	// With a quick check we know right away that we don't need to call ReserveStackSpace and do other checks inside it
-	if (ctx.m_stackBlocks.GetLength() == 0 || sp - (needSize + RESERVE_STACK) < ctx.m_stackBlocks[ctx.m_stackIndex]) {
-		if (!ctx.ReserveStackSpace(needSize)) {
+	angelsea_assert(ctx.m_stackBlocks.GetLength() != 0);
+
+	auto* new_sp = sp;
+
+	if (sp - (script_data.stackNeeded + RESERVE_STACK) < ctx.m_stackBlocks[ctx.m_stackIndex]) [[unlikely]] {
+		if (!ctx.ReserveStackSpace(script_data.stackNeeded)) { // may update sp register
 			return 1;
 		}
 
-		if (ctx.m_regs.stackPointer != sp) {
-			int numDwords = fn.GetSpaceNeededForArguments() + (fn.objectType != nullptr ? AS_PTR_SIZE : 0)
+		if (vm_registers->stackPointer != sp) {
+			int num_dwords = fn.GetSpaceNeededForArguments() + (fn.objectType != nullptr ? AS_PTR_SIZE : 0)
 			    + (fn.DoesReturnOnStack() ? AS_PTR_SIZE : 0);
-			memcpy(ctx.m_regs.stackPointer, sp, sizeof(asDWORD) * numDwords);
+			memcpy(vm_registers->stackPointer, sp, sizeof(asDWORD) * num_dwords);
 		}
+
+		new_sp = vm_registers->stackPointer;
 	}
 
-	vm_registers->programPointer    = fn.scriptData->byteCode.AddressOf();
-	vm_registers->stackFramePointer = vm_registers->stackPointer;
+	vm_registers->programPointer    = script_data.byteCode.AddressOf();
+	vm_registers->stackFramePointer = new_sp;
 
 	return 0;
 }
