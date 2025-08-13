@@ -72,6 +72,7 @@ angelsea::JitConfig get_test_jit_config() {
 		.c = {
 			.human_readable = true
 		},
+		.experimental_stack_elision = true,
 	};
 
 	set_env_int_variable("ASEA_MIR_DEBUG_LEVEL", config.debug.mir_debug_level);
