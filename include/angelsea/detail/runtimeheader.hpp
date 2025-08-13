@@ -152,11 +152,19 @@ typedef union {
 	asDWORD i;
 } asea_i2f;
 
+typedef union {
+	double f;
+	asQWORD i;
+} asea_i2f64;
+
 typedef struct {
 	void* ptr;
 	asUINT len;
 	asUINT max_len;
 } asea_array;
+
+static asea_i2f asea_i2f_inst;
+static asea_i2f64 asea_i2f64_inst;
 )___"
 
     // Angelsea runtime functions, see runtime.hpp

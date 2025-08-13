@@ -1591,6 +1591,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	std::vector<VarType>     arg_types;
 	std::vector<std::string> arg_exprs;
 	std::string              obj_expr;
+	std::string              to_emit_before_call;
 
 	std::int64_t current_arg_dwords = 0;
 	std::int64_t current_arg_pwords = 0;
@@ -1611,8 +1612,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 			const auto push_ins_offset = (*push_offsets)[push_offset_idx];
 			const auto push_info       = state.stack_push_infos.at(push_ins_offset);
 
-			std::string ret
-			    = fmt::format("({TYPE})push_tmp{ID}", fmt::arg("TYPE", type.c), fmt::arg("ID", push_ins_offset));
+			std::string ret = fmt::format("push_tmp{ID}", fmt::arg("ID", push_ins_offset));
 			--push_offset_idx;
 
 			if (push_info.type == var_types::u32) {
@@ -1625,7 +1625,29 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 				angelsea_assert(false);
 			}
 
-			return ret;
+			// HORRIFYING for a layer of reasons
+			// one being that it is still possible to fallback at this point and
+			// leave useless vars but w/e
+			// also MIR miscompiles if we abuse the comma operator to do this
+			if (type == var_types::f32) {
+				to_emit_before_call += fmt::format(
+				    "\t\tasea_i2f_inst.i = {};\n"
+				    "\t\tfloat tmp_casted{} = asea_i2f_inst.f;\n",
+				    ret,
+				    push_ins_offset
+				);
+				return fmt::format("tmp_casted{}", push_ins_offset);
+			}
+			if (type == var_types::f64) {
+				to_emit_before_call += fmt::format(
+				    "\t\tasea_i2f64_inst.i = {};\n"
+				    "\t\tdouble tmp_casted{} = asea_i2f64_inst.f;\n",
+				    ret,
+				    push_ins_offset
+				);
+				return fmt::format("tmp_casted{}", push_ins_offset);
+			}
+			return fmt::format("({}){}", type.c, ret);
 		}
 
 		return fmt::format(
@@ -1677,6 +1699,10 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		arg_exprs.emplace_back("obj");
 	}
 
+	// can start emit()s from this point on
+
+	emit("{}", to_emit_before_call);
+
 	// restore stack pushes that were *not* for us
 	if (push_offsets != nullptr && push_offset_idx >= 0) {
 		if (m_config->c.human_readable) {
@@ -1693,8 +1719,6 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 			emit("\t\t/* Stack elision flush done */\n");
 		}
 	}
-
-	// can start emit()s from this point on
 
 	if (sys_fn.callConv >= ICC_THISCALL) {
 		if (call.object_pointer_override.empty()) {
