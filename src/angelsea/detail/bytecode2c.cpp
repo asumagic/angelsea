@@ -372,8 +372,7 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 		    "\t\tasea_set_internal_exception(_regs, \"" TXT_NULL_POINTER_ACCESS
 		    "\");\n"
 		    "\t\tgoto vm;\n"
-		    "\t\n",
-		    fmt::arg("SAVE_REGS", save_registers_sequence)
+		    "\t\n"
 		);
 		state.error_handlers.vm_fallback = true;
 	}
@@ -384,8 +383,7 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 		    "\t\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_BY_ZERO
 		    "\");\n"
 		    "\t\tgoto vm;\n"
-		    "\t\n",
-		    fmt::arg("SAVE_REGS", save_registers_sequence)
+		    "\t\n"
 		);
 		state.error_handlers.vm_fallback = true;
 	}
@@ -396,8 +394,7 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 		    "\t\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_OVERFLOW
 		    "\");\n"
 		    "\t\tgoto vm;\n"
-		    "\t\n",
-		    fmt::arg("SAVE_REGS", save_registers_sequence)
+		    "\t\n"
 		);
 		state.error_handlers.vm_fallback = true;
 	}
@@ -1957,8 +1954,7 @@ void BytecodeToC::emit_divmod_var_unsigned_ins(FnState& state, std::string_view 
 	    fmt::arg("DST", frame_var(ins.sword0(), type)),
 	    fmt::arg("LHS", frame_var(ins.sword1(), type)),
 	    fmt::arg("RHS", frame_var(ins.sword2(), type)),
-	    fmt::arg("OP", op),
-	    fmt::arg("SAVE_REGS", save_registers_sequence)
+	    fmt::arg("OP", op)
 	);
 	state.error_handlers.divide_by_zero = true;
 	emit_auto_bc_inc(state);
