@@ -1624,9 +1624,14 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 			}
 
 			// HORRIFYING for a layer of reasons
-			// one being that it is still possible to fallback at this point and
-			// leave useless vars but w/e
-			// also MIR miscompiles if we abuse the comma operator to do this
+			// one being that it is still possible to fallback at this point and leave useless vars but w/e
+			// also MIR miscompiles if we abuse the comma operator to do this e.g. `(asea_i2f_inst.i = 123,
+			// asea_i2f_inst.f)` so instead we go through a new temporary variable. this in itself doesn't really change
+			// anything, but it means we emit it before here
+			//
+			// TODO: it would be nice if the code on the push side knew about the type we're expecting on the argument
+			// side. at the moment, MIR requires int-float bit casts (effectively what we do via unions) to happen by a
+			// memory load and store instead of a register move (see https://github.com/vnmakarov/mir/issues/293)
 			if (type == var_types::f32) {
 				to_emit_before_call += fmt::format(
 				    "\t\tasea_i2f_inst.i = {};\n"
