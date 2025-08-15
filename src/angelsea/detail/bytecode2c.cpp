@@ -1872,7 +1872,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	} else if (return_type.c != "void") {
 		if (return_type.c == "void*") {
 			emit("\t\tvalue_reg = (asPWORD){};\n", call_expression);
-		} else if (fn.returnType.IsIntegerType() && !fn.returnType.IsReference()) {
+		} else if (fn.returnType.IsUnsignedType() || fn.returnType.IsIntegerType() || fn.returnType.IsEnumType()) {
 			// straight copy, bypass union that might not be optimized away by MIR
 			emit("\t\tvalue_reg = {};\n", call_expression);
 		} else {
