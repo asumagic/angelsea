@@ -1816,7 +1816,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		    "\t\tobj = (char*)obj + {BASE_OFFSET} >> 1;\n"
 		    "#else\n"
 		    "\t\tobj = (char*)obj + {BASE_OFFSET};\n"
-		    "#endif",
+		    "#endif\n",
 		    fmt::arg("BASE_OFFSET", sys_fn.baseOffset)
 		);
 	}
