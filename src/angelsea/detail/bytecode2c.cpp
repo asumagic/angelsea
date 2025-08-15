@@ -1606,7 +1606,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		if (type.IsDoubleType()) {
 			return var_types::f64;
 		}
-		if (type.IsIntegerType() || type.IsUnsignedType() || type.IsBooleanType()) {
+		if (type.IsIntegerType() || type.IsUnsignedType() || type.IsBooleanType() || type.IsEnumType()) {
 			return type.GetSizeInMemoryDWords() == 1 ? var_types::u32 : var_types::u64;
 		}
 
@@ -1872,7 +1872,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	} else if (return_type.c != "void") {
 		if (return_type.c == "void*") {
 			emit("\t\tvalue_reg = (asPWORD){};\n", call_expression);
-		} else if (fn.returnType.IsUnsignedType() || fn.returnType.IsIntegerType() || fn.returnType.IsEnumType()) {
+		} else if (fn.returnType.IsUnsignedType() || fn.returnType.IsIntegerType() || fn.returnType.IsBooleanType()
+		           || fn.returnType.IsEnumType()) {
 			// straight copy, bypass union that might not be optimized away by MIR
 			emit("\t\tvalue_reg = {};\n", call_expression);
 		} else {
