@@ -1858,7 +1858,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		    fmt::arg("TARGET", return_target_override),
 		    fmt::arg("CALL_EXPR", call_expression)
 		);
-	} else if (fn.returnType.IsObjectHandle()) {
+	} else if (fn.returnType.IsObjectHandle() && !fn.returnType.IsReference()) {
+		// FIXME: set objectType
 		emit("\t\tregs->obj = {};\n", call_expression);
 		// TODO: auto handles
 		angelsea_assert(!sys_fn.returnAutoHandle);
