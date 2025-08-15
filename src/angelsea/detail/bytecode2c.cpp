@@ -271,7 +271,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		case asBC_ChkNullS:
 		case asBC_ClrHi:
 		case asBC_FuncPtr:
-		case asBC_LoadVObjR:
 		case asBC_AllocMem:
 		case asBC_SetListSize:
 		case asBC_PshListElmnt:
