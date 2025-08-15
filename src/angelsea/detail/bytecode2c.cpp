@@ -1574,10 +1574,6 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle compositeIndirect yet"};
 	}
 
-	if (sys_fn.baseOffset != 0) {
-		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle multiple inheritance yet"};
-	}
-
 	if (sys_fn.auxiliary != nullptr || sys_fn.callConv >= ICC_THISCALL_OBJLAST) {
 		return {.ok = false, .fail_reason = "Direct native call failed: Cannot make sense of auxiliary functions yet"};
 	}
@@ -1810,6 +1806,19 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		} else {
 			emit("\t\tvoid *obj = {};\n", call.object_pointer_override);
 		}
+	}
+
+	if (sys_fn.baseOffset > 0) {
+		// we preserve the arm/aarch64 check from AS here but it is untested!
+		emit(
+		    "#if (defined(__GNUC__) && (defined(AS_ARM64) || defined(AS_ARM) || defined(AS_MIPS))) || "
+		    "defined(AS_PSVITA)\n"
+		    "\t\tobj = (char*)obj + {BASE_OFFSET} >> 1;\n"
+		    "#else\n"
+		    "\t\tobj = (char*)obj + {BASE_OFFSET};\n"
+		    "#endif",
+		    fmt::arg("BASE_OFFSET", sys_fn.baseOffset)
+		);
 	}
 
 	std::string final_callable_name;
