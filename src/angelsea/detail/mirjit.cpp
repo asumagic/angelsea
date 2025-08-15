@@ -192,7 +192,7 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 	if (m_c_generator.get_fallback_count() > 0) {
 		log(config(),
 		    engine(),
-		    LogSeverity::PERF_WARNING,
+		    LogSeverity::PERF_HINT,
 		    "Number of fallbacks for module \"{}\": {}",
 		    name,
 		    m_c_generator.get_fallback_count());

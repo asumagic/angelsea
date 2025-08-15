@@ -13,6 +13,7 @@
 #include <angelsea/detail/runtimeheader.hpp>
 #include <angelsea/detail/stringutil.hpp>
 #include <as_callfunc.h>
+#include <as_config.h>
 #include <as_context.h>
 #include <as_property.h>
 #include <as_scriptengine.h>
@@ -1321,6 +1322,53 @@ std::string BytecodeToC::emit_type_info_lookup([[maybe_unused]] FnState& state, 
 	return type_info_symbol;
 }
 
+std::string BytecodeToC::emit_dummy_struct_declaration(FnState& state, const asCDataType& type) {
+	if (type.GetTypeInfo() == nullptr) {
+		return {};
+	}
+
+	const auto&       type_info = *type.GetTypeInfo();
+	const auto&       flags     = type_info.flags;
+	const std::size_t size      = type.GetSizeInMemoryBytes();
+
+	if ((flags & (asOBJ_APP_CLASS_DESTRUCTOR | asOBJ_APP_CLASS_COPY_CONSTRUCTOR | asOBJ_APP_ARRAY)) != 0) {
+		log(*m_config,
+		    *m_script_engine,
+		    LogSeverity::PERF_HINT,
+		    "Type `{}` has non-trivial C++ ABI, which we currently don't emulate pass/return by value yet for. Native "
+		    "call will fall back to VM.",
+		    type_info.GetName());
+		return {};
+	}
+
+	std::string gen_name = fmt::format("{}_abi{}", m_c_symbol_prefix, type_info.GetTypeId());
+	std::string decl     = "\t\ttypedef struct { ";
+
+	if ((flags & (asOBJ_APP_CLASS_ALLFLOATS | asOBJ_APP_FLOAT)) != 0) {
+		// FIXME: how does this behave across ABIs with float/double
+		for (std::size_t i = 0; i < size; i += 4) {
+			decl += fmt::format("float _{}; ", i);
+		}
+	} else if ((flags & (asOBJ_APP_CLASS_ALLINTS | asOBJ_APP_PRIMITIVE)) != 0) {
+		// FIXME: same question as for floats (but iirc it just packs on system V)
+		for (std::size_t i = 0; i < size; i += 4) {
+			decl += fmt::format("asDWORD _{}; ", i);
+		}
+	} else {
+		log(*m_config,
+		    *m_script_engine,
+		    LogSeverity::PERF_HINT,
+		    "Type `{}` has unsupported layout for pass/return-by-value, which would be too complex to support. Native "
+		    "call will fall back to VM.",
+		    type_info.GetName());
+		return {};
+	}
+
+	decl += fmt::format("}} {};\n", gen_name);
+	emit("{}", decl);
+	return gen_name;
+}
+
 void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<ScriptCallByIdx, ScriptCallByExpr> call) {
 	// TODO: figure out a way to inline callees. maybe we can find simple functions and trigger their generation in a
 	// way that ensures they will be compiled? or we can just bring them into our module??
@@ -1526,13 +1574,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		return {.ok = false, .fail_reason = "Direct native call failed: Cannot make sense of auxiliary functions yet"};
 	}
 
-	// determine return type (and early fail on unsupported types)
-	if (((fn.returnType.IsObject() || fn.returnType.IsFuncdef()) && !fn.returnType.IsReference())) {
-		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle returning objects yet"};
-	}
-
-	if (fn.DoesReturnOnStack()) {
-		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle returning on stack yet"};
+	if (fn.returnType.IsFuncdef() && !fn.returnType.IsReference()) {
+		return {.ok = false, .fail_reason = "Direct native call failed: Need to add tests for funcdef return"};
 	}
 
 	// TODO: don't use it since upstream AS has a TODO to remove it
@@ -1550,25 +1593,40 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle arg cleanup yet"};
 	}
 
-	// TODO: move to new function and take into account the ability to declare structs and such
-	const auto get_var_type = [](const asCDataType& type) -> VarType {
+	std::vector<std::string> struct_decls;
+
+	const auto get_var_type = [&](const asCDataType& type) -> VarType {
 		if (type.IsReference() || type.IsObjectHandle()) {
 			return var_types::void_ptr;
 		}
 
-		switch (type.GetSizeInMemoryDWords()) {
-		case 0: return {"void", "void", 0}; break;
-		case 1:
-			return type.IsEqualExceptConst(asCDataType::CreatePrimitive(ttFloat, true)) ? var_types::f32
-			                                                                            : var_types::u32;
-		case 2:
-			return type.IsEqualExceptConst(asCDataType::CreatePrimitive(ttDouble, true)) ? var_types::f64
-			                                                                             : var_types::u64;
-		default: return {};
+		if (type.IsFloatType()) {
+			return var_types::f32;
 		}
+		if (type.IsDoubleType()) {
+			return var_types::f64;
+		}
+		if (type.IsIntegerType() || type.IsUnsignedType() || type.IsBooleanType()) {
+			return type.GetSizeInMemoryDWords() == 1 ? var_types::u32 : var_types::u64;
+		}
+
+		if (type.GetSizeInMemoryBytes() == 0) {
+			return {"void", "void", 0};
+		}
+
+		std::string maybe_struct_decl = emit_dummy_struct_declaration(state, type);
+
+		if (maybe_struct_decl.empty()) {
+			return {};
+		}
+
+		struct_decls.push_back(std::move(maybe_struct_decl));
+
+		return {std::string_view{struct_decls.back()}, {}, std::size_t(type.GetSizeInMemoryBytes())};
 	};
 
 	VarType return_type = get_var_type(fn.returnType);
+
 	if (return_type.c.empty()) {
 		return {.ok = false, .fail_reason = "Direct native call failed: Return type cannot be handled"};
 	}
@@ -1590,6 +1648,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	std::vector<std::string> arg_exprs;
 	std::string              obj_expr;
 	std::string              to_emit_before_call;
+	std::string              return_target_override;
 
 	std::int64_t current_arg_dwords = 0;
 	std::int64_t current_arg_pwords = 0;
@@ -1669,6 +1728,15 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		}
 	}
 
+	if (fn.DoesReturnOnStack()) {
+		return_target_override = fmt::format(
+		    "*({TYPE}*){EXPR}",
+		    fmt::arg("TYPE", return_type.c),
+		    fmt::arg("EXPR", arg_current_stack_ptr_expr(var_types::void_ptr))
+		);
+		current_arg_pwords += 1;
+	}
+
 	if (sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
 	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST || sys_fn.callConv == ICC_CDECL_OBJFIRST) {
 		// where the argument actually lands depends on the convention
@@ -1743,11 +1811,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		formatted_arg_types[i] = arg_types[i].c;
 	}
 
-	if (sys_fn.callConv == ICC_VIRTUAL_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL_RETURNINMEM
-	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST
-	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST_RETURNINMEM
-	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJLAST
-	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJLAST_RETURNINMEM) {
+	if (sys_fn.callConv == ICC_VIRTUAL_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST
+	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJLAST) {
 		// dereference pointer via the vtable. this is janky! we are in C, so we essentially have to emulate the C++ ABI
 		// here. TODO: option to disable virtual calls specifically?
 
@@ -1779,55 +1844,58 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		final_callable_name = fn_callable_symbol;
 	}
 
-	// emit function call -- format differently if it returns anything or not
-	if (return_type.c != "void") {
+	// perform the actual call. the expression to perform the call is always the same but the surrounding call to figure
+	// out where to store the return value differs.
+	std::string call_expression = fmt::format(
+	    "{FN}(\n\t\t\t{ARGEXPRS})",
+	    fmt::arg("FN", final_callable_name),
+	    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ",\n\t\t\t"))
+	);
+
+	if (!return_target_override.empty()) {
 		emit(
-		    "\t\t{RETTYPE} ret = {FN}(\n\t\t\t{ARGEXPRS});\n",
-		    fmt::arg("RETTYPE", return_type.c),
-		    fmt::arg("FN", final_callable_name),
-		    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ",\n\t\t\t"))
+		    "\t\t{TARGET} = {CALL_EXPR};\n",
+		    fmt::arg("TARGET", return_target_override),
+		    fmt::arg("CALL_EXPR", call_expression)
 		);
+	} else if (fn.returnType.IsObjectHandle()) {
+		emit("\t\tregs->obj = {};\n", call_expression);
+		// TODO: auto handles
+		angelsea_assert(!sys_fn.returnAutoHandle);
+	} else if ((fn.returnType.IsObject() || fn.returnType.IsFuncdef()) && !fn.returnType.IsReference()) {
+		if (return_type.c == "void*") {
+			emit("\t\tvalue_reg = (asPWORD){};\n", call_expression);
+		} else {
+			// should be handled by return pointer override case above
+			angelsea_assert(false);
+		}
+	} else if (return_type.c != "void") {
+		if (return_type.c == "void*") {
+			emit("\t\tvalue_reg = (asPWORD){};\n", call_expression);
+		} else if (fn.returnType.IsIntegerType() && !fn.returnType.IsReference()) {
+			// straight copy, bypass union that might not be optimized away by MIR
+			emit("\t\tvalue_reg = {};\n", call_expression);
+		} else {
+			// must do a proper bit cast via an union in case of floating-point types
+			emit(
+			    "\t\tasea_var ret_conv;\n"
+			    "\t\tret_conv.as_{RETTYPE} = {CALL_EXPR};\n"
+			    "\t\tvalue_reg = ret_conv.as_asQWORD;\n",
+			    fmt::arg("RETTYPE", return_type.c),
+			    fmt::arg("CALL_EXPR", call_expression)
+			);
+		}
 	} else {
-		emit(
-		    "\t\t{FN}(\n\t\t\t{ARGEXPRS});\n",
-		    fmt::arg("FN", final_callable_name),
-		    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ",\n\t\t\t"))
-		);
+		emit("\t\t{};\n", call_expression);
 	}
 
+	// pop stack arguments (at least the ones that weren't in the "virtual" stack elision stack)
 	if (!call.is_internal_call && (current_arg_dwords > 0 || current_arg_pwords > 0)) {
 		emit(
 		    "\t\tsp = (asea_var*)((asDWORD*)sp + {STACK_DWORDS} + {STACK_PWORDS} * (sizeof(asPWORD) / 4));\n",
 		    fmt::arg("STACK_DWORDS", current_arg_dwords),
 		    fmt::arg("STACK_PWORDS", current_arg_pwords)
 		);
-	}
-
-	// Store the returned value in our stack
-	if ((fn.returnType.IsObject() || fn.returnType.IsFuncdef()) && !fn.returnType.IsReference()) {
-		if (fn.returnType.IsObjectHandle()) {
-			emit("\t\tregs->obj = ret;\n");
-			// TODO: auto handles
-			angelsea_assert(!sys_fn.returnAutoHandle);
-		}
-		// TODO: return on stack logic
-		angelsea_assert(false);
-	} else if (return_type.c != "void") {
-		// Store value in value register
-		if (return_type.c == "void*") {
-			emit("\t\tvalue_reg = (asPWORD)ret;\n");
-		} else if (fn.returnType.IsIntegerType() && !fn.returnType.IsReference()) {
-			// Straight copy, bypass union that might not be optimized away by MIR
-			emit("\t\tvalue_reg = ret;\n");
-		} else {
-			// Must do a proper conversion via an union in case of floating-point types
-			emit(
-			    "\t\tasea_var ret_conv;\n"
-			    "\t\tret_conv.as_{RETTYPE} = ret;\n"
-			    "\t\tvalue_reg = ret_conv.as_asQWORD;\n",
-			    fmt::arg("RETTYPE", return_type.c)
-			);
-		}
 	}
 
 	return {.ok = true, .fail_reason = {}};
@@ -1851,8 +1919,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 
 	if (!call.is_internal_call) {
 		if (fn.IsVariadic()) {
-			// TODO: variadics are a bit annoying to support; certainly viable but they're so rare that other than full
-			// AOT i don't see the point to support them
+			// TODO: variadics are a bit annoying to support; certainly viable but they're so rare that other than
+			// full AOT i don't see the point to support them
 			return {.ok = false, .fail_reason = "Direct generic call failed: Variadics not supported yet"};
 		}
 
@@ -1874,11 +1942,11 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 	    fmt::arg("INIT_POP_SIZE", sys_fn.paramSize)
 	);
 
-	// TODO: check which of those could skip initialization if there are cases where the asCGeneric methods will never
-	// read them
+	// TODO: check which of those could skip initialization if there are cases where the asCGeneric methods will
+	// never read them
 
-	// FIXME: optional suspend support -- also doProcessSuspend also includes setting exceptions on the script context!
-	// also check this for script to script calls
+	// FIXME: optional suspend support -- also doProcessSuspend also includes setting exceptions on the script
+	// context! also check this for script to script calls
 
 	// FIXME: set m_callingSystemFunction -- also relevant to the above?
 
@@ -1957,8 +2025,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 
 void BytecodeToC::emit_stack_push_ins(FnState& state, std::string_view expr, VarType type) {
 	if (state.stack_push_infos.contains(state.ins.offset)) {
-		// cast ain't gonna cut it if the expression is of float type - if this happen, you'll need to be smarter about
-		// tmp variable declaration, right now they're all QWORD
+		// cast ain't gonna cut it if the expression is of float type - if this happen, you'll need to be smarter
+		// about tmp variable declaration, right now they're all QWORD
 		angelsea_assert(type != var_types::f32 && type != var_types::f64);
 
 		emit("\t\tpush_tmp{ID} = {EXPR};\n", fmt::arg("ID", state.ins.offset), fmt::arg("EXPR", expr));
@@ -1971,7 +2039,10 @@ void BytecodeToC::emit_stack_push_ins(FnState& state, std::string_view expr, Var
 
 void BytecodeToC::flush_stack_push_optimization(FnState& state) {
 	if (m_config->c.human_readable) {
-		emit("\t\t/* Function call fallback can't eliminate stack temporaries; pushing them back */\n");
+		emit(
+		    "\t\t/* Stack elision optimization must be cancelled because we're falling back to VM; pushing back the "
+		    "elided pushes */\n"
+		);
 	}
 
 	// flush pushes for calls originating from scripts
@@ -1982,7 +2053,7 @@ void BytecodeToC::flush_stack_push_optimization(FnState& state) {
 	}
 
 	if (m_config->c.human_readable) {
-		emit("\t\t/* End of flushing stack temporaries */\n\n");
+		emit("\t\t/* Stack elision flush done */\n\n");
 	}
 }
 

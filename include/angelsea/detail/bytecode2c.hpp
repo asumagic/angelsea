@@ -184,6 +184,10 @@ class BytecodeToC {
 	std::string emit_global_lookup(FnState& state, void* pointer, bool global_var_only);
 	std::string emit_type_info_lookup(FnState& state, asITypeInfo& type);
 
+	/// Emits a struct that emulates the layout for ABI purposes in the current scope and returns its generated name.
+	/// Returns an empty string on failure e.g. when we cannot figure safely figure out an equivalent.
+	std::string emit_dummy_struct_declaration(FnState& state, const asCDataType& type);
+
 	struct SystemCall {
 		int              fn_idx;
 		std::string_view object_pointer_override;

@@ -9,7 +9,7 @@
 
 namespace angelsea::detail {
 
-enum class LogSeverity { VERBOSE, INFO, WARNING, PERF_WARNING, ERROR };
+enum class LogSeverity { VERBOSE, INFO, WARNING, PERF_HINT, ERROR };
 
 template<typename... Ts>
 void log_at(
@@ -34,8 +34,8 @@ void log_at(
 		type = targets.info;
 		break;
 	}
-	case LogSeverity::PERF_WARNING: {
-		type = targets.performance_warning;
+	case LogSeverity::PERF_HINT: {
+		type = targets.performance_hint;
 		break;
 	}
 	case LogSeverity::WARNING: {

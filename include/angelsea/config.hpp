@@ -11,11 +11,11 @@ namespace angelsea {
 
 struct JitConfig {
 	struct LogTargets {
-		asEMsgType verbose             = asEMsgType(-1);
-		asEMsgType info                = asMSGTYPE_INFORMATION;
-		asEMsgType performance_warning = asMSGTYPE_WARNING;
-		asEMsgType warning             = asMSGTYPE_WARNING;
-		asEMsgType error               = asMSGTYPE_ERROR;
+		asEMsgType verbose          = asEMsgType(-1);
+		asEMsgType info             = asMSGTYPE_INFORMATION;
+		asEMsgType performance_hint = asMSGTYPE_INFORMATION;
+		asEMsgType warning          = asMSGTYPE_WARNING;
+		asEMsgType error            = asMSGTYPE_ERROR;
 	};
 
 	/// Logging configuration for different severities.

@@ -150,6 +150,8 @@ int native_manyargs(int x0, int x1, int x2, int x3, int x4, int x5, int x6, int 
 	    + x16;
 }
 
+SomeClass ret_trivial_by_value() { return {.a = 69420}; }
+
 std::string return_string(int a, int b, const std::string& c) {
 	std::string ret("hello world! ");
 	ret += std::to_string(a);
@@ -169,9 +171,15 @@ void bind_native_functions(asIScriptEngine& e) {
 	    asCALL_GENERIC
 	);
 
-	e.RegisterObjectType("SomeClass", sizeof(SomeClass), asOBJ_VALUE | asOBJ_POD);
+	e.RegisterObjectType(
+	    "SomeClass",
+	    sizeof(SomeClass),
+	    asOBJ_VALUE | asOBJ_POD | asOBJ_APP_CLASS_ALLINTS | asGetTypeTraits<SomeClass>()
+	);
 	e.RegisterObjectMethod("SomeClass", "void add_obj(int x)", asMETHOD(SomeClass, add_obj), asCALL_THISCALL);
 	e.RegisterObjectProperty("SomeClass", "int a", asOFFSET(SomeClass, a));
+
+	e.RegisterGlobalFunction("SomeClass ret_trivial_by_value()", asFUNCTION(ret_trivial_by_value), asCALL_CDECL);
 
 	// e.RegisterObjectType("NoisyClass", sizeof(SomeClass), asOBJ_VALUE | asGetTypeTraits<NoisyClass>());
 	// e.RegisterObjectBehaviour("NoisyClass", asBEHAVE_CONSTRUCT, "void f()", WRAP_CON(NoisyClass, ()),
@@ -216,6 +224,13 @@ TEST_CASE("native calling convention", "[abi][conv_native]") {
 	    )
 	    == "147\n"
 	);
+}
+
+TEST_CASE("native calling convention return by value", "[abi][conv_native]") {
+	EngineContext context;
+	bind_native_functions(*context.engine);
+
+	REQUIRE(run_string(context, "print(''+ret_trivial_by_value().a)") == "69420\n");
 }
 
 TEST_CASE("native abi benchmark", "[abi][conv_native][benchmark]") {
