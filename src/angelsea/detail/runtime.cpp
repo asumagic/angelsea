@@ -32,7 +32,11 @@ void asea_call_object_method(asSVMRegisters* vm_registers, void* obj, int fn) {
 	asea_get_engine(vm_registers).CallObjectMethod(obj, fn);
 }
 
-int asea_prepare_script_stack(
+// this is its own function so that we can legally make it inline and tag it as always_inline. otherwise, the compiler
+// chooses not to inline asea_prepare_script_stack from the _and_vars variant, which in this case is wasteful and adds
+// unnecessary stack overhead
+[[gnu::always_inline]]
+inline int asea_prepare_script_stack_common(
     asSVMRegisters*    vm_registers,
     asCScriptFunction& fn,
     asDWORD*           pc,
@@ -97,6 +101,16 @@ int asea_prepare_script_stack(
 	return 0;
 }
 
+int asea_prepare_script_stack(
+    asSVMRegisters*    vm_registers,
+    asCScriptFunction& fn,
+    asDWORD*           pc,
+    asDWORD*           sp,
+    asDWORD*           fp
+) {
+	return asea_prepare_script_stack_common(vm_registers, fn, pc, sp, fp);
+}
+
 int asea_prepare_script_stack_and_vars(
     asSVMRegisters*    vm_registers,
     asCScriptFunction& fn,
@@ -104,7 +118,7 @@ int asea_prepare_script_stack_and_vars(
     asDWORD*           sp,
     asDWORD*           fp
 ) {
-	if (asea_prepare_script_stack(vm_registers, fn, pc, sp, fp) != 0) {
+	if (asea_prepare_script_stack_common(vm_registers, fn, pc, sp, fp) != 0) {
 		return 1;
 	}
 
