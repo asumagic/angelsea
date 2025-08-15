@@ -868,6 +868,16 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
+	case asBC_LoadVObjR: {
+		emit(
+		    "\t\tvalue_reg = (asPWORD){BASE_PTR} + {OFF};\n",
+		    fmt::arg("BASE_PTR", frame_ptr(ins.sword0())),
+		    fmt::arg("OFF", ins.sword1())
+		);
+		emit_auto_bc_inc(state);
+		break;
+	}
+
 	case asBC_LoadThisR: {
 		emit(
 		    "\t\tasPWORD base = {THIS};\n"
@@ -1204,7 +1214,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_ChkNullS:     // TODO: find way to emit
 	case asBC_ClrHi:        // TODO: find way to emit
 	case asBC_FuncPtr:      // TODO: find way to emit
-	case asBC_LoadVObjR:    // TODO: find way to emit
 	case asBC_AllocMem:     // TODO: implement (seems used in list factories)
 	case asBC_SetListSize:  // TODO: implement
 	case asBC_PshListElmnt: // TODO: implement
