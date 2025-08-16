@@ -201,6 +201,7 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 	if (config().debug.dump_c_code) {
 		angelsea_assert(config().debug.dump_c_code_file != nullptr);
 		[[maybe_unused]] auto _written = fputs(m_c_generator.source().c_str(), config().debug.dump_c_code_file);
+		[[maybe_unused]] auto _err     = fflush(config().debug.dump_c_code_file);
 	}
 
 	auto [async_fn_it, success]
