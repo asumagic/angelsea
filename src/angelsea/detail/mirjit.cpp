@@ -39,6 +39,7 @@ static void bind_runtime(Mir& mir) {
 	ASEA_BIND_MIR(asea_cast);
 	ASEA_BIND_MIR(asea_alloc);
 	ASEA_BIND_MIR(asea_free);
+	ASEA_BIND_MIR(asea_new_script_object);
 	ASEA_BIND_MIR(memcpy);
 	ASEA_BIND_MIR(memset);
 	ASEA_BIND_MIR(fmod);

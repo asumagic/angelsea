@@ -181,6 +181,7 @@ double fmod(double a, double b);
 void asea_clean_args(asSVMRegisters* vm_registers, void* function, asDWORD* args);
 int asea_call_system_function(asSVMRegisters* vm_registers, int fn);
 int asea_call_object_method(asSVMRegisters* vm_registers, void* obj, int fn);
+void* asea_new_script_object(asCObjectType* obj_type);
 void asea_cast(asSVMRegisters* vm_registers, asCScriptObject* obj, asDWORD type_id);
 void* asea_alloc(asQWORD size);
 void  asea_free(void* ptr);

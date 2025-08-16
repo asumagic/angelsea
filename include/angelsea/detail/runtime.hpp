@@ -67,6 +67,10 @@ void asea_clean_args(asSVMRegisters* vm_registers, asCScriptFunction& fn, asDWOR
 /// \brief Casts script object \ref obj to the requested \ref type_id; stores result in object register
 void asea_cast(asSVMRegisters* vm_registers, asCScriptObject* obj, asDWORD type_id);
 
+/// \brief Heap-allocate a new script object and construct it, then return the pointer to it. The caller should still be
+/// calling the scripted constructor for that object.
+void* asea_new_script_object(asCObjectType* obj_type);
+
 void* asea_alloc(asQWORD size);
 void  asea_free(void* ptr);
 

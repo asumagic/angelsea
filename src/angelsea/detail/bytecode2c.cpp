@@ -601,40 +601,41 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_ALLOC: {
-		auto*             type = std::bit_cast<asCObjectType*>(ins.pword0());
-		asSTypeBehaviour& beh  = type->beh;
-		int               func = ins.int0(AS_PTR_SIZE);
-
-		if ((type->flags & asOBJ_SCRIPT_OBJECT) != 0) {
-			emit_vm_fallback(state, "Cannot handle asBC_ALLOC for script entities yet");
-			break;
-		}
+		auto* type   = std::bit_cast<asCObjectType*>(ins.pword0());
+		int   fn_idx = ins.int0(AS_PTR_SIZE);
 
 		std::size_t alloc_size = type->size;
 		if (alloc_size % 4 != 0) { // up-align to multiple of 4 bytes
 			alloc_size += 4 - (alloc_size % 4);
 		}
 
+		if ((type->flags & asOBJ_SCRIPT_OBJECT) != 0) {
+			asCScriptFunction& fn = *static_cast<asCScriptEngine*>(m_script_engine)->scriptFunctions[fn_idx];
+			const auto         objtype_symbol = emit_type_info_lookup(state, *type);
+			emit(
+			    "\t\tvoid* new_obj = asea_new_script_object((asCObjectType*)&{OBJECT_TYPE});\n"
+			    "\t\tvoid **a = (void**)((asea_var*)((asDWORD*)sp + {ARG_SPACE}))->as_ptr;\n"
+			    "\t\tif (a) {{ *a = new_obj; }}\n"
+			    "\t\tsp = (asea_var*)((char*)sp - sizeof(void*));\n"
+			    "\t\tsp->as_ptr = new_obj;\n",
+			    fmt::arg("OBJECT_TYPE", objtype_symbol),
+			    fmt::arg("ARG_SPACE", fn.GetSpaceNeededForArguments())
+			);
+			emit_direct_script_call_ins(state, ScriptCallByIdx{fn_idx});
+			break;
+		}
+
 		emit("\t\tasDWORD* mem = asea_alloc({ALLOC_SIZE});\n", fmt::arg("ALLOC_SIZE", alloc_size));
 
-		if ((type->flags & asOBJ_SCRIPT_OBJECT) != 0) {
-			const auto objtype_symbol = emit_type_info_lookup(state, *type);
-			emit("\t\tasea_construct_script_object(mem, &{OBJECT_TYPE});\n", fmt::arg("OBJECT_TYPE", objtype_symbol));
-			// TODO
-		} else {
-			if (func != 0) {
-				// define as an internal call, but we'll have to pop from the stack as a consequence
-				emit_system_call(
-				    state,
-				    {.fn_idx = func, .object_pointer_override = {"mem"}, .is_internal_call = false}
-				);
-				emit(
-				    "\t\tasDWORD** a = (asDWORD**)(sp->as_ptr);\n"
-				    "\t\tsp = (asea_var*)((char*)sp + sizeof(asPWORD));\n"
-				    "\t\tif (a) *a = mem;\n"
-				);
-				// FIXME: suspend
-			}
+		if (fn_idx != 0) {
+			// define as an internal call, but we'll have to pop from the stack as a consequence
+			emit_system_call(state, {.fn_idx = fn_idx, .object_pointer_override = {"mem"}, .is_internal_call = false});
+			emit(
+			    "\t\tasDWORD** a = (asDWORD**)(sp->as_ptr);\n"
+			    "\t\tsp = (asea_var*)((char*)sp + sizeof(asPWORD));\n"
+			    "\t\tif (a) *a = mem;\n"
+			);
+			// FIXME: suspend
 		}
 
 		emit_auto_bc_inc(state);
@@ -1406,7 +1407,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 	}
 
 	if (will_emit_direct) {
-		emit("\t\tpc += 2;\n");
+		emit_auto_bc_inc(state);
 
 		if (known_fn != nullptr) {
 			emit("\t\tasea_prepare_script_stack(_regs, {FN}, pc, sp, fp);\n", fmt::arg("FN", fn_expr));
@@ -1463,8 +1464,8 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 	} else {
 		// Call fallback: We initiate the call from JIT, and the rest of the JitEntry handler will branch into the
 		// correct instruction.
+		emit_auto_bc_inc(state);
 		emit(
-		    "\t\tpc += 2;\n"
 		    "{SAVE_REGS}"
 		    "\t\tasea_call_script_function(_regs, {FN});\n"
 		    "\t\treturn;\n",

@@ -180,6 +180,12 @@ void asea_cast(asSVMRegisters* vm_registers, asCScriptObject* obj, asDWORD type_
 	}
 }
 
+void* asea_new_script_object(asCObjectType* obj_type) {
+	auto* mem = static_cast<asCScriptObject*>(asea_alloc(obj_type->size));
+	ScriptObject_Construct(obj_type, mem);
+	return mem;
+}
+
 void* asea_alloc(asQWORD size) { return userAlloc(size); }
 void  asea_free(void* ptr) { userFree(ptr); }
 }
