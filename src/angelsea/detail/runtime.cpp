@@ -187,5 +187,6 @@ void* asea_new_script_object(asCObjectType* obj_type) {
 }
 
 void* asea_alloc(asQWORD size) { return userAlloc(size); }
-void  asea_free(void* ptr) { userFree(ptr); }
+
+void asea_free(void* ptr) { userFree(ptr); }
 }
