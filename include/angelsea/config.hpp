@@ -89,6 +89,14 @@ struct JitConfig {
 	/// to care all that much performance-wise.
 	int mir_optimization_level = 2;
 
+	/// Maximum number of bytecode size in bytes for a function to be considered by the JIT compiler. This is to limit
+	/// the effect of extremely large functions that take disproportionately much memory and compute time when compiled
+	/// with MIR.
+	///
+	/// It can also avoid needlessly triggering compilation for long functions that are cold and very long to the point
+	/// they hit enough JIT entry points to trigger compilation.
+	std::size_t max_bytecode_bytes = 25000;
+
 	/// Gross hack that frees a bunch of memory internally used by MIR that is not really used after the code generation
 	/// of a function. This reduces RES memory usage very significantly in real applications.
 	bool hack_mir_minimize = true;

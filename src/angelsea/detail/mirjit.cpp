@@ -96,6 +96,16 @@ void MirJit::register_function(asIScriptFunction& script_function) {
 		m_registered_engine_globals = true;
 	}
 
+	asUINT bytecode_length;
+	script_function.GetByteCode(&bytecode_length);
+	if (bytecode_length * sizeof(asDWORD) > m_config.max_bytecode_bytes) {
+		log(m_config,
+		    *m_engine,
+		    script_function,
+		    LogSeverity::WARNING,
+		    "Function not considered for JIT compilation because it is too complex");
+	}
+
 	auto [lazy_mir_it, not_already_registered] = m_lazy_functions.emplace(
 	    &script_function,
 	    LazyMirFunction{
