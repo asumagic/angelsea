@@ -1814,6 +1814,13 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	emit("{}", to_emit_before_call);
 
+	if (!m_config->hack_ignore_context_inspect) {
+		emit("{}", save_registers_sequence);
+	} else {
+		// write stack pointer in case the syscall causes a nested script call; otherwise our stack may get stomped
+		emit("\t\tregs->sp = sp;\n");
+	}
+
 	// restore stack pushes that were *not* for us
 	if (push_offsets != nullptr && push_offset_idx >= 0) {
 		if (m_config->c.human_readable) {
@@ -1991,6 +1998,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 
 	if (!m_config->hack_ignore_context_inspect) {
 		emit("{}", save_registers_sequence);
+	} else {
+		// write stack pointer in case the syscall causes a nested script call; otherwise our stack may get stomped
+		emit("\t\tregs->sp = sp;\n");
 	}
 
 	// generic ABI requires arguments etc. to be on stack
