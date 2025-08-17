@@ -227,6 +227,7 @@ engine->SetEngineProperty(asEP_INCLUDE_JIT_INSTRUCTIONS, true);
 engine->SetEngineProperty(asEP_JIT_INTERFACE_VERSION, 2);
 engine->SetEngineProperty(asEP_BUILD_WITHOUT_LINE_CUES, true);
 
+// example config
 angelsea::JitConfig config {
     .triggers = {
         .hits_before_func_compile = 10000,
@@ -236,8 +237,14 @@ angelsea::Jit jit(config, *engine);
 assert(engine->SetJITCompiler(&jit) >= 0);
 ```
 
-NOTE: The JIT compiler is not thread-safe yet; you will likely face issues if
-there are several AngelScript contexts running concurrently.
+It is strongly encouraged to check [`JitConfig` tunables](include/angelsea/config.hpp)
+and to adjust it accordingly for your application.  
+The defaults are overall tuned for the needs of a semi-heavily scripted
+commercial application.
+
+> [!WARNING]
+> The JIT compiler itself is not currently thread-safe with regards to
+> multithreaded AngelScript contexts or engines.
 
 ### License notice
 
