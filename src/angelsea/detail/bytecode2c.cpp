@@ -1871,17 +1871,10 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		// NOTE: we have a MSVC codepath but realistically it is untested! it happens to be modelled after what most
 		// ABIs AS supports, with the exception of MSVC. we also don't check for clang as if it identifies self as
 		// _MSC_VER then it is implementing the MSVC ABI.
-		emit_forward_declaration(
-		    state,
-		    std::string(fn_callable_symbol),
-		    "extern char {FNCALLABLE}[];\n"
-		    "typedef {RETTYPE} (*virtfn)({ARGTYPES});\n",
-		    fmt::arg("RETTYPE", return_type.c),
-		    fmt::arg("ARGTYPES", fmt::join(formatted_arg_types, ",")),
-		    fmt::arg("FNCALLABLE", fn_callable_symbol)
-		);
+		emit_forward_declaration(state, std::string(fn_callable_symbol), "extern char {}[];\n", fn_callable_symbol);
 
 		emit(
+		    "typedef {RETTYPE} (*virtfn)({ARGTYPES});\n"
 		    "#ifdef _MSC_VER\n"
 		    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
 		    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} >> 2];\n"
