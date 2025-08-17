@@ -185,7 +185,8 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		fn.GetDeclaredAt(&section, &row, &col);
 		emit(
 		    "\tasea_debug_message(_regs, \"TRACE FUNCTION: module "
-		    "{}: {}:{}:{}: {}\");\n\n",
+		    "{}: {}:{}:{}: {}; JitEntry follows:\");\n"
+		    "\tasea_debug_int(_regs, entryLabel);\n\n",
 		    internal_module_name,
 		    escape_c_literal(section != nullptr ? section : "<anon>"),
 		    row,
