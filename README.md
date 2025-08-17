@@ -35,13 +35,11 @@ exploding compute and memory costs.
 
 ## Supported platforms
 
-Currently, only x86-64 Linux is being developed on and tested. However, MIR
-supports many other platforms and CPU architectures, and Angelsea should be
-generating fairly portable C code, so it shouldn't be hard to port (just don't
-try big-endian).
+MIR supports many other platforms and CPU architectures, and Angelsea should be
+generating fairly portable C code, but very little of it is tested (please don't
+bother trying big-endian).
 
-In order of what would be nice to try and get working (but that will wait before
-the project is more functional):
+We would [like to support](https://github.com/asumagic/angelsea/issues?q=is%3Aissue%20state%3Aopen%20label%3Atargets):
 
 - ✅ **Linux x86-64** (main test platform)
 - MinGW x86-64
@@ -50,8 +48,8 @@ the project is more functional):
 - macOS x86-64
 - MSVC x86-64
 
-No 32-bit platforms are planned, if only because MIR currently supports none.  
-For 32-bit x86 support, see [BlindMindStudio's JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler).
+32-bit support is not planned because MIR supports no such platform.
+[BlindMindStudio's JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler) supports 32-bit and 64-bit x86.
 
 ## Clone & Build
 
