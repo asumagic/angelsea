@@ -53,11 +53,11 @@ In order of what would be nice to try and get working (but that will wait before
 the project is more functional):
 
 - ✅ **Linux x86-64** (main test platform)
-- MinGW x86-64: #2
-- Linux aarch64: #1
-- macOS aarch64: #3
-- macOS x86-64: #3
-- MSVC x86-64: #4
+- MinGW x86-64
+- Linux aarch64
+- macOS aarch64
+- macOS x86-64
+- MSVC x86-64
 
 No 32-bit platforms are planned, if only because MIR currently supports none.  
 For 32-bit x86 support, see [BlindMindStudio's JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler).
