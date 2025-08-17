@@ -104,6 +104,7 @@ void MirJit::register_function(asIScriptFunction& script_function) {
 		    script_function,
 		    LogSeverity::WARNING,
 		    "Function not considered for JIT compilation because it is too complex");
+		return;
 	}
 
 	auto [lazy_mir_it, not_already_registered] = m_lazy_functions.emplace(
