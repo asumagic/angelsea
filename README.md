@@ -13,6 +13,9 @@ We don't consider it stable yet, but it works. The test suite is constantly
 checked and it is regularly tested against a test development build of
 [King Arthur's Gold](https://store.steampowered.com/app/219830/King_Arthurs_Gold).
 
+It is still in a bit of a "move fast, break things" phase, but we're trying to
+keep unstable features out of the main branch.
+
 ### Performance
 
 Compared to the [BlindMindStudios JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler),
