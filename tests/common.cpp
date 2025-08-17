@@ -69,10 +69,10 @@ angelsea::JitConfig get_test_jit_config() {
 	        .dump_c_code   = is_env_set("ASEA_DUMP_C"),
 	        .dump_mir_code = is_env_set("ASEA_DUMP_MIR"),
 		},
+		.experimental_stack_elision = true,
 		.c = {
 			.human_readable = true
 		},
-		.experimental_stack_elision = true,
 	};
 
 	set_env_int_variable("ASEA_MIR_DEBUG_LEVEL", config.debug.mir_debug_level);
