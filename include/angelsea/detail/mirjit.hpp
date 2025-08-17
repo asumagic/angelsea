@@ -70,7 +70,7 @@ struct AsyncMirFunction {
 	std::vector<std::pair<asPWORD*, asPWORD>>  jit_entry_args;
 	std::vector<std::pair<std::string, void*>> deferred_bindings;
 	std::string                                c_name;
-	std::string                                c_source;
+	TranspiledCode                             c_source;
 	std::string                                pretty_name;
 	struct {
 		std::atomic<bool> ready;

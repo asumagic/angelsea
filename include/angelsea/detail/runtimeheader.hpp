@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-#include <string_view>
-
 namespace angelsea::detail {
 
-constexpr std::string_view angelsea_c_header_copyright = R"___(/*
+constexpr const char* angelsea_c_header_copyright = R"___(/*
 	This generated source file contains macro definitions and references to
 	internal structures extracted from the AngelScript scripting library, which
 	are licensed under the zlib license (license provided below).
@@ -54,7 +52,7 @@ constexpr std::string_view angelsea_c_header_copyright = R"___(/*
 
 )___";
 
-constexpr std::string_view angelsea_c_header =
+constexpr const char* angelsea_c_header =
     // JIT-only definitions that don't depend on angelscript.h
     R"___(#ifdef ASEA_SUPPORT
 
@@ -196,7 +194,7 @@ extern char asea_generic_vtable[];
 #define ASEA_FDIV(lhs, rhs) lhs / rhs
 )___";
 
-constexpr std::string_view angelsea_c_header_offsets =
+constexpr const char* angelsea_c_header_offsets =
     R"___(extern const asPWORD asea_offset_ctx_callstack;
 extern const asPWORD asea_offset_ctx_status;
 extern const asPWORD asea_offset_ctx_currentfn;

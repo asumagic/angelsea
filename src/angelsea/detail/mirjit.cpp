@@ -166,17 +166,26 @@ void MirJit::bind_engine_globals(asIScriptEngine& engine) {
 }
 
 struct InputData {
-	std::string* c_source;
-	std::size_t  current_offset;
+	TranspiledCode* code;
+	std::size_t     current_block = 0;
+	const char*     current_ptr;
+
+	explicit InputData(TranspiledCode& code) : code{&code}, current_ptr{code.source_bits[0]} {}
 };
 
 static int c2mir_getc_callback(void* user_data) {
 	InputData& info = *static_cast<InputData*>(user_data);
-	if (info.current_offset >= info.c_source->size()) {
-		return EOF;
+	while (*info.current_ptr == '\0') {
+		if (info.current_block >= info.code->source_bits.size() - 1) {
+			return EOF;
+		}
+
+		++info.current_block;
+		info.current_ptr = info.code->source_bits[info.current_block];
 	}
-	char c = (*info.c_source)[info.current_offset];
-	++info.current_offset;
+
+	char c = *info.current_ptr;
+	++info.current_ptr;
 	return c;
 }
 
@@ -210,29 +219,35 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 		    m_c_generator.get_fallback_count());
 	}
 
-	if (config().debug.dump_c_code) {
-		angelsea_assert(config().debug.dump_c_code_file != nullptr);
-		[[maybe_unused]] auto _written = fputs(m_c_generator.source().c_str(), config().debug.dump_c_code_file);
-		[[maybe_unused]] auto _err     = fflush(config().debug.dump_c_code_file);
-	}
-
-	auto [async_fn_it, success]
-	    = m_async_codegen_functions.try_emplace(fn.script_function, std::make_unique<AsyncMirFunction>());
-	angelsea_assert(success);
-	AsyncMirFunction& async_fn = *async_fn_it->second;
-	async_fn.jit_engine        = this;
-	async_fn.script_function   = fn.script_function;
-	async_fn.c_name            = c_name;
-	async_fn.c_source          = m_c_generator.source();
-	async_fn.pretty_name       = name;
-	async_fn.deferred_bindings = std::move(deferred_bindings);
-
+	std::vector<std::pair<asPWORD*, asPWORD>> jit_entry_args;
 	for (BytecodeInstruction ins : get_bytecode(*fn.script_function)) {
 		if (ins.info->bc == asBC_JitEntry) {
-			async_fn.jit_entry_args.emplace_back(&ins.pword0(), ins.pword0());
+			jit_entry_args.emplace_back(&ins.pword0(), ins.pword0());
 		}
 	}
 
+	auto [async_fn_it, success] = m_async_codegen_functions.try_emplace(
+	    fn.script_function,
+	    std::unique_ptr<AsyncMirFunction>{new AsyncMirFunction{
+	        .jit_engine        = this,
+	        .script_function   = fn.script_function,
+	        .jit_entry_args    = std::move(jit_entry_args),
+	        .deferred_bindings = std::move(deferred_bindings),
+	        .c_name            = c_name,
+	        .c_source          = m_c_generator.finalize_context(),
+	        .pretty_name       = name,
+	        .compiled          = {}
+	    }}
+	);
+	auto& async_fn = *async_fn_it->second;
+
+	if (config().debug.dump_c_code) {
+		angelsea_assert(config().debug.dump_c_code_file != nullptr);
+		for (const char* block : async_fn.c_source.source_bits) {
+			std::ignore = fputs(block, config().debug.dump_c_code_file);
+		}
+		std::ignore = fflush(config().debug.dump_c_code_file);
+	}
 	setup_jit_callback(*fn.script_function, jit_entry_await_async, &async_fn, true);
 
 	m_lazy_functions.erase(fn.script_function);
@@ -284,7 +299,7 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 		    .include_dirs       = nullptr,
 		};
 
-		InputData input_data{.c_source = &fn.c_source, .current_offset = 0};
+		InputData input_data(fn.c_source);
 		if (c2mir_compile(compile_mir, &c_options, c2mir_getc_callback, &input_data, fn.pretty_name.c_str(), nullptr)
 		    == 0) {
 			log(config(), engine(), LogSeverity::ERROR, "Failed to compile C for \"{}\"", fn.pretty_name.c_str());

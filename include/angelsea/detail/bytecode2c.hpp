@@ -38,6 +38,26 @@ static constexpr VarType s8{"asINT8", "asINT8", 1}, s16{"asINT16", "asINT16", 2}
     void_ptr{"void*", "ptr", 8 /* same as pword */}, f32{"float", "float", 4}, f64{"double", "double", 8};
 } // namespace var_types
 
+struct TranspiledBlocks {
+	std::string forward_declarations;
+	std::string function_code;
+};
+
+struct TranspiledCode {
+	TranspiledCode()                                 = default;
+	TranspiledCode(const TranspiledCode&)            = delete;
+	TranspiledCode& operator=(const TranspiledCode&) = delete;
+	TranspiledCode(TranspiledCode&&)                 = default;
+	TranspiledCode& operator=(TranspiledCode&&)      = default;
+	~TranspiledCode()                                = default;
+
+	std::vector<const char*> source_bits;
+
+	/// Holds whatever dynamic sources in \ref source_bits need to be held. Those will be less complete than \ref
+	/// source_bits because \ref source_bits can also refer to some static/constant strings.
+	TranspiledBlocks code_blocks;
+};
+
 class BytecodeToC {
 	public:
 	struct ExternScriptFunction {
@@ -65,11 +85,10 @@ class BytecodeToC {
 
 	BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix = "asea_jit");
 
-	void prepare_new_context();
+	void           prepare_new_context();
+	TranspiledCode finalize_context();
 
 	void translate_function(std::string_view internal_module_name, asIScriptFunction& fn);
-
-	std::string& source() { return m_module_state.buffer; }
 
 	/// Configure the callback to be invoked when a function is mapped to a C
 	/// function name. This is useful to track the generated entry points in
@@ -120,6 +139,9 @@ class BytecodeToC {
 		/// Complementary to \ref stack_push_to_fn
 		std::unordered_map<std::size_t, std::vector<std::size_t>> fn_to_stack_push;
 
+		/// Symbols that already have been emitted, to avoid duplicated declarations
+		std::unordered_set<std::string> emitted_symbols; // (might be good to find a way to remove?)
+
 		bool has_direct_generic_call;
 
 		struct {
@@ -136,7 +158,25 @@ class BytecodeToC {
 	void translate_instruction(FnState& state);
 
 	template<class... Ts> void emit(fmt::format_string<Ts...> format, Ts&&... format_args) {
-		fmt::format_to(std::back_inserter(m_module_state.buffer), format, std::forward<Ts>(format_args)...);
+		emit_to(m_module_state.code_blocks.function_code, format, std::forward<Ts>(format_args)...);
+	}
+
+	template<class... Ts> void emit_to(std::string& target, fmt::format_string<Ts...> format, Ts&&... format_args) {
+		fmt::format_to(std::back_inserter(target), format, std::forward<Ts>(format_args)...);
+	}
+
+	template<class... Ts>
+	void emit_forward_declaration(
+	    FnState&                  state,
+	    std::string               symbol_name,
+	    fmt::format_string<Ts...> format,
+	    Ts&&... format_args
+	) {
+		auto [it, not_already_emitted] = state.emitted_symbols.emplace(std::move(symbol_name));
+		if (!not_already_emitted) {
+			return;
+		}
+		emit_to(m_module_state.code_blocks.forward_declarations, format, std::forward<Ts>(format_args)...);
 	}
 
 	/// Determines which asBC_JitEntry instructions should be valid entry points for the JITted function, and sets the
@@ -336,12 +376,12 @@ class BytecodeToC {
 
 	/// State for the current `prepare_new_context` context.
 	struct ModuleState {
-		std::string buffer;
-		std::size_t fallback_count;
-		std::size_t string_constant_idx;
-		std::size_t type_info_idx;
-		std::size_t fn_idx;
-		std::string fn_name;
+		TranspiledBlocks code_blocks         = {};
+		std::size_t      fallback_count      = 0;
+		std::size_t      string_constant_idx = 0;
+		std::size_t      type_info_idx       = 0;
+		std::size_t      fn_idx              = 0;
+		std::string      fn_name;
 	};
 	ModuleState m_module_state;
 
