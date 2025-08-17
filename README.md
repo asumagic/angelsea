@@ -20,51 +20,47 @@ entry point (e.g. inserted by AS at the start of the function or after calls).
 
 ## Current status
 
-The JIT compiler can already be used: The test suite is constantly checked and
-it is regularly tested against a test development build of
+We don't consider it stable yet, but it works. The test suite is constantly
+checked and it is regularly tested against a test development build of
 [King Arthur's Gold](https://store.steampowered.com/app/219830/King_Arthurs_Gold).
 
 ### Performance
 
-Early benchmarks show the JIT exceeding interpreter performance for now.
-However, instruction support is partial and some features (such as native calls)
-fall back to the VM, which is rather detrimental to real-world performance.
+Compared to the [BlindMindStudios JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler),
+you should hopefully get similar or exceeding (+30%) performance in real world
+usecases.  
+However, we haven't looked at performance too closely yet; and since instruction
+support is not complete and there are differences in ABI support YMMV.
 
-The compiler in itself is not particularly fast, and currently has more memory
-overhead than we'd like. However:
+The compiler itself isn't very fast or memory efficient but we mitigate those
+concerns as well as we can:
 
-- It supports lazy compilation. Functions can be allowed to compile only after
-a certain number of JitEntry hits. This has the caveat that, in some cases, the
-function has to be re-entered to finalize JIT compilation, but this is OK in
-most cases.
-- You can enable asynchronous compilation using `Jit::SetCompileCallback` to
-make heavy compiler jobs run in their own thread. Currently, this can bottleneck
-on a single thread, but it will not block the main thread.
+- Lazy compilation is used by default, so cold functions can be ignored.
+- Asynchronous compilation can be enabled using `Jit::SetCompileCallback`.
+Currently, this can bottleneck on a single thread, but it will not block the
+main thread.
+- Huge functions (typically thousands of lines) are ignored by default due to
+exploding compute and memory costs.
 
 ## Supported platforms
 
 Currently, only x86-64 Linux is being developed on and tested. However, MIR
 supports many other platforms and CPU architectures, and Angelsea should be
-generating fairly portable C code, so it shouldn't be hard to port.
-
-Generated code is not tested on big-endian architectures and is very likely
-broken.
-
-(Ideally, we would setup CI to automatically test other platforms; perhaps even
-using qemu integration with containers to test aarch64 etc.)
+generating fairly portable C code, so it shouldn't be hard to port (just don't
+try big-endian).
 
 In order of what would be nice to try and get working (but that will wait before
 the project is more functional):
 
 - ✅ **Linux x86-64** (main test platform)
-- MinGW x86-64
-- Linux aarch64
-- macOS aarch64
-- macOS x86-64
-- MSVC x86-64
+- MinGW x86-64: #2
+- Linux aarch64: #1
+- macOS aarch64: #3
+- macOS x86-64: #3
+- MSVC x86-64: #4
 
-32-bit platform support are not planned as it is not supported by MIR.  
-If you require 32-bit support, you may have to use [BlindMindStudio's JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler).
+No 32-bit platforms are planned, if only because MIR currently supports none.  
+For 32-bit x86 support, see [BlindMindStudio's JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler).
 
 ## Clone & Build
 
