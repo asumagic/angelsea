@@ -7,17 +7,6 @@ Angelsea is a **JIT compiler for AngelScript** written in C++20 which leverages
 the lightweight [MIR](https://github.com/vnmakarov/mir) JIT runtime and its C11
 compiler.
 
-## Design
-
-Angelsea compiles AngelScript bytecode to C functions that are JIT compiled by
-c2mir to MIR and ultimately machine code and invoked by the usual JIT entry
-points in AngelScript.
-
-C code generation amounts to pasting simple C that closely matches the
-AngelScript interpreter.  
-It can fallback to it in unsupported cases, and may be invoked from any JIT
-entry point (e.g. inserted by AS at the start of the function or after calls).
-
 ## Current status
 
 We don't consider it stable yet, but it works. The test suite is constantly
@@ -31,6 +20,8 @@ you should hopefully get similar or exceeding (+30%) performance in real world
 usecases.  
 However, we haven't looked at performance too closely yet; and since instruction
 support is not complete and there are differences in ABI support YMMV.
+
+#### Compiler performance
 
 The compiler itself isn't very fast or memory efficient but we mitigate those
 concerns as well as we can:
@@ -265,6 +256,21 @@ in source **and** binary distributions!
 - [Running the test suite](doc/TESTS.md)
 
 ## Q&A
+
+### How does the JIT compiler work?
+
+AngelScript uses a bytecode virtual machine, so a JIT compiler has to take this
+bytecode and translate some or all of it to native code.  
+Bytecode functions have one or more "JIT entry points" from which a JIT function
+can start. This effectively allows JIT functions to drop down to the VM for
+unsupported instructions, but still making it possible to be called again.
+
+Angelsea compiles AngelScript bytecode to C functions. c2mir compiles that to
+MIR in memory, and MIR ultimately emits machine code.
+
+Lazy compilation works by giving AngelScript dummy JIT functions that merely
+count how often they were called. Once the configurable threshold is reached,
+compilation will be triggered, potentially asynchronously.
 
 ### What is the best supported calling convention?
 
