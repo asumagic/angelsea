@@ -74,7 +74,7 @@ struct JitConfig {
 		/// especially hot ones) be hit before it triggers code generation.
 		/// This avoids compiling cold functions unnecessarily, or even functions that are never called, which can be
 		/// surprisingly common for code that relies a lot on `#include`.
-		std::size_t hits_before_func_compile = 0;
+		std::size_t hits_before_func_compile = 15000;
 	};
 	CompileTriggers triggers;
 
