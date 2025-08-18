@@ -32,7 +32,10 @@ namespace angelsea::detail {
 static constexpr std::string_view save_registers_sequence
     = "\t\tregs->pc = pc;\n"
       "\t\tregs->sp = sp;\n"
-      "\t\tregs->fp = fp;\n"
+      // we don't ever need to save the fp back to the VM registers because the fp is constant within a function, and
+      // initialized from the VM registers. it will be saved and reloaded as part of the call state or elsewhere by the
+      // AS engine, but that is distinct from the register save sequence.
+      //   "\t\tregs->fp = fp;\n"
       "\t\tregs->value = value_reg;\n";
 
 template<typename T> static std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
