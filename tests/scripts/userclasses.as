@@ -119,4 +119,8 @@ void is_test()
     if (f1 is f2) { print("not ok"); }
     if (f1 !is f2) { print("ok"); }
     if (f1_alias is f1_alias) { print("ok"); }
+
+    Foo@ fnull = null;
+    if (fnull is null) { print("ok"); }
+    if (fnull !is null) { print("not ok"); }
 }

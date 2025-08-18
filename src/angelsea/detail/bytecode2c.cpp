@@ -274,7 +274,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		case asBC_LdGRdR4:
 		case asBC_CALLBND:
 		case asBC_CallPtr:
-		case asBC_ClrVPtr:
 		case asBC_ChkRefS:
 		case asBC_ClrHi:
 		case asBC_FuncPtr:
@@ -715,6 +714,8 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_SetV2:
 	case asBC_SetV4:    emit_assign_ins(state, frame_var(ins.sword0(), u32), imm_int(ins.dword0(), u32)); break;
 	case asBC_SetV8:    emit_assign_ins(state, frame_var(ins.sword0(), u64), imm_int(ins.qword0(), u64)); break;
+
+	case asBC_ClrVPtr:  emit_assign_ins(state, frame_var(ins.sword0(), pword), "0"); break;
 
 	case asBC_CpyVtoR4: emit_assign_ins(state, "value_reg", frame_var(ins.sword0(), u32)); break;
 	case asBC_CpyRtoV4: emit_assign_ins(state, frame_var(ins.sword0(), u32), "value_reg"); break;
@@ -1209,7 +1210,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_LdGRdR4:      // TODO: find way to emit
 	case asBC_CALLBND:      // TODO: find way to emit & implement (calls & syscalls)
 	case asBC_CallPtr:      // TODO: find way to emit & implement (calls & syscalls) -- probably just functors
-	case asBC_ClrVPtr:      // TODO: find way to emit (maybe asOBJ_SCOPED?)
 	case asBC_ChkRefS:      // TODO: find way to emit
 	case asBC_ClrHi:        // TODO: find way to emit
 	case asBC_FuncPtr:      // TODO: find way to emit
