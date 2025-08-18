@@ -29,6 +29,8 @@ namespace angelsea::detail {
 // TODO: fix indent level for all of those that use this...
 // TODO: format immediate functions instead of using fmt::format/to_string for it
 
+/// Sequence of C statements to backup whatever state the current JIT function may have modified back to the VM
+/// registers, so that returning execution back to the AS interpreter can successfully carry on with where we stopped.
 static constexpr std::string_view save_registers_sequence
     = "\t\tregs->pc = pc;\n"
       "\t\tregs->sp = sp;\n"
