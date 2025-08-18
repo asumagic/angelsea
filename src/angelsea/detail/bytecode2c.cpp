@@ -1800,6 +1800,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 				};
 			}
 
+			// TODO: store to tmp var to avoid reloading from stack again
 			to_emit_after_call += fmt::format("\t\tasea_free({});\n", arg_ptr);
 			current_arg_pwords += 1;
 		}
