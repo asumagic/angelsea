@@ -64,6 +64,7 @@ angelsea::JitConfig get_test_jit_config() {
 	angelsea::JitConfig config{
 	    .log_targets = {
 			.verbose = is_env_set("ASEA_VERBOSE") ? asMSGTYPE_INFORMATION : (asEMsgType)-1,
+			.performance_hint = is_env_set("ASEA_VERBOSE") ? asMSGTYPE_INFORMATION : (asEMsgType)-1,
 		},
 	    .debug = {
 	        .dump_c_code   = is_env_set("ASEA_DUMP_C"),

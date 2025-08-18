@@ -10,3 +10,6 @@
 [submodule "tests/vendor/Catch2"]
 	path = tests/vendor/Catch2
 	url = https://github.com/catchorg/Catch2.git
+[submodule "tests/vendor/nanobench"]
+	path = tests/vendor/nanobench
+	url = https://github.com/martinus/nanobench.git

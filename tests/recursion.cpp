@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include "benchmark.hpp"
 #include "common.hpp"
 
 #include <thread>
@@ -85,19 +86,27 @@ TEST_CASE("fib benchmark", "[fib][benchmark]") {
 
 	ANGELSEA_TEST_CHECK(run_fib(10000, interp_fib_iterative, true) == run_fib(10000, jit_fib_iterative, true));
 
-	BENCHMARK("Interpreter fib(10000) (iterative)") { return run_fib(10000, interp_fib_iterative, true); };
-	BENCHMARK("JIT         fib(10000) (iterative)") { return run_fib(10000, jit_fib_iterative, true); };
-	BENCHMARK("C++         fib(10000) (iterative)") {
-		volatile int i = 10000;
-		return fib_iterative(i);
-	};
+	{
+		auto b = default_benchmark();
+		b.title("Iterative fib(10000)");
+		b.run("Interpreter", [&] { ankerl::nanobench::doNotOptimizeAway(run_fib(10000, interp_fib_iterative, true)); });
+		b.run("JIT", [&] { ankerl::nanobench::doNotOptimizeAway(run_fib(10000, jit_fib_iterative, true)); });
+		b.run("C++", [&] {
+			volatile int i = 10000;
+			ankerl::nanobench::doNotOptimizeAway(fib_iterative(i));
+		});
+	}
 
-	BENCHMARK("Interpreter fib(25) (recursive)") { return run_fib(25, interp_fib, false); };
-	BENCHMARK("JIT         fib(25) (recursive)") { return run_fib(25, jit_fib, false); };
-	BENCHMARK("C++         fib(25) (recursive)") {
-		volatile int i = 25;
-		return fib(i);
-	};
+	{
+		auto b = default_benchmark();
+		b.title("Recusive fib(25)");
+		b.run("Interpreter", [&] { ankerl::nanobench::doNotOptimizeAway(run_fib(25, interp_fib, false)); });
+		b.run("JIT", [&] { ankerl::nanobench::doNotOptimizeAway(run_fib(25, jit_fib, false)); });
+		b.run("C++", [&] {
+			volatile int i = 25;
+			ankerl::nanobench::doNotOptimizeAway(fib(i));
+		});
+	}
 }
 
 TEST_CASE("fib in a thread", "[fibasync]") {

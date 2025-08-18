@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include "benchmark.hpp"
 #include "common.hpp"
 
 TEST_CASE("brainfuck interpreter", "[megatest][bf]") { REQUIRE(run("scripts/bfint.as") == "hello world"); }
@@ -28,6 +29,10 @@ TEST_CASE("brainfuck benchmark", "[benchmark]") {
 		ANGELSEA_TEST_CHECK(script_context->Execute() == asEXECUTION_FINISHED);
 	};
 
-	BENCHMARK("Interpreter brainfuck hello") { run_bf(interp_main); };
-	BENCHMARK("JIT         brainfuck hello") { run_bf(jit_main); };
+	{
+		auto b = default_benchmark();
+		b.title("Basic brainfuck benchmark");
+		b.run("Interpreter", [&] { run_bf(interp_main); });
+		b.run("JIT", [&] { run_bf(jit_main); });
+	}
 }

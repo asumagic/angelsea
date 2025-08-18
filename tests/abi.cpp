@@ -2,10 +2,12 @@
 
 #include "common.hpp"
 
+#include "benchmark.hpp"
 #include <angelscript.h>
 #include <as_datatype.h>
 #include <as_generic.h>
 #include <autowrapper/aswrappedcall.h>
+#include <nanobench.h>
 
 struct SomeClass {
 	int a = 0;
@@ -132,11 +134,19 @@ TEST_CASE("generic abi benchmark", "[abi][conv_generic][benchmark]") {
 		return script_context->GetReturnDWord();
 	};
 
-	BENCHMARK("JIT    1M generic `void(this, int)`") { return run_fn(jit_million_method_bench); };
-	BENCHMARK("Interp 1M generic `void(this, int)`") { return run_fn(interp_million_method_bench); };
+	{
+		auto b = default_benchmark();
+		b.title("1M generic `void(this, int)`");
+		b.run("Interpreter", [&] { return run_fn(interp_million_method_bench); });
+		b.run("JIT", [&] { return run_fn(jit_million_method_bench); });
+	}
 
-	BENCHMARK("JIT    1M generic `int()`") { return run_fn(jit_million_bench); };
-	BENCHMARK("Interp 1M generic `int()`") { return run_fn(interp_million_bench); };
+	{
+		auto b = default_benchmark();
+		b.title("1M generic `int()`");
+		b.run("Interpreter", [&] { return run_fn(interp_million_bench); });
+		b.run("JIT", [&] { return run_fn(jit_million_bench); });
+	}
 }
 
 int native_noarg() { return 123; }
@@ -206,7 +216,8 @@ void bind_native_functions(asIScriptEngine& e) {
 	// );
 
 	e.RegisterGlobalFunction(
-	    "int native_manyargs(int x0, int x1, int x2, int x3, int x4, int x5, int x6, int x7, int x8, float y1, float "
+	    "int native_manyargs(int x0, int x1, int x2, int x3, int x4, int x5, int x6, int x7, int x8, float y1, "
+	    "float "
 	    "y2, float y3, float y4, int x9, int x10, int x11, int x12, int x13, int x14, int x15, int x16)",
 	    asFUNCTION(native_manyargs),
 	    asCALL_CDECL
@@ -227,7 +238,8 @@ TEST_CASE("native calling convention", "[abi][conv_native]") {
 	REQUIRE(
 	    run_string(
 	        context,
-	        "print(''+native_manyargs(0, 1, 2, 3, 4, 5, 6, 7, 8, 0.5, 1.5, 3.0, 6.0, 9, 10, 11, 12, 13, 14, 15, 16))"
+	        "print(''+native_manyargs(0, 1, 2, 3, 4, 5, 6, 7, 8, 0.5, 1.5, 3.0, 6.0, 9, 10, 11, 12, 13, 14, 15, "
+	        "16))"
 	    )
 	    == "147\n"
 	);
@@ -280,9 +292,17 @@ TEST_CASE("native abi benchmark", "[abi][conv_native][benchmark]") {
 		return script_context->GetReturnDWord();
 	};
 
-	BENCHMARK("JIT    1M native `void(this, int)`") { return run_fn(jit_million_method_bench); };
-	BENCHMARK("Interp 1M native `void(this, int)`") { return run_fn(interp_million_method_bench); };
+	{
+		auto b = default_benchmark();
+		b.title("1M native `void(this, int)`");
+		b.run("Interpeter", [&] { return run_fn(interp_million_method_bench); });
+		b.run("JIT", [&] { return run_fn(jit_million_method_bench); });
+	}
 
-	BENCHMARK("JIT    1M native `int()`") { return run_fn(jit_million_bench); };
-	BENCHMARK("Interp 1M native `int()`") { return run_fn(interp_million_bench); };
+	{
+		auto b = default_benchmark();
+		b.title("1M native `int()`");
+		b.run("Interpeter", [&] { return run_fn(interp_million_bench); });
+		b.run("JIT", [&] { return run_fn(jit_million_bench); });
+	}
 }

@@ -14,6 +14,7 @@ target_include_directories(angelscript-addons PUBLIC ${ANGELSCRIPT_ADDON_ROOT})
 target_link_libraries(angelscript-addons PRIVATE asea_angelscript)
 
 add_executable(angelsea-tests
+	nanobench-impl.cpp
 	abi.cpp
 	booleans.cpp
 	branching.cpp
@@ -30,6 +31,7 @@ add_executable(angelsea-tests
 	typedefs.cpp
 )
 
+target_include_directories(angelsea-tests PRIVATE vendor/nanobench/src/include)
 target_link_libraries(angelsea-tests PRIVATE asea_angelscript_internal angelsea angelscript-addons Catch2::Catch2WithMain)
 
 list(APPEND CMAKE_MODULE_PATH ${CATCH2_ROOT}/extras)
