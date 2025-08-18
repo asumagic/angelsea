@@ -50,7 +50,7 @@ TEST_CASE("user class chkref", "[chkref][userclass]") {
 }
 
 TEST_CASE("globals with user classes", "[userclass][globals][globalswithclasses]") {
-	REQUIRE(run("scripts/globalswithclasses.as", "void global_test()") == "123\n456\n789\n");
+	REQUIRE(run("scripts/globalswithclasses.as", "void global_test()") == "123\n456\n789\n123\n");
 }
 
 TEST_CASE("user class Vec3f", "[userclass][vec3f]") {

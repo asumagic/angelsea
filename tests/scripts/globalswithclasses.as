@@ -16,4 +16,11 @@ void global_test() {
     global_foo.m3 = 789;
 
     bar(global_foo.m1, global_foo.m2, global_foo.m3);
+
+    // causes emit of ChkNullS as of v2.38.0
+    global_pass_by_ref(global_foo);
+}
+
+void global_pass_by_ref(const Foo &in foo) {
+    print(""+foo.m1);
 }

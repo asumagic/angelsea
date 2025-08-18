@@ -276,7 +276,6 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		case asBC_CallPtr:
 		case asBC_ClrVPtr:
 		case asBC_ChkRefS:
-		case asBC_ChkNullS:
 		case asBC_ClrHi:
 		case asBC_FuncPtr:
 		case asBC_AllocMem:
@@ -596,6 +595,15 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tif ({VAR} == 0) {{ {ERR_NULL_HANDLER} }}\n",
 		    fmt::arg("ERR_NULL_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_NULL)),
 		    fmt::arg("VAR", frame_var(ins.sword0(), pword))
+		);
+		break;
+	}
+
+	case asBC_ChkNullS: {
+		emit(
+		    "\t\tif ({VAR} == 0) {{ {ERR_NULL_HANDLER} }}\n",
+		    fmt::arg("ERR_NULL_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_NULL)),
+		    fmt::arg("VAR", stack_var(ins.word0(), pword))
 		);
 		break;
 	}
@@ -1203,7 +1211,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_CallPtr:      // TODO: find way to emit & implement (calls & syscalls) -- probably just functors
 	case asBC_ClrVPtr:      // TODO: find way to emit (maybe asOBJ_SCOPED?)
 	case asBC_ChkRefS:      // TODO: find way to emit
-	case asBC_ChkNullS:     // TODO: find way to emit
 	case asBC_ClrHi:        // TODO: find way to emit
 	case asBC_FuncPtr:      // TODO: find way to emit
 	case asBC_AllocMem:     // TODO: implement (seems used in list factories)
