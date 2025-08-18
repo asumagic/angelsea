@@ -29,17 +29,6 @@ namespace angelsea::detail {
 // TODO: fix indent level for all of those that use this...
 // TODO: format immediate functions instead of using fmt::format/to_string for it
 
-/// Sequence of C statements to backup whatever state the current JIT function may have modified back to the VM
-/// registers, so that returning execution back to the AS interpreter can successfully carry on with where we stopped.
-static constexpr std::string_view save_registers_sequence
-    = "\t\tregs->pc = pc;\n"
-      "\t\tregs->sp = sp;\n"
-      // we don't ever need to save the fp back to the VM registers because the fp is constant within a function, and
-      // initialized from the VM registers. it will be saved and reloaded as part of the call state or elsewhere by the
-      // AS engine, but that is distinct from the register save sequence.
-      //   "\t\tregs->fp = fp;\n"
-      "\t\tregs->value = value_reg;\n";
-
 template<typename T> static std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
 
 BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix) :
@@ -88,6 +77,16 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		);
 	}
 
+	m_module_state.fn_bytecode_ptr = fmt::format("{}_bc", m_module_state.fn_name);
+	emit("extern asDWORD {}[];\n", m_module_state.fn_bytecode_ptr);
+	if (m_on_map_extern_callback) {
+		m_on_map_extern_callback(
+		    m_module_state.fn_bytecode_ptr.c_str(),
+		    ExternBytecodeDefinition{.fn = &fn},
+		    fn.GetByteCode()
+		);
+	}
+
 	// JIT entry signature is `void(asSVMRegisters *regs, asPWORD jitArg)`
 	emit("void {name}(asSVMRegisters *_regs, asPWORD entryLabel) {{\n", fmt::arg("name", m_module_state.fn_name));
 
@@ -96,7 +95,6 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	emit("\tasea_vm_registers *regs = (asea_vm_registers *)_regs;\n");
 
 	emit(
-	    "\tasDWORD* pc = regs->pc;\n"
 	    "\tasea_var* sp = regs->sp;\n"
 	    "\tasea_var *const fp = regs->fp;\n"
 	    "\tasQWORD value_reg = regs->value;\n"
@@ -110,8 +108,9 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	    .branch_targets           = {},    // populated by discover_branch_targets
 	    .stack_push_infos         = {},    // populated by discover_function_call_pushes
 	    .fn_to_stack_push         = {},    // ^
+	    .emitted_symbols          = {},    // populated by whatever emits extern declarations
 	    .has_direct_generic_call  = false, // populated by discover_function_calls
-	    .error_handlers           = {},    // populated by any translate_instruction
+	    .error_handlers_mask      = 0,     // populated by any translate_instruction
 	};
 
 	discover_switch_map(state);
@@ -445,7 +444,11 @@ void BytecodeToC::emit_entry_dispatch(FnState& state) {
 }
 
 void BytecodeToC::emit_error_handlers(FnState& state) {
-	if (state.error_handlers.null) {
+	const auto requires_handler = [&](ErrorHandler handler) {
+		return (std::uint64_t(state.error_handlers_mask) & std::uint64_t(handler)) != 0;
+	};
+
+	if (requires_handler(ErrorHandler::ERR_NULL)) {
 		emit(
 		    "\terr_null:\n"
 		    "\t\tasea_set_internal_exception(_regs, \"" TXT_NULL_POINTER_ACCESS
@@ -453,10 +456,10 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 		    "\t\tgoto vm;\n"
 		    "\t\n"
 		);
-		state.error_handlers.vm_fallback = true;
+		state.error_handlers_mask |= std::uint64_t(ErrorHandler::VM_FALLBACK);
 	}
 
-	if (state.error_handlers.divide_by_zero) {
+	if (requires_handler(ErrorHandler::ERR_DIVIDE_BY_ZERO)) {
 		emit(
 		    "\terr_divide_by_zero:\n"
 		    "\t\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_BY_ZERO
@@ -464,10 +467,10 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 		    "\t\tgoto vm;\n"
 		    "\t\n"
 		);
-		state.error_handlers.vm_fallback = true;
+		state.error_handlers_mask |= std::uint64_t(ErrorHandler::VM_FALLBACK);
 	}
 
-	if (state.error_handlers.divide_overflow) {
+	if (requires_handler(ErrorHandler::ERR_DIVIDE_OVERFLOW)) {
 		emit(
 		    "\terr_divide_overflow:\n"
 		    "\t\tasea_set_internal_exception(_regs, \"" TXT_DIVIDE_OVERFLOW
@@ -475,16 +478,13 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 		    "\t\tgoto vm;\n"
 		    "\t\n"
 		);
-		state.error_handlers.vm_fallback = true;
+		state.error_handlers_mask |= std::uint64_t(ErrorHandler::VM_FALLBACK);
 	}
 
-	if (state.error_handlers.vm_fallback) {
-		emit(
-		    "\tvm:\n"
-		    "{}"
-		    "\t\treturn;\n",
-		    save_registers_sequence
-		);
+	if (requires_handler(ErrorHandler::VM_FALLBACK)) {
+		emit("\tvm:\n");
+		emit_save_sp(state);
+		emit("\treturn;\n");
 	}
 }
 
@@ -520,12 +520,11 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	switch (ins.info->bc) {
-	case asBC_JitEntry: emit_auto_bc_inc(state); break;
+	case asBC_JitEntry: break;
 	case asBC_STR:      emit_vm_fallback(state, "deprecated instruction"); break;
 
 	case asBC_SUSPEND:  {
 		if (m_config->hack_ignore_suspend) {
-			emit_auto_bc_inc(state);
 			break;
 		}
 		emit_vm_fallback(state, "SUSPEND is not implemented yet");
@@ -546,7 +545,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tvalue_reg = sp->as_asPWORD;\n"
 		    "\t\tsp = (asea_var*)((char*)sp + sizeof(asPWORD));\n"
 		);
-		emit_auto_bc_inc(state);
 		break;
 	}
 	case asBC_PSF: emit_stack_push_ins(state, fmt::format("(asPWORD){}", frame_ptr(ins.sword0())), pword); break;
@@ -571,32 +569,33 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_PopPtr: {
 		emit("\t\tsp = (asea_var*)((char*)sp + sizeof(asPWORD));\n");
-		emit_auto_bc_inc(state);
 		break;
 	}
 
 	case asBC_RDSPtr: {
 		emit(
 		    "\t\tasPWORD* a = (asPWORD*)sp->as_ptr;\n"
-		    "\t\tif (a == 0) {{ goto err_null; }}\n"
-		    "\t\tsp->as_asPWORD = *a;\n"
+		    "\t\tif (a == 0) {{ {ERR_NULL_HANDLER} }}\n"
+		    "\t\tsp->as_asPWORD = *a;\n",
+		    fmt::arg("ERR_NULL_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_NULL))
 		);
-		state.error_handlers.null = true;
-		emit_auto_bc_inc(state);
 		break;
 	}
 
 	case asBC_CHKREF: {
-		emit("\t\tif (sp->as_asPWORD == 0) {{ goto err_null; }}\n");
-		state.error_handlers.null = true;
-		emit_auto_bc_inc(state);
+		emit(
+		    "\t\tif (sp->as_asPWORD == 0) {{ {ERR_NULL_HANDLER} }}\n",
+		    fmt::arg("ERR_NULL_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_NULL))
+		);
 		break;
 	}
 
 	case asBC_ChkNullV: {
-		emit("\t\tif ({VAR} == 0) {{ goto err_null; }}\n", fmt::arg("VAR", frame_var(ins.sword0(), pword)));
-		state.error_handlers.null = true;
-		emit_auto_bc_inc(state);
+		emit(
+		    "\t\tif ({VAR} == 0) {{ {ERR_NULL_HANDLER} }}\n",
+		    fmt::arg("ERR_NULL_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_NULL)),
+		    fmt::arg("VAR", frame_var(ins.sword0(), pword))
+		);
 		break;
 	}
 
@@ -647,7 +646,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tif (a) *a = mem;\n"
 		);
 
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -686,7 +684,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\t}}\n"
 		);
 
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -695,13 +692,12 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tvoid *dst = sp->as_ptr;\n"
 		    "\t\tsp = (asea_var*)((char*)sp + sizeof(void*));\n"
 		    "\t\tvoid *src = sp->as_ptr;\n"
-		    "\t\tif (!src || !dst) {{ goto err_null; }}\n"
+		    "\t\tif (!src || !dst) {{ {ERR_NULL_HANDLER} }}\n"
 		    "\t\tmemcpy(dst, src, {COUNT});\n"
 		    "\t\tsp->as_ptr = dst;\n",
+		    fmt::arg("ERR_NULL_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_NULL)),
 		    fmt::arg("COUNT", ins.word0() * sizeof(asDWORD))
 		);
-		state.error_handlers.null = true;
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -740,7 +736,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_LDG: {
 		std::string symbol = emit_global_lookup(state, std::bit_cast<void*>(ins.pword0()), true);
 		emit("\t\tvalue_reg = (asPWORD)&{};\n", symbol);
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -776,7 +771,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		}
 
 		emit("\t\t*dst = src;\n");
-		emit_auto_bc_inc(state);
 
 		break;
 	}
@@ -815,7 +809,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		}
 
 		emit("\t\t*dst = src;\n");
-		emit_auto_bc_inc(state);
 
 		break;
 	}
@@ -828,7 +821,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\t*a = 0;\n",
 		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
 		);
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -838,7 +830,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tregs->obj = 0;\n",
 		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
 		);
-		emit_auto_bc_inc(state);
 
 		break;
 	}
@@ -853,7 +844,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    fmt::arg("VAR", stack_var(ins.word0(), pword)),
 		    fmt::arg("OBJPTR", frame_var("offset", pword))
 		);
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -864,7 +854,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    fmt::arg("VAR", stack_var(ins.word0(), pword)),
 		    fmt::arg("VARDEREF", frame_var("*obj", pword))
 		);
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -875,20 +864,18 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    fmt::arg("VAR", stack_var(ins.word0(), pword)),
 		    fmt::arg("VARDEREF", frame_ptr("(int)*var_idx"))
 		);
-		emit_auto_bc_inc(state);
 		break;
 	}
 
 	case asBC_LoadRObjR: {
 		emit(
 		    "\t\tasPWORD base = {VAR};\n"
-		    "\t\tif (base == 0) {{ goto err_null; }}\n"
+		    "\t\tif (base == 0) {{ {ERR_NULL_HANDLER} }}\n"
 		    "\t\tvalue_reg = base + {SWORD1};\n",
+		    fmt::arg("ERR_NULL_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_NULL)),
 		    fmt::arg("VAR", frame_var(ins.sword0(), pword)),
 		    fmt::arg("SWORD1", ins.sword1())
 		);
-		state.error_handlers.null = true;
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -898,20 +885,18 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    fmt::arg("BASE_PTR", frame_ptr(ins.sword0())),
 		    fmt::arg("OFF", ins.sword1())
 		);
-		emit_auto_bc_inc(state);
 		break;
 	}
 
 	case asBC_LoadThisR: {
 		emit(
 		    "\t\tasPWORD base = {THIS};\n"
-		    "\t\tif (base == 0) {{ goto err_null; }}\n"
+		    "\t\tif (base == 0) {{ {ERR_NULL_HANDLER} }}\n"
 		    "\t\tvalue_reg = base + {SWORD0};\n",
+		    fmt::arg("ERR_NULL_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_NULL)),
 		    fmt::arg("THIS", frame_var(0, pword)),
 		    fmt::arg("SWORD0", ins.sword0())
 		);
-		state.error_handlers.null = true;
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -927,7 +912,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tvar->as_asDWORD = ((asea_var*)value_reg)->as_asBYTE;\n",
 		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
 		);
-		emit_auto_bc_inc(state);
 		break;
 	}
 	case asBC_RDR2: {
@@ -936,7 +920,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tvar->as_asDWORD = ((asea_var*)value_reg)->as_asWORD;\n",
 		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
 		);
-		emit_auto_bc_inc(state);
 		break;
 	}
 	case asBC_RDR4: emit_assign_ins(state, frame_var(ins.sword0(), u32), "((asea_var*)value_reg)->as_asDWORD"); break;
@@ -949,7 +932,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tsp = (asea_var*)((char*)sp + sizeof(asPWORD));\n",
 		    fmt::arg("TYPEID", ins.dword0())
 		);
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -991,7 +973,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    state,
 		    SystemCall{.fn_idx = ins.int0(), .object_pointer_override = {}, .is_internal_call = false}
 		);
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -1029,16 +1010,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
-	case asBC_JMP: {
-		bcins::Jump jmp{ins};
-		emit(
-		    "\t\tpc += {BRANCH_OFFSET};\n"
-		    "\t\tgoto bc{BRANCH_TARGET};\n",
-		    fmt::arg("BRANCH_OFFSET", jmp.relative_offset()),
-		    fmt::arg("BRANCH_TARGET", jmp.target_offset())
-		);
-		break;
-	}
+	case asBC_JMP:  emit("\t\tgoto bc{};\n", bcins::Jump{ins}.target_offset()); break;
 
 	case asBC_JMPP: {
 		emit("\t\tswitch({}) {{\n", frame_var(ins.sword0(), s32));
@@ -1047,7 +1019,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		std::size_t i = 0;
 		// TODO: also investigate label as values for this
 		for (const std::size_t target : mapping_it->second) {
-			emit("\t\tcase {}: pc += {}; goto bc{};\n", i, target - ins.offset, target);
+			emit("\t\tcase {}: goto bc{};\n", i, target);
 			++i;
 		}
 		emit("\t\t}}\n");
@@ -1062,7 +1034,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    "\t\tvar->as_asBYTE = !value;\n",
 		    fmt::arg("VARPTR", frame_ptr(ins.sword0()))
 		);
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -1070,24 +1041,21 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		// NOTE: memory GVN: if we store &ASEA_STACK_TOP.as_asPWORD to a temporary and use it, then we get corruption
 		// with load GVN (angelsea -O3 mode as of writing), again.
 		emit(
-		    "\t\tif (sp->as_asPWORD == 0) {{ goto err_null; }}\n"
+		    "\t\tif (sp->as_asPWORD == 0) {{ {ERR_NULL_HANDLER} }}\n"
 		    "\t\tsp->as_asPWORD += {SWORD0};\n",
+		    fmt::arg("ERR_NULL_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_NULL)),
 		    fmt::arg("SWORD0", ins.sword0())
 		);
-		state.error_handlers.null = true;
-		emit_auto_bc_inc(state);
 		break;
 	}
 
 	case asBC_IncVi: {
 		emit("\t\t++{};\n", frame_var(ins.sword0(), u32));
-		emit_auto_bc_inc(state);
 		break;
 	}
 
 	case asBC_DecVi: {
 		emit("\t\t--{};\n", frame_var(ins.sword0(), u32));
-		emit_auto_bc_inc(state);
 		break;
 	}
 
@@ -1266,19 +1234,48 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	emit("\t}}\n");
 }
 
-void BytecodeToC::emit_auto_bc_inc(FnState& state) { emit("\t\tpc += {};\n", state.ins.size); }
-
 void BytecodeToC::emit_vm_fallback(FnState& state, std::string_view reason) {
 	++m_module_state.fallback_count;
-	state.error_handlers.vm_fallback = true;
 
 	if (m_config->c.human_readable) {
-		emit("\t\tgoto vm; /* {} */\n", reason);
+		emit("\t\t{} /* {} */\n", jump_to_error_handler_code(state, ErrorHandler::VM_FALLBACK), reason);
 	} else {
-		emit("\t\tgoto vm;\n");
+		emit("\t\t{}\n", jump_to_error_handler_code(state, ErrorHandler::VM_FALLBACK));
 	}
 }
 
+std::string BytecodeToC::jump_to_error_handler_code(FnState& state, ErrorHandler handler) {
+	state.error_handlers_mask |= std::uint64_t(handler);
+
+	std::string_view handler_name;
+	switch (handler) {
+	case ErrorHandler::VM_FALLBACK:         handler_name = "vm"; break;
+	case ErrorHandler::ERR_NULL:            handler_name = "err_null"; break;
+	case ErrorHandler::ERR_DIVIDE_BY_ZERO:  handler_name = "err_divide_by_zero"; break;
+	case ErrorHandler::ERR_DIVIDE_OVERFLOW: handler_name = "err_divide_overflow"; break;
+	}
+
+	return fmt::format(
+	    "regs->pc = {BYTECODE} + {INS_OFFSET}; "
+	    "goto {HANDLER};",
+	    fmt::arg("BYTECODE", m_module_state.fn_bytecode_ptr),
+	    fmt::arg("INS_OFFSET", state.ins.offset),
+	    fmt::arg("HANDLER", handler_name)
+	);
+}
+
+// we don't ever need to save the fp back to the VM registers because the fp is constant within a function, and
+// initialized from the VM registers. it will be saved and reloaded as part of the call state or elsewhere by  the AS
+// engine, but that is distinct from the register save sequence.
+
+void BytecodeToC::emit_save_sp([[maybe_unused]] FnState& state) { emit("\t\tregs->sp = sp;\n"); }
+void BytecodeToC::emit_save_pc(FnState& state, bool next_pc) {
+	emit(
+	    "\t\tregs->pc = {BYTECODE} + {INS_OFFSET};\n",
+	    fmt::arg("BYTECODE", m_module_state.fn_bytecode_ptr),
+	    fmt::arg("INS_OFFSET", state.ins.offset + (next_pc ? state.ins.size : 0))
+	);
+}
 void BytecodeToC::emit_primitive_cast_var_ins(FnState& state, VarType src, VarType dst) {
 	BytecodeInstruction& ins      = state.ins;
 	const bool           in_place = ins.size == 1;
@@ -1293,7 +1290,6 @@ void BytecodeToC::emit_primitive_cast_var_ins(FnState& state, VarType src, VarTy
 		    fmt::arg("DSTPTR", frame_ptr(ins.sword0())),
 		    fmt::arg("SRC", frame_var(in_place ? ins.sword0() : ins.sword1(), src))
 		);
-		emit_auto_bc_inc(state);
 		return;
 	}
 	emit_assign_ins(state, frame_var(ins.sword0(), dst), frame_var(in_place ? ins.sword0() : ins.sword1(), src));
@@ -1430,10 +1426,13 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 	}
 
 	if (will_emit_direct) {
-		emit_auto_bc_inc(state);
-
 		if (known_fn != nullptr) {
-			emit("\t\tasea_prepare_script_stack(_regs, {FN}, pc, sp, fp);\n", fmt::arg("FN", fn_expr));
+			emit(
+			    "\t\tasea_prepare_script_stack(_regs, {FN}, {BYTECODE} + {INS_OFFSET}, sp, fp);\n",
+			    fmt::arg("FN", fn_expr),
+			    fmt::arg("BYTECODE", m_module_state.fn_bytecode_ptr),
+			    fmt::arg("INS_OFFSET", state.ins.offset + state.ins.size)
+			);
 			bool emitted_fp_var = false;
 			// setup stack with our knowledge
 			for (asUINT n = known_fn->scriptData->variables.GetLength(); n-- > 0;) {
@@ -1459,7 +1458,12 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 			}
 		} else {
 			// if the function is not known, do the above stack logic dynamically in runtime
-			emit("\t\tasea_prepare_script_stack_and_vars(_regs, {FN}, pc, sp, fp);\n", fmt::arg("FN", fn_expr));
+			emit(
+			    "\t\tasea_prepare_script_stack_and_vars(_regs, {FN}, {BYTECODE} + {INS_OFFSET}, sp, fp);\n",
+			    fmt::arg("FN", fn_expr),
+			    fmt::arg("BYTECODE", m_module_state.fn_bytecode_ptr),
+			    fmt::arg("INS_OFFSET", state.ins.offset + state.ins.size)
+			);
 		}
 
 		if (known_fn == state.fn) {
@@ -1487,13 +1491,12 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 	} else {
 		// Call fallback: We initiate the call from JIT, and the rest of the JitEntry handler will branch into the
 		// correct instruction.
-		emit_auto_bc_inc(state);
+		emit_save_sp(state);
+		emit_save_pc(state, true);
 		emit(
-		    "{SAVE_REGS}"
 		    "\t\tasea_call_script_function(_regs, {FN});\n"
 		    "\t\treturn;\n",
-		    fmt::arg("FN", fn_expr),
-		    fmt::arg("SAVE_REGS", save_registers_sequence)
+		    fmt::arg("FN", fn_expr)
 		);
 	}
 }
@@ -1529,9 +1532,8 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 		}
 
 		if (!call.is_internal_call) {
-			// could condition programPointer and maybe stackFramePointer(?) on hack_ignore_context_inspect but we need
-			// to write most registers anyway
-			emit("{}", save_registers_sequence);
+			emit_save_sp(state);
+			emit_save_pc(state, true);
 			emit(
 			    "\t\tsp = (asea_var*)((asDWORD*)sp + asea_call_system_function(_regs, {FN}));\n"
 			    "\t\tvalue_reg = regs->value;\n",
@@ -1541,7 +1543,8 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 			// FIXME: doprocessuspend check wrt setting *script* exceptions correctness
 		} else {
 			// TODO: assert for method
-			emit("{}", save_registers_sequence);
+			emit_save_sp(state);
+			emit_save_pc(state, true);
 			emit("\t\tasea_call_object_method(_regs, {}, {});\n", call.object_pointer_override, call.fn_idx);
 		}
 	}
@@ -1821,7 +1824,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	emit("{}", to_emit_before_call);
 
 	if (!m_config->hack_ignore_context_inspect) {
-		emit("{}", save_registers_sequence);
+		emit_save_sp(state);
+		emit_save_pc(state, true);
 	} else {
 		// write stack pointer in case the syscall causes a nested script call; otherwise our stack may get stomped
 		emit("\t\tregs->sp = sp;\n");
@@ -1848,10 +1852,10 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		if (call.object_pointer_override.empty()) {
 			emit(
 			    "\t\tvoid *obj = {OBJ_EXPR};\n"
-			    "\t\tif (obj == 0) {{ goto err_null; }}\n",
+			    "\t\tif (obj == 0) {{ {ERR_NULL_HANDLER} }}\n",
+			    fmt::arg("ERR_NULL_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_NULL)),
 			    fmt::arg("OBJ_EXPR", obj_expr)
 			);
-			state.error_handlers.null = true;
 		} else {
 			emit("\t\tvoid *obj = {};\n", call.object_pointer_override);
 		}
@@ -2003,7 +2007,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 	}
 
 	if (!m_config->hack_ignore_context_inspect) {
-		emit("{}", save_registers_sequence);
+		emit_save_sp(state);
+		emit_save_pc(state, true);
 	} else {
 		// write stack pointer in case the syscall causes a nested script call; otherwise our stack may get stomped
 		emit("\t\tregs->sp = sp;\n");
@@ -2034,9 +2039,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 			    "\t\tpop_size += sizeof(asPWORD) / 4;\n"
 			    "\t\targs += sizeof(asPWORD) / 4;\n"
 			    "\t\tg.currentObject = sp->as_ptr;\n"
-			    "\t\tif (g.currentObject == 0) {{ goto err_null; }}\n"
+			    "\t\tif (g.currentObject == 0) {{ {ERR_NULL_HANDLER} }}\n",
+			    fmt::arg("ERR_NULL_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_NULL))
 			);
-			state.error_handlers.null = true;
 		}
 	}
 
@@ -2109,8 +2114,6 @@ void BytecodeToC::emit_stack_push_ins(FnState& state, std::string_view expr, Var
 	} else {
 		emit_stack_push(state, expr, type);
 	}
-
-	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::flush_stack_push_optimization(FnState& state) {
@@ -2135,7 +2138,6 @@ void BytecodeToC::flush_stack_push_optimization(FnState& state) {
 
 void BytecodeToC::emit_assign_ins(FnState& state, std::string_view dst, std::string_view src) {
 	emit("\t\t{DST} = {SRC};\n", fmt::arg("DST", dst), fmt::arg("SRC", src));
-	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::emit_stack_push(FnState& state, std::string_view expr, VarType type) {
@@ -2152,13 +2154,9 @@ void BytecodeToC::emit_cond_branch_ins(FnState& state, std::string_view test) {
 	bcins::Jump jmp{state.ins};
 	emit(
 	    "\t\tif( {TEST} ) {{\n"
-	    "\t\t\tpc += {BRANCH_OFFSET};\n"
 	    "\t\t\tgoto bc{BRANCH_TARGET};\n"
-	    "\t\t}}\n"
-	    "\t\tpc += {INSTRUCTION_LENGTH};\n",
+	    "\t\t}}\n",
 	    fmt::arg("TEST", test),
-	    fmt::arg("INSTRUCTION_LENGTH", jmp.size),
-	    fmt::arg("BRANCH_OFFSET", jmp.relative_offset()),
 	    fmt::arg("BRANCH_TARGET", jmp.target_offset())
 	);
 }
@@ -2178,7 +2176,6 @@ void BytecodeToC::emit_compare_var_expr_ins(FnState& state, VarType type, std::s
 	    fmt::arg("RHS", rhs_expr),
 	    fmt::arg("TYPE", type.c)
 	);
-	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::emit_test_ins(FnState& state, std::string_view op_with_rhs_0) {
@@ -2187,18 +2184,15 @@ void BytecodeToC::emit_test_ins(FnState& state, std::string_view op_with_rhs_0) 
 	    "\t\tvalue_reg = (value {OP} 0) ? 1 : 0;\n",
 	    fmt::arg("OP", op_with_rhs_0)
 	);
-	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::emit_prefixop_valuereg_ins(FnState& state, std::string_view op, VarType type) {
 	emit("\t\t{OP}((asea_var*)value_reg)->as_{TYPE};\n", fmt::arg("OP", op), fmt::arg("TYPE", type.c));
-	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::emit_unop_var_inplace_ins(FnState& state, std::string_view op, VarType type) {
 	BytecodeInstruction& ins = state.ins;
 	emit("\t\t{VAR} = {OP} {VAR};\n", fmt::arg("OP", op), fmt::arg("VAR", frame_var(ins.sword0(), type)));
-	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::emit_binop_var_var_ins(FnState& state, std::string_view op, VarType lhs, VarType rhs, VarType dst) {
@@ -2210,7 +2204,6 @@ void BytecodeToC::emit_binop_var_var_ins(FnState& state, std::string_view op, Va
 	    fmt::arg("LHS", frame_var(ins.sword1(), lhs)),
 	    fmt::arg("RHS", frame_var(ins.sword2(), rhs))
 	);
-	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::emit_binop_var_imm_ins(
@@ -2228,7 +2221,6 @@ void BytecodeToC::emit_binop_var_imm_ins(
 	    fmt::arg("LHS", frame_var(ins.sword1(), lhs)),
 	    fmt::arg("RHS", rhs_expr)
 	);
-	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::emit_divmod_var_float_ins(FnState& state, std::string_view op, VarType type) {
@@ -2236,16 +2228,15 @@ void BytecodeToC::emit_divmod_var_float_ins(FnState& state, std::string_view op,
 	emit(
 	    "\t\t{TYPE} lhs = {LHS};\n"
 	    "\t\t{TYPE} divider = {RHS};\n"
-	    "\t\tif (divider == 0) {{ goto err_divide_by_zero; }}\n"
+	    "\t\tif (divider == 0) {{ {ERR_DIVIDE_BY_ZERO_HANDLER} }}\n"
 	    "\t\t{DST} = {OP}(lhs, divider);\n",
+	    fmt::arg("ERR_DIVIDE_BY_ZERO_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_DIVIDE_BY_ZERO)),
 	    fmt::arg("TYPE", type.c),
 	    fmt::arg("DST", frame_var(ins.sword0(), type)),
 	    fmt::arg("LHS", frame_var(ins.sword1(), type)),
 	    fmt::arg("RHS", frame_var(ins.sword2(), type)),
 	    fmt::arg("OP", op)
 	);
-	state.error_handlers.divide_by_zero = true;
-	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::emit_divmod_var_int_ins(
@@ -2258,9 +2249,11 @@ void BytecodeToC::emit_divmod_var_int_ins(
 	emit(
 	    "\t\t{TYPE} lhs = {LHS};\n"
 	    "\t\t{TYPE} divider = {RHS};\n"
-	    "\t\tif (divider == 0) {{ goto err_divide_by_zero; }}\n"
-	    "\t\tif (divider == -1 && lhs == ({TYPE}){LHS_OVERFLOW}) {{ goto err_divide_overflow; }}\n"
+	    "\t\tif (divider == 0) {{ {ERR_DIVIDE_BY_ZERO_HANDLER}  }}\n"
+	    "\t\tif (divider == -1 && lhs == ({TYPE}){LHS_OVERFLOW}) {{ {ERR_DIVIDE_OVERFLOW_HANDLER} }}\n"
 	    "\t\t{DST} = lhs {OP} divider;\n",
+	    fmt::arg("ERR_DIVIDE_BY_ZERO_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_DIVIDE_BY_ZERO)),
+	    fmt::arg("ERR_DIVIDE_OVERFLOW_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_DIVIDE_OVERFLOW)),
 	    fmt::arg("TYPE", type.c),
 	    fmt::arg("DST", frame_var(ins.sword0(), type)),
 	    fmt::arg("LHS", frame_var(ins.sword1(), type)),
@@ -2269,25 +2262,21 @@ void BytecodeToC::emit_divmod_var_int_ins(
 	    fmt::arg("OP", op),
 	    fmt::arg("LHS_OVERFLOW", lhs_overflow_value)
 	);
-	state.error_handlers.divide_by_zero  = true;
-	state.error_handlers.divide_overflow = true;
-	emit_auto_bc_inc(state);
 }
 
 void BytecodeToC::emit_divmod_var_unsigned_ins(FnState& state, std::string_view op, VarType type) {
 	BytecodeInstruction& ins = state.ins;
 	emit(
 	    "\t\t{TYPE} divider = {RHS};\n"
-	    "\t\tif (divider == 0) {{ goto err_divide_by_zero; }}\n"
+	    "\t\tif (divider == 0) {{ {ERR_DIVIDE_BY_ZERO_HANDLER}  }}\n"
 	    "\t\t{DST} = {LHS} {OP} divider;\n",
+	    fmt::arg("ERR_DIVIDE_BY_ZERO_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_DIVIDE_BY_ZERO)),
 	    fmt::arg("TYPE", type.c),
 	    fmt::arg("DST", frame_var(ins.sword0(), type)),
 	    fmt::arg("LHS", frame_var(ins.sword1(), type)),
 	    fmt::arg("RHS", frame_var(ins.sword2(), type)),
 	    fmt::arg("OP", op)
 	);
-	state.error_handlers.divide_by_zero = true;
-	emit_auto_bc_inc(state);
 }
 
 std::string BytecodeToC::frame_ptr(std::string_view expr) {

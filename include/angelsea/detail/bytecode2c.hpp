@@ -60,6 +60,9 @@ struct TranspiledCode {
 
 class BytecodeToC {
 	public:
+	struct ExternBytecodeDefinition {
+		asIScriptFunction* fn;
+	};
 	struct ExternScriptFunction {
 		int id;
 	};
@@ -77,8 +80,13 @@ class BytecodeToC {
 	struct ExternTypeInfo {
 		asITypeInfo* object_type;
 	};
-	using ExternMapping = std::
-	    variant<ExternGlobalVariable, ExternStringConstant, ExternScriptFunction, ExternSystemFunction, ExternTypeInfo>;
+	using ExternMapping = std::variant<
+	    ExternBytecodeDefinition,
+	    ExternGlobalVariable,
+	    ExternStringConstant,
+	    ExternScriptFunction,
+	    ExternSystemFunction,
+	    ExternTypeInfo>;
 
 	using OnMapFunctionCallback = std::function<void(asIScriptFunction&, const std::string& name)>;
 	using OnMapExternCallback   = std::function<void(const char* c_name, const ExternMapping& kind, void* raw_value)>;
@@ -117,6 +125,13 @@ class BytecodeToC {
 		VarType type;
 	};
 
+	enum class ErrorHandler : std::uint8_t {
+		VM_FALLBACK         = 1 << 0,
+		ERR_NULL            = 1 << 1,
+		ERR_DIVIDE_BY_ZERO  = 1 << 2,
+		ERR_DIVIDE_OVERFLOW = 1 << 3,
+	};
+
 	struct FnState {
 		asIScriptFunction* fn;
 		/// Current instruction being translated (if in a callee of translate_instruction)
@@ -144,12 +159,7 @@ class BytecodeToC {
 
 		bool has_direct_generic_call;
 
-		struct {
-			bool null : 1            = false;
-			bool divide_by_zero : 1  = false;
-			bool divide_overflow : 1 = false;
-			bool vm_fallback : 1     = false;
-		} error_handlers;
+		std::underlying_type_t<ErrorHandler> error_handlers_mask;
 	};
 
 	std::string create_new_entry_point_name(asIScriptFunction& fn);
@@ -217,9 +227,11 @@ class BytecodeToC {
 	void emit_entry_dispatch(FnState& state);
 	void emit_error_handlers(FnState& state);
 
-	void emit_vm_fallback(FnState& state, std::string_view reason);
+	void        emit_vm_fallback(FnState& state, std::string_view reason);
+	std::string jump_to_error_handler_code(FnState& state, ErrorHandler handler);
 
-	void emit_auto_bc_inc(FnState& state);
+	void emit_save_sp(FnState& state);
+	void emit_save_pc(FnState& state, bool next_pc);
 
 	std::string emit_global_lookup(FnState& state, void* pointer, bool global_var_only);
 	std::string emit_type_info_lookup(FnState& state, asITypeInfo& type);
@@ -382,6 +394,7 @@ class BytecodeToC {
 		std::size_t      type_info_idx       = 0;
 		std::size_t      fn_idx              = 0;
 		std::string      fn_name;
+		std::string      fn_bytecode_ptr;
 	};
 	ModuleState m_module_state;
 
