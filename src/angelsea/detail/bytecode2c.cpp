@@ -2168,9 +2168,7 @@ void BytecodeToC::emit_compare_var_expr_ins(FnState& state, VarType type, std::s
 	emit(
 	    "\t\t{TYPE} lhs = {LHS};\n"
 	    "\t\t{TYPE} rhs = {RHS};\n"
-	    "\t\tif      (lhs == rhs) value_reg = 0;\n"
-	    "\t\telse if (lhs < rhs)  value_reg = -1;\n"
-	    "\t\telse                 value_reg = 1;\n",
+	    "\t\tvalue_reg = (lhs > rhs) - (lhs < rhs);\n",
 	    fmt::arg("LHS", frame_var(state.ins.sword0(), type)),
 	    fmt::arg("RHS", rhs_expr),
 	    fmt::arg("TYPE", type.c)
