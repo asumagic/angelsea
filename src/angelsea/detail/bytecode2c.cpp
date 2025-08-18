@@ -92,12 +92,13 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 
 	// HACK: which we would prefer not to do; but accessing value is
 	// going to be pain with strict aliasing either way
-	emit("\tasea_vm_registers *regs = (asea_vm_registers *)_regs;\n");
-
 	emit(
+	    "\tasea_vm_registers *regs = (asea_vm_registers *)_regs;\n"
+	    "\tasDWORD *const base_pc = {BASE_PC};\n"
 	    "\tasea_var* sp = regs->sp;\n"
 	    "\tasea_var *const fp = regs->fp;\n"
-	    "\tasQWORD value_reg = regs->value;\n"
+	    "\tasQWORD value_reg = regs->value;\n",
+	    fmt::arg("BASE_PC", m_module_state.fn_bytecode_ptr)
 	);
 
 	FnState state{
@@ -1256,9 +1257,8 @@ std::string BytecodeToC::jump_to_error_handler_code(FnState& state, ErrorHandler
 	}
 
 	return fmt::format(
-	    "regs->pc = {BYTECODE} + {INS_OFFSET}; "
+	    "regs->pc = base_pc + {INS_OFFSET}; "
 	    "goto {HANDLER};",
-	    fmt::arg("BYTECODE", m_module_state.fn_bytecode_ptr),
 	    fmt::arg("INS_OFFSET", state.ins.offset),
 	    fmt::arg("HANDLER", handler_name)
 	);
@@ -1271,8 +1271,7 @@ std::string BytecodeToC::jump_to_error_handler_code(FnState& state, ErrorHandler
 void BytecodeToC::emit_save_sp([[maybe_unused]] FnState& state) { emit("\t\tregs->sp = sp;\n"); }
 void BytecodeToC::emit_save_pc(FnState& state, bool next_pc) {
 	emit(
-	    "\t\tregs->pc = {BYTECODE} + {INS_OFFSET};\n",
-	    fmt::arg("BYTECODE", m_module_state.fn_bytecode_ptr),
+	    "\t\tregs->pc = base_pc + {INS_OFFSET};\n",
 	    fmt::arg("INS_OFFSET", state.ins.offset + (next_pc ? state.ins.size : 0))
 	);
 }
@@ -1428,7 +1427,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 	if (will_emit_direct) {
 		if (known_fn != nullptr) {
 			emit(
-			    "\t\tasea_prepare_script_stack(_regs, {FN}, {BYTECODE} + {INS_OFFSET}, sp, fp);\n",
+			    "\t\tasea_prepare_script_stack(_regs, {FN}, base_pc + {INS_OFFSET}, sp, fp);\n",
 			    fmt::arg("FN", fn_expr),
 			    fmt::arg("BYTECODE", m_module_state.fn_bytecode_ptr),
 			    fmt::arg("INS_OFFSET", state.ins.offset + state.ins.size)
@@ -1459,7 +1458,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 		} else {
 			// if the function is not known, do the above stack logic dynamically in runtime
 			emit(
-			    "\t\tasea_prepare_script_stack_and_vars(_regs, {FN}, {BYTECODE} + {INS_OFFSET}, sp, fp);\n",
+			    "\t\tasea_prepare_script_stack_and_vars(_regs, {FN}, base_pc + {INS_OFFSET}, sp, fp);\n",
 			    fmt::arg("FN", fn_expr),
 			    fmt::arg("BYTECODE", m_module_state.fn_bytecode_ptr),
 			    fmt::arg("INS_OFFSET", state.ins.offset + state.ins.size)
