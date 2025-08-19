@@ -86,6 +86,7 @@ see rationale further below.
 
 It has optional dependencies on:
 - [**Catch2**](https://github.com/catchorg/Catch2/tree/devel) (for testing)
+- [**nanobench**](https://github.com/martinus/nanobench/) (for benchmarking in testing)
 
 > [!NOTE]
 > In theory, if you want to avoid building via CMake, you could pull Angelsea
