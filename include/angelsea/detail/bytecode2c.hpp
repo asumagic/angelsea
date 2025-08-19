@@ -379,81 +379,83 @@ class BytecodeToC {
 
 	/// Make a local variable using some operand, where `value` is either a known operand type or a variant of known
 	/// operand types. Returns the type of the created variable.
-	template<class T>
-	VarType make_local_from_operand(FnState& state, std::string_view name, const T& variant_or_operand) {
-		const auto visitor = overloaded{
-		    [&]<typename U>(const operands::Immediate<U>& v)
-		        requires std::is_integral_v<U>
-		    {
-			    const auto type = v.get_type();
+	template<class T> VarType make_local_from_operand(FnState& state, std::string_view name, const T& operand);
+};
+
+template<class T>
+inline VarType BytecodeToC::make_local_from_operand(FnState& state, std::string_view name, const T& operand) {
+	const auto visitor = overloaded{
+	    [&]<typename U>(const operands::Immediate<U>& v)
+	        requires std::is_integral_v<U>
+	    {
+		    const auto type = v.get_type();
+		    emit(
+		        "\t\t{TYPE} {NAME} = {VALUE};\n",
+		        fmt::arg("TYPE", type.c),
+		        fmt::arg("NAME", name),
+		        fmt::arg("VALUE", imm_int(v.value, type))
+		    );
+		    return type;
+	    },
+	    [&](const operands::Immediate<float>& v) {
+		    emit(
+		        "\t\tasea_i2f_inst.i = {VALUE};\n"
+		        "\t\tfloat {NAME} = asea_i2f_inst.f;\n",
+		        fmt::arg("NAME", name),
+		        fmt::arg("VALUE", imm_int(std::bit_cast<asDWORD>(v.value), var_types::u32))
+		    );
+		    return var_types::f32;
+	    },
+	    [&](const operands::FrameVariable& v) {
+		    // FIXME: can't handle fp yet
+		    emit(
+		        "\t\t{TYPE} {NAME} = {VAR};\n",
+		        fmt::arg("TYPE", v.type.c),
+		        fmt::arg("NAME", name),
+		        fmt::arg("VAR", frame_var(v.idx, v.type))
+		    );
+		    return v.type;
+	    },
+	    [&](const operands::FrameVariablePointer& v) {
+		    emit("\t\tvoid* {NAME} = {VAR};\n", fmt::arg("NAME", name), fmt::arg("VAR", frame_ptr(v.idx)));
+		    return var_types::void_ptr;
+	    },
+	    [&](const operands::GlobalVariable& v) {
+		    std::string symbol = emit_global_lookup(state, v.ptr, !v.can_refer_to_str);
+		    if (v.dereference) {
 			    emit(
-			        "\t\t{TYPE} {NAME} = {VALUE};\n",
-			        fmt::arg("TYPE", type.c),
-			        fmt::arg("NAME", name),
-			        fmt::arg("VALUE", imm_int(v.value, type))
-			    );
-			    return type;
-		    },
-		    [&](const operands::Immediate<float>& v) {
-			    emit(
-			        "\t\tasea_i2f_inst.i = {VALUE};\n"
-			        "\t\tfloat {NAME} = asea_i2f_inst.f;\n",
-			        fmt::arg("NAME", name),
-			        fmt::arg("VALUE", imm_int(std::bit_cast<asDWORD>(v.value), var_types::u32))
-			    );
-			    return var_types::f32;
-		    },
-		    [&](const operands::FrameVariable& v) {
-			    // FIXME: can't handle fp yet
-			    emit(
-			        "\t\t{TYPE} {NAME} = {VAR};\n",
+			        "\t\t{TYPE} {NAME} = *({TYPE}*)&{GLOBAL};\n",
 			        fmt::arg("TYPE", v.type.c),
 			        fmt::arg("NAME", name),
-			        fmt::arg("VAR", frame_var(v.idx, v.type))
+			        fmt::arg("GLOBAL", symbol)
 			    );
-			    return v.type;
-		    },
-		    [&](const operands::FrameVariablePointer& v) {
-			    emit("\t\tvoid* {NAME} = {VAR};\n", fmt::arg("NAME", name), fmt::arg("VAR", frame_ptr(v.idx)));
-			    return var_types::void_ptr;
-		    },
-		    [&](const operands::GlobalVariable& v) {
-			    std::string symbol = emit_global_lookup(state, v.ptr, !v.can_refer_to_str);
-			    if (v.dereference) {
-				    emit(
-				        "\t\t{TYPE} {NAME} = *({TYPE}*)&{GLOBAL};\n",
-				        fmt::arg("TYPE", v.type.c),
-				        fmt::arg("NAME", name),
-				        fmt::arg("GLOBAL", symbol)
-				    );
-				    return v.type;
-			    }
-			    emit("\t\tvoid* {NAME} = &{GLOBAL};\n", fmt::arg("NAME", name), fmt::arg("GLOBAL", symbol));
-			    return var_types::void_ptr;
-		    },
-		    [&](const operands::ObjectType& v) {
-			    const auto objtype_symbol = emit_type_info_lookup(state, *v.ptr);
-			    emit(
-			        "\t\tasCObjectType* {NAME} = &{OBJ_TYPE};\n",
-			        fmt::arg("NAME", name),
-			        fmt::arg("OBJ_TYPE", objtype_symbol)
-			    );
-			    return var_types::void_ptr;
-		    },
-		    [&](const operands::ValueRegister& v) {
-			    // FIXME: can't handle fp yet
-			    emit("\t\t{TYPE} {NAME} = value_reg;\n", fmt::arg("TYPE", v.type.c), fmt::arg("NAME", name));
 			    return v.type;
 		    }
-		};
+		    emit("\t\tvoid* {NAME} = &{GLOBAL};\n", fmt::arg("NAME", name), fmt::arg("GLOBAL", symbol));
+		    return var_types::void_ptr;
+	    },
+	    [&](const operands::ObjectType& v) {
+		    const auto objtype_symbol = emit_type_info_lookup(state, *v.ptr);
+		    emit(
+		        "\t\tasCObjectType* {NAME} = &{OBJ_TYPE};\n",
+		        fmt::arg("NAME", name),
+		        fmt::arg("OBJ_TYPE", objtype_symbol)
+		    );
+		    return var_types::void_ptr;
+	    },
+	    [&](const operands::ValueRegister& v) {
+		    // FIXME: can't handle fp yet
+		    emit("\t\t{TYPE} {NAME} = value_reg;\n", fmt::arg("TYPE", v.type.c), fmt::arg("NAME", name));
+		    return v.type;
+	    },
+	};
 
-		// dispatch over variant or call directly
-		if constexpr (requires { std::visit(visitor, variant_or_operand); }) {
-			return std::visit(visitor, variant_or_operand);
-		} else {
-			return visitor(variant_or_operand);
-		}
+	// dispatch over variant or call directly
+	if constexpr (requires { std::visit(visitor, operand); }) {
+		return std::visit(visitor, operand);
+	} else {
+		return visitor(operand);
 	}
-};
+}
 
 } // namespace angelsea::detail
