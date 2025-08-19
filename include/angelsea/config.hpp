@@ -151,8 +151,13 @@ struct JitConfig {
 		/// Requires compiler support (includes: C2MIR, gcc, clang, but not MSVC).
 		/// Disabled by default, because it seems to regress performance with C2MIR.
 		bool use_gnu_label_as_value = false;
-		bool human_readable         = false;
-		bool copyright_header       = false;
+		/// Enables use of __builtin_expect, which can improve code generation by biasing the code generator to assume
+		/// certain branches may or may not get taken. This enables slightly more efficient generated code when using
+		/// the MIR JIT. We wouldn't recommend enabling it for smarter AOT compilers, though.
+		/// Requires compiler support (includes: C2MIR, gcc, clang, but not MSVC).
+		bool use_builtin_expect = true;
+		bool human_readable     = false;
+		bool copyright_header   = false;
 
 		/// Emits direct values to determine the offset of fields within e.g. `asCContext` as opposed to using external
 		/// globals in C code. This results in less portable code (which does not matter for JIT). When using MIR JIT

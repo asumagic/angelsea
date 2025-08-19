@@ -17,27 +17,6 @@
 
 namespace angelsea::detail {
 
-/// Describes the type of a value on the stack, which is useful to abstract its
-/// loading and storing.
-/// This is used both for operands and the destination.
-struct VarType {
-	/// C type name
-	std::string_view c;
-	/// Accessor name for asea_var
-	/// FIXME: change uses of c where relevant
-	std::string_view var_accessor;
-	std::size_t      size;
-
-	bool operator==(const VarType& other) const { return c == other.c; };
-};
-
-namespace var_types {
-static constexpr VarType s8{"asINT8", "asINT8", 1}, s16{"asINT16", "asINT16", 2}, s32{"asINT32", "asINT32", 4},
-    s64{"asINT64", "asINT64", 8}, u8{"asBYTE", "asBYTE", 1}, u16{"asWORD", "asWORD", 2}, u32{"asDWORD", "asDWORD", 4},
-    u64{"asQWORD", "asQWORD", 8}, pword{"asPWORD", "asPWORD", 8 /* should never be used for this type anyway */},
-    void_ptr{"void*", "ptr", 8 /* same as pword */}, f32{"float", "float", 4}, f64{"double", "double", 8};
-} // namespace var_types
-
 struct TranspiledBlocks {
 	std::string forward_declarations;
 	std::string function_code;
@@ -309,24 +288,15 @@ class BytecodeToC {
 
 	void emit_assign_ins(FnState& state, std::string_view dst, std::string_view src);
 
-	/// Emits the complete handler for a conditional relative branching instruction.
-	/// If the condition provided by the expression in `test` is true, then perform a relative jump by the specified
-	/// amount.
-	void emit_cond_branch_ins(FnState& state, std::string_view test);
+	/// Emits a conditional branch: If `expr` is true then jump to the specified bytecode offset, otherwise continue.
+	void emit_cond_branch(FnState& state, std::string_view expr, std::size_t target_offset);
 
-	/// Emits the complete handler for a compare instruction between two variables on the stack (whether integral or
-	/// floating-point).
-	/// - If var1 == var2 => *valueRegister =  0
-	/// - If var1 < var2  => *valueRegister = -1
-	/// - If var1 > var2  => *valueRegister =  1
-	void emit_compare_var_var_ins(FnState& state, VarType type);
-
-	/// Emits the complete handler for a compare instruction between a variable on the stack and the result of an
-	/// expression (whether integral or floating-point).
-	/// - If var1 == imm => *valueRegister =  0
-	/// - If var1 < imm  => *valueRegister = -1
-	/// - If var1 > imm  => *valueRegister =  1
-	void emit_compare_var_expr_ins(FnState& state, VarType type, std::string_view rhs_expr);
+	/// Emits the handler for a compare instruction between a variable on the stack and the result of an expression
+	/// (whether integral or floating-point).
+	/// - If lhs == rhs => *valueRegister =  0
+	/// - If lhs < rhs  => *valueRegister = -1
+	/// - If lhs > rhs  => *valueRegister =  1
+	void emit_compare(FnState& state, const bcins::Compare& compare);
 
 	/// Emits the complete handler for a test instruction.
 	/// Writes the boolean result of `valueRegister {op} 0` to `valueRegister`.
@@ -399,8 +369,66 @@ class BytecodeToC {
 	ModuleState m_module_state;
 
 	std::size_t m_module_idx;
+
+	template<class T> void make_local_from_operand(FnState& state, std::string_view name, const T& value) {
+		std::visit([&](auto&& v) { make_local_from_operand(state, name, v); }, value);
+	}
 };
 
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset);
+
+template<>
+inline void BytecodeToC::make_local_from_operand<bcins::operands::Immediate<asINT32>>(
+    [[maybe_unused]] FnState&                  state,
+    std::string_view                           name,
+    const bcins::operands::Immediate<asINT32>& value
+) {
+	emit(
+	    "\t\tasINT32 {NAME} = {VALUE};\n",
+	    fmt::arg("NAME", name),
+	    fmt::arg("VALUE", imm_int(value.value, var_types::s32))
+	);
+}
+
+template<>
+inline void BytecodeToC::make_local_from_operand<bcins::operands::Immediate<asDWORD>>(
+    [[maybe_unused]] FnState&                  state,
+    std::string_view                           name,
+    const bcins::operands::Immediate<asDWORD>& value
+) {
+	emit(
+	    "\t\tasDWORD {NAME} = {VALUE};\n",
+	    fmt::arg("NAME", name),
+	    fmt::arg("VALUE", imm_int(value.value, var_types::u32))
+	);
+}
+
+template<>
+inline void BytecodeToC::make_local_from_operand<bcins::operands::Immediate<float>>(
+    [[maybe_unused]] FnState&                state,
+    std::string_view                         name,
+    const bcins::operands::Immediate<float>& value
+) {
+	emit(
+	    "\t\tasea_i2f_inst.i = {VALUE};\n"
+	    "\t\tfloat {NAME} = asea_i2f_inst.f;\n",
+	    fmt::arg("NAME", name),
+	    fmt::arg("VALUE", imm_int(std::bit_cast<asDWORD>(value.value), var_types::u32))
+	);
+}
+
+template<>
+inline void BytecodeToC::make_local_from_operand<bcins::operands::Var>(
+    FnState&                    state,
+    std::string_view            name,
+    const bcins::operands::Var& value
+) {
+	emit(
+	    "\t\t{TYPE} {NAME} = {VAR};\n",
+	    fmt::arg("TYPE", value.type.c),
+	    fmt::arg("NAME", name),
+	    fmt::arg("VAR", frame_var(value.idx, value.type))
+	);
+}
 
 } // namespace angelsea::detail

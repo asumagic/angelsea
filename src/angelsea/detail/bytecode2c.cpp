@@ -21,6 +21,7 @@
 #include <bit>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+#include <variant>
 
 #define DIRECT_VALUE_IF_POSSIBLE(var) (m_config->c.emit_hardcoded_vm_offsets ? fmt::to_string(var) : #var)
 
@@ -28,8 +29,6 @@ namespace angelsea::detail {
 
 // TODO: fix indent level for all of those that use this...
 // TODO: format immediate functions instead of using fmt::format/to_string for it
-
-template<typename T> static std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
 
 BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix) :
     m_config(&config), m_script_engine(&engine), m_c_symbol_prefix(std::move(c_symbol_prefix)), m_module_idx(-1) {}
@@ -97,7 +96,8 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	    "\tasDWORD *const base_pc = {BASE_PC};\n"
 	    "\tasea_var* sp = regs->sp;\n"
 	    "\tasea_var *const fp = regs->fp;\n"
-	    "\tasQWORD value_reg = regs->value;\n",
+	    "\tasQWORD value_reg = regs->value;\n"
+	    "\tint cond_reg;\n",
 	    fmt::arg("BASE_PC", m_module_state.fn_bytecode_ptr)
 	);
 
@@ -1069,14 +1069,26 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		break;
 	}
 
-	case asBC_JZ:     emit_cond_branch_ins(state, "(asINT32)value_reg == 0"); break;
-	case asBC_JLowZ:  emit_cond_branch_ins(state, "(asBYTE)value_reg == 0"); break;
-	case asBC_JNZ:    emit_cond_branch_ins(state, "(asINT32)value_reg != 0"); break;
-	case asBC_JLowNZ: emit_cond_branch_ins(state, "(asBYTE)value_reg != 0"); break;
-	case asBC_JS:     emit_cond_branch_ins(state, "(asINT32)value_reg < 0"); break;
-	case asBC_JNS:    emit_cond_branch_ins(state, "(asINT32)value_reg >= 0"); break;
-	case asBC_JP:     emit_cond_branch_ins(state, "(asINT32)value_reg > 0"); break;
-	case asBC_JNP:    emit_cond_branch_ins(state, "(asINT32)value_reg <= 0"); break;
+	case asBC_JZ:
+	case asBC_JLowZ:
+	case asBC_JNZ:
+	case asBC_JLowNZ:
+	case asBC_JS:
+	case asBC_JNS:
+	case asBC_JP:
+	case asBC_JNP:    {
+		bcins::Jump jmp{ins};
+		emit_cond_branch(
+		    state,
+		    fmt::format(
+		        "({TYPE})value_reg {OP} 0",
+		        fmt::arg("TYPE", jmp.cond_expr->lhs_type.c),
+		        fmt::arg("OP", jmp.cond_expr->c_comparison_op)
+		    ),
+		    jmp.target_offset()
+		);
+		break;
+	}
 
 	case asBC_TZ:     emit_test_ins(state, "=="); break;
 	case asBC_TNZ:    emit_test_ins(state, "!="); break;
@@ -1085,20 +1097,16 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	case asBC_TP:     emit_test_ins(state, ">"); break;
 	case asBC_TNP:    emit_test_ins(state, "<="); break;
 
-	case asBC_CMPi:   emit_compare_var_var_ins(state, s32); break;
-	case asBC_CMPu:   emit_compare_var_var_ins(state, u32); break;
-	case asBC_CMPd:   emit_compare_var_var_ins(state, f64); break;
-	case asBC_CMPf:   emit_compare_var_var_ins(state, f32); break;
-	case asBC_CMPi64: emit_compare_var_var_ins(state, s64); break;
-	case asBC_CMPu64: emit_compare_var_var_ins(state, u64); break;
-	case asBC_CmpPtr: emit_compare_var_var_ins(state, pword); break;
-
-	case asBC_CMPIi:  emit_compare_var_expr_ins(state, s32, imm_int(ins.int0(), s32)); break;
-	case asBC_CMPIu:  emit_compare_var_expr_ins(state, u32, imm_int(ins.dword0(), u32)); break;
-	case asBC_CMPIf:
-		emit("\t\tasea_i2f rhs_i2f = {{.i={}}};\n", ins.dword0());
-		emit_compare_var_expr_ins(state, f32, "rhs_i2f.f");
-		break;
+	case asBC_CMPi:
+	case asBC_CMPu:
+	case asBC_CMPd:
+	case asBC_CMPf:
+	case asBC_CMPi64:
+	case asBC_CMPu64:
+	case asBC_CmpPtr:
+	case asBC_CMPIi:
+	case asBC_CMPIu:
+	case asBC_CMPIf:  emit_compare(state, bcins::Compare{ins}); break;
 
 	case asBC_INCi8:  emit_prefixop_valuereg_ins(state, "++", u8); break;
 	case asBC_DECi8:  emit_prefixop_valuereg_ins(state, "--", u8); break;
@@ -2156,30 +2164,27 @@ void BytecodeToC::emit_stack_push(FnState& state, std::string_view expr, VarType
 	emit("\t\tsp->as_{TYPE} = {EXPR};\n", fmt::arg("TYPE", type.c), fmt::arg("EXPR", expr));
 }
 
-void BytecodeToC::emit_cond_branch_ins(FnState& state, std::string_view test) {
-	bcins::Jump jmp{state.ins};
+void BytecodeToC::emit_cond_branch(FnState& state, std::string_view expr, std::size_t target_offset) {
+	if (m_config->c.use_builtin_expect) {
+		emit(
+		    "\t\tif (__builtin_expect({TEST}, {EXPECTED_BRANCH_VALUE})) {{\n",
+		    fmt::arg("TEST", expr),
+		    fmt::arg("EXPECTED_BRANCH_VALUE", target_offset < int(state.ins.offset) ? 1 : 0)
+		);
+	} else {
+		emit("\t\tif ({TEST}) {{\n", fmt::arg("TEST", expr));
+	}
 	emit(
-	    "\t\tif( {TEST} ) {{\n"
 	    "\t\t\tgoto bc{BRANCH_TARGET};\n"
 	    "\t\t}}\n",
-	    fmt::arg("TEST", test),
-	    fmt::arg("BRANCH_TARGET", jmp.target_offset())
+	    fmt::arg("BRANCH_TARGET", target_offset)
 	);
 }
 
-void BytecodeToC::emit_compare_var_var_ins(FnState& state, VarType type) {
-	emit_compare_var_expr_ins(state, type, frame_var(state.ins.sword1(), type));
-}
-
-void BytecodeToC::emit_compare_var_expr_ins(FnState& state, VarType type, std::string_view rhs_expr) {
-	emit(
-	    "\t\t{TYPE} lhs = {LHS};\n"
-	    "\t\t{TYPE} rhs = {RHS};\n"
-	    "\t\tvalue_reg = (lhs > rhs) - (lhs < rhs);\n",
-	    fmt::arg("LHS", frame_var(state.ins.sword0(), type)),
-	    fmt::arg("RHS", rhs_expr),
-	    fmt::arg("TYPE", type.c)
-	);
+void BytecodeToC::emit_compare(FnState& state, const bcins::Compare& compare) {
+	make_local_from_operand(state, "lhs", compare.lhs);
+	make_local_from_operand(state, "rhs", compare.rhs);
+	emit("\t\tvalue_reg = (lhs > rhs) - (lhs < rhs);\n");
 }
 
 void BytecodeToC::emit_test_ins(FnState& state, std::string_view op_with_rhs_0) {
