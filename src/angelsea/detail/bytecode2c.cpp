@@ -138,57 +138,8 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 		);
 	}
 
-	// Transpiled functions are compiled to be JIT entry points for the
-	// AngelScript VM.
-	//
-	// The conversion process is relatively simple: There is no deep analysis of
-	// bytecode; for each bytecode instruction we emit one block of C code,
-	// which is largely similar to the equivalent source code in the AngelScript
-	// VM (asCContext::ExecuteNext()).
-	// If we can't handle an instruction, we rebuild whatever state we need to
-	// return to the VM and we `return;` out of the function. This includes
-	// instructions we might not be supporting yet, or that are too complex to
-	// implement.
-	//
-	// A script function may have one equivalent JIT function (the one we are
-	// emitting here).
-	// To differentiate between JIT entry points, we can assign a non-zero
-	// asPWORD to each of them.
-	// We handle this by simply assigning each asBC_JitEntry a unique increasing
-	// number (we will call this an entry ID). We then simply `switch` on that
-	// entry ID (see later) to `goto` to the C handler of a given bytecode
-	// instruction.
-	//
-	// A transpiled function looks like this (simplified, with offsets made up,
-	// etc.):
-	//
-	// void asea_jit_mod1_fn3(asSVMRegisters *regs, asPWORD entryLabel) {
-	//     switch (entryLabel)
-	//     {
-	//     case 1: goto bc0;
-	//     case 2: goto bc7;
-	//     }
-	//
-	//     /* bytecode: JitEntry 1 */
-	//     bc0: { /* <-- unique C label where the value is the equivalent bytecode
-	//     offset */
-	//         /* <- no useful handler for jit entries */
-	//     }
-	//     /* fallthrough to the next instruction */
-	//
-	//     /* bytecode: [DISASSEMBLED INSTRUCTION] */
-	//     bc3: {
-	//         blah blah do stuff
-	//         /* <-- code handling the instruction */
-	//     }
-	//     /* fallthrough to the next instruction */
-	//
-	//     /* bytecode: JitEntry 2 */
-	//     bc3: {
-	//     }
-	//
-	//     etc.
-	// }
+	// check generated code with for an idea of the generated code structure; also see the Q&A in readme that briefly
+	// explains how the translation process occurs.
 
 	if (m_config->debug.trace_functions) {
 		const char* section;
