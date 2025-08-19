@@ -222,13 +222,13 @@ struct FusedCompareJump {
 	bcins::Jump    jump;
 };
 
-/// No-op that does not do anything. Used to mask over
+/// No-op that does not do anything. Used to mask over instructions that have been fused.
 struct Nop {};
 
 } // namespace virtins
 
 // TODO: pretty inefficient, at some point we probably want to just translate the whole bytecode to a vector of our own
-// that is more compact than a vector of std::variant
+// that is more compact than a vector of std::variant. Would also get rid of the virtins::Nop
 using VirtualInstruction = std::variant<virtins::FusedCompareJump, virtins::Nop>;
 
 } // namespace angelsea::detail
