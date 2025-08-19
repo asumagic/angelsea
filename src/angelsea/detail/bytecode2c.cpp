@@ -113,7 +113,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	    .branch_targets           = {},    // populated by discover_branch_targets
 	    .stack_push_infos         = {},    // populated by discover_function_call_pushes
 	    .fn_to_stack_push         = {},    // ^
-	    .overriden_instructions   = {},    // populated by discover_peephole
+	    .overriden_instructions   = {},    // populated by several passes, but primarily discover_peephole
 	    .emitted_symbols          = {},    // populated by whatever emits extern declarations
 	    .has_direct_generic_call  = false, // populated by discover_function_calls
 	    .error_handlers_mask      = 0,     // populated by any translate_instruction
@@ -270,6 +270,9 @@ void BytecodeToC::discover_switch_map(FnState& state) {
 		} else if (ins.opcode() == asBC_JMP) {
 			if (current_mapping != nullptr) {
 				current_mapping->emplace_back(ins.offset + ins.size() + ins.int0());
+
+				// avoid emitting useless BBs that will just get destroyed anyway
+				state.overriden_instructions.emplace(ins.offset, virtins::Nop{});
 			}
 		} else {
 			current_mapping = nullptr;
