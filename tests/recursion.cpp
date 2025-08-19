@@ -89,6 +89,7 @@ TEST_CASE("fib benchmark", "[fib][benchmark]") {
 	{
 		auto b = default_benchmark();
 		b.title("Iterative fib(10000)");
+		b.warmup(20);
 		b.run("Interpreter", [&] { ankerl::nanobench::doNotOptimizeAway(run_fib(10000, interp_fib_iterative, true)); });
 		b.run("JIT", [&] { ankerl::nanobench::doNotOptimizeAway(run_fib(10000, jit_fib_iterative, true)); });
 		b.run("C++", [&] {

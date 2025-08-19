@@ -6,6 +6,6 @@
 
 inline ankerl::nanobench::Bench default_benchmark() {
 	ankerl::nanobench::Bench b;
-	b.relative(true).performanceCounters(true).minEpochIterations(5);
+	b.relative(true).performanceCounters(true).minEpochIterations(5).warmup(1);
 	return b;
 }
