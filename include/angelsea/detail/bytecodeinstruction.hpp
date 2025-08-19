@@ -6,6 +6,7 @@
 #include <angelscript.h>
 #include <angelsea/detail/debug.hpp>
 #include <array>
+#include <as_objecttype.h>
 #include <as_scriptengine.h>
 #include <as_scriptfunction.h>
 #include <bit>
@@ -51,6 +52,13 @@ struct VarType {
 	bool operator==(const VarType& other) const { return c == other.c; };
 };
 
+namespace var_types {
+static constexpr VarType s8{"asINT8", "asINT8", 1}, s16{"asINT16", "asINT16", 2}, s32{"asINT32", "asINT32", 4},
+    s64{"asINT64", "asINT64", 8}, u8{"asBYTE", "asBYTE", 1}, u16{"asWORD", "asWORD", 2}, u32{"asDWORD", "asDWORD", 4},
+    u64{"asQWORD", "asQWORD", 8}, pword{"asPWORD", "asPWORD", 8 /* should never be used for this type anyway */},
+    void_ptr{"void*", "ptr", 8 /* same as pword */}, f32{"float", "float", 4}, f64{"double", "double", 8};
+} // namespace var_types
+
 template<typename T> inline std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
 
 namespace operands {
@@ -60,23 +68,93 @@ struct FrameVariable {
 	short   idx;
 	VarType type;
 
+	VarType get_type() const { return type; }
+
 	bool operator==(const FrameVariable&) const = default;
+};
+
+/// Models the address of a specific variable slot in the currente function's stack frame.
+struct FrameVariablePointer {
+	short idx;
+
+	static constexpr VarType get_type() { return var_types::void_ptr; }
+
+	bool operator==(const FrameVariablePointer&) const = default;
 };
 
 /// Models a value that is directly embedded in the code.
 template<class T> struct Immediate {
 	T value;
 
+	static constexpr VarType get_type() {
+		// just handle the types we may be using
+		if constexpr (std::is_same_v<T, asDWORD>) {
+			return var_types::u32;
+		}
+		if constexpr (std::is_same_v<T, asQWORD>) {
+			return var_types::u64;
+		}
+		if constexpr (std::is_same_v<T, asPWORD>) {
+			return var_types::pword;
+		}
+		if constexpr (std::is_same_v<T, asINT32>) {
+			return var_types::s32;
+		}
+		if constexpr (std::is_same_v<T, float>) {
+			return var_types::f32;
+		}
+	}
+
 	bool operator==(const Immediate<T>&) const = default;
+};
+
+/// Models a pointer-sized immediate, although it does not have to point to an actual address in memory.
+struct PointerImmediate {
+	asPWORD value;
+
+	static constexpr VarType get_type() { return var_types::pword; }
+
+	bool operator==(const PointerImmediate&) const = default;
+};
+
+/// Models a pointer to a global variable. The pointer points directly to the actual value. Figuring out what the global
+/// variable is relies inspecting the script engine context.
+struct GlobalVariable {
+	void*   ptr;
+	VarType type;
+	/// Whether the operand can refer to a global string in the string pool (or if not, if it can only refer to proper
+	/// global variables). Depends on the instruction.
+	bool can_refer_to_str;
+	/// Whether we are dereferencing the global variable, or merely taking its address.
+	bool dereference; // TODO: should this just be a different operand type?
+
+	VarType get_type() const { return dereference ? type : var_types::void_ptr; }
+
+	bool operator==(const GlobalVariable&) const = default;
+};
+
+/// Models a reference to an object type.
+struct ObjectType {
+	asCObjectType* ptr;
+
+	static constexpr VarType get_type() { return var_types::void_ptr; }
+
+	bool operator==(const ObjectType&) const = default;
+};
+
+/// Models that the operand should be the value register interpreted as a specific type.
+struct ValueRegister {
+	VarType type;
+
+	VarType get_type() const { return type; }
+
+	bool operator==(const ValueRegister&) const = default;
 };
 } // namespace operands
 
-namespace var_types {
-static constexpr VarType s8{"asINT8", "asINT8", 1}, s16{"asINT16", "asINT16", 2}, s32{"asINT32", "asINT32", 4},
-    s64{"asINT64", "asINT64", 8}, u8{"asBYTE", "asBYTE", 1}, u16{"asWORD", "asWORD", 2}, u32{"asDWORD", "asDWORD", 4},
-    u64{"asQWORD", "asQWORD", 8}, pword{"asPWORD", "asPWORD", 8 /* should never be used for this type anyway */},
-    void_ptr{"void*", "ptr", 8 /* same as pword */}, f32{"float", "float", 4}, f64{"double", "double", 8};
-} // namespace var_types
+VarType visit_operand_type(const auto& variant) {
+	return std::visit([](const auto& operand) { return operand.get_type(); }, variant);
+}
 
 /// Groups semantically similar bytecode instructions under common structs with metadata
 namespace bcins {
@@ -93,7 +171,6 @@ template<typename T> std::optional<T> try_as(const InsRef& ins) {
 
 /// Conditional or unconditional jump instruction, excluding switches.
 struct Jump : InsRef {
-	public:
 	static constexpr std::array valid_opcodes
 	    = {asBC_JMP, asBC_JZ, asBC_JLowZ, asBC_JNZ, asBC_JLowNZ, asBC_JS, asBC_JNS, asBC_JP, asBC_JNP};
 	explicit Jump(const InsRef& ins) : InsRef(ins) {
@@ -124,8 +201,64 @@ struct Jump : InsRef {
 	std::optional<CondExpr> cond_expr;
 };
 
-/// Comparison of an integral or floating-point type, where the result is -1, 0 or 1 for `lhs < rhs`, `lhs == rhs`, or
-/// `lhs > rhs` respectively.
+struct StackPush : InsRef {
+	static constexpr std::array valid_opcodes
+	    = {asBC_TYPEID,
+	       asBC_PshC4,
+	       asBC_PshV4,
+	       asBC_PshG4,
+	       asBC_PshC8,
+	       asBC_PshV8,
+	       asBC_VAR,
+	       asBC_PshNull,
+	       asBC_PshVPtr,
+	       asBC_PshGPtr,
+	       asBC_PshRPtr,
+	       asBC_PSF,
+	       asBC_PGA,
+	       asBC_OBJTYPE};
+
+	explicit StackPush(const InsRef& ins) : InsRef(ins) {
+		using namespace var_types;
+		using namespace operands;
+
+		angelsea_assert(is_specific_ins<StackPush>(ins));
+
+		switch (ins.opcode()) {
+			// TODO: when supported
+			// case asBC_FuncPtr:
+			// case asBC_PshListElmnt:
+		case asBC_TYPEID:
+		case asBC_PshC4:   value = Immediate<asDWORD>{ins.dword0()}; break;
+		case asBC_PshV4:   value = FrameVariable{ins.sword0(), u32}; break;
+		case asBC_PshG4:   value = GlobalVariable{std::bit_cast<void*>(ins.pword0()), u32, true, true}; break;
+		case asBC_PshC8:   value = Immediate<asQWORD>{ins.qword0()}; break;
+		case asBC_PshV8:   value = FrameVariable{ins.sword0(), u64}; break;
+		case asBC_VAR:     value = PointerImmediate{asPWORD(ins.sword0())}; break;
+		case asBC_PshNull: value = PointerImmediate{0}; break;
+		case asBC_PshVPtr: value = FrameVariable{ins.sword0(), pword}; break;
+		case asBC_PshGPtr: value = GlobalVariable{std::bit_cast<void*>(ins.pword0()), pword, true, true}; break;
+		case asBC_PshRPtr: value = ValueRegister{pword}; break;
+		case asBC_PSF:     value = FrameVariablePointer{ins.sword0()}; break;
+		case asBC_PGA:     value = GlobalVariable{std::bit_cast<void*>(ins.pword0()), {}, true, false}; break;
+		case asBC_OBJTYPE: value = ObjectType{std::bit_cast<asCObjectType*>(ins.pword0())}; break;
+		default:           angelsea_assert(false);
+		}
+	}
+	std::variant<
+	    operands::FrameVariable,
+	    operands::FrameVariablePointer,
+	    operands::GlobalVariable,
+	    operands::ObjectType,
+	    operands::ValueRegister,
+	    operands::Immediate<asDWORD>,
+	    operands::Immediate<asQWORD>,
+	    operands::PointerImmediate>
+	    value;
+};
+
+/// Comparison of an integral or floating-point type, where the result is -1, 0 or 1 for `lhs < rhs`, `lhs == rhs`,
+/// or `lhs > rhs` respectively.
 struct Compare : InsRef {
 	static constexpr std::array valid_opcodes
 	    = {asBC_CMPi,
@@ -227,8 +360,8 @@ struct Nop {};
 
 } // namespace virtins
 
-// TODO: pretty inefficient, at some point we probably want to just translate the whole bytecode to a vector of our own
-// that is more compact than a vector of std::variant. Would also get rid of the virtins::Nop
+// TODO: pretty inefficient, at some point we probably want to just translate the whole bytecode to a vector of
+// our own that is more compact than a vector of std::variant. Would also get rid of the virtins::Nop
 using VirtualInstruction = std::variant<virtins::FusedCompareJump, virtins::Nop>;
 
 } // namespace angelsea::detail

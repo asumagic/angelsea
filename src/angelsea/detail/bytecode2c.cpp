@@ -332,39 +332,10 @@ void BytecodeToC::discover_function_call_pushes(FnState& state) {
 			state.fn_to_stack_push.emplace(ins.offset, std::move(pushes));
 
 			current_pushes.clear();
+		} else if (const auto push = bcins::try_as<bcins::StackPush>(ins); push.has_value()) {
+			current_pushes.push_back({ins.offset, StackPushInfo{.type = visit_operand_type(push->value)}});
 		} else {
-			switch (ins.opcode()) {
-				// TODO: ChkNullS (and probably others) can appear in the stack push pattern; we should support those
-				// TODO: also handle in-place stack ops like RDSPtr
-
-			case asBC_PshC4:
-			case asBC_PshV4:
-			case asBC_PshG4: {
-				current_pushes.push_back({ins.offset, StackPushInfo{.type = var_types::u32}});
-				break;
-			}
-				// TODO: when supported
-				// case asBC_FuncPtr:
-				// case asBC_PshListElmnt:
-			case asBC_PshC8:
-			case asBC_PshV8: {
-				current_pushes.push_back({ins.offset, StackPushInfo{.type = var_types::u64}});
-				break;
-			}
-			case asBC_VAR:
-			case asBC_PshNull:
-			case asBC_PshVPtr:
-			case asBC_PshRPtr:
-			case asBC_PSF:
-			case asBC_PGA:
-			case asBC_PshGPtr:
-			case asBC_OBJTYPE: {
-				current_pushes.push_back({ins.offset, StackPushInfo{.type = var_types::pword}});
-				break;
-			}
-
-			default: current_pushes.clear();
-			}
+			current_pushes.clear();
 		}
 	}
 }
@@ -547,14 +518,20 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_TYPEID:
-	case asBC_PshC4:   emit_stack_push_ins(state, imm_int(ins.dword0(), u32), u32); break;
-	case asBC_VAR:     emit_stack_push_ins(state, imm_int(ins.sword0(), pword), pword); break;
-	case asBC_PshC8:   emit_stack_push_ins(state, imm_int(ins.qword0(), u64), u64); break;
-	case asBC_PshV4:   emit_stack_push_ins(state, frame_var(ins.sword0(), u32), u32); break;
-	case asBC_PshV8:   emit_stack_push_ins(state, frame_var(ins.sword0(), u64), u64); break;
-	case asBC_PshNull: emit_stack_push_ins(state, "0", pword); break; // TODO: not tested, how to emit?
-	case asBC_PshVPtr: emit_stack_push_ins(state, frame_var(ins.sword0(), pword), pword); break;
-	case asBC_PshRPtr: emit_stack_push_ins(state, "value_reg", pword); break;
+	case asBC_PshC4:
+	case asBC_PshV4:
+	case asBC_PshG4:
+	case asBC_PshC8:
+	case asBC_PshV8:
+	case asBC_VAR:
+	case asBC_PshNull:
+	case asBC_PshVPtr:
+	case asBC_PshGPtr:
+	case asBC_PshRPtr:
+	case asBC_PSF:
+	case asBC_PGA:
+	case asBC_OBJTYPE: emit_stack_push_ins(state, bcins::StackPush{ins}); break;
+
 	case asBC_PopRPtr: {
 		emit(
 		    "\t\tvalue_reg = sp->as_asPWORD;\n"
@@ -562,26 +539,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		);
 		break;
 	}
-	case asBC_PSF: emit_stack_push_ins(state, fmt::format("(asPWORD){}", frame_ptr(ins.sword0())), pword); break;
-
-	case asBC_PGA: {
-		std::string symbol = emit_global_lookup(state, std::bit_cast<void*>(ins.pword0()), false);
-		emit_stack_push_ins(state, fmt::format("(asPWORD)&{}", symbol), pword);
-		break;
-	}
-
-	case asBC_PshGPtr: {
-		std::string symbol = emit_global_lookup(state, std::bit_cast<void*>(ins.pword0()), false);
-		emit_stack_push_ins(state, fmt::format("(asPWORD){}", symbol), pword);
-		break;
-	}
-
-	case asBC_PshG4: {
-		std::string symbol = emit_global_lookup(state, std::bit_cast<void*>(ins.pword0()), false);
-		emit_stack_push_ins(state, fmt::format("*(asDWORD*)&{}", symbol), u32);
-		break;
-	}
-
 	case asBC_PopPtr: {
 		emit("\t\tsp = (asea_var*)((char*)sp + sizeof(asPWORD));\n");
 		break;
@@ -620,14 +577,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		    fmt::arg("ERR_NULL_HANDLER", jump_to_error_handler_code(state, ErrorHandler::ERR_NULL)),
 		    fmt::arg("VAR", stack_var(ins.word0(), pword))
 		);
-		break;
-	}
-
-	case asBC_OBJTYPE: {
-		asPWORD    objtype_raw    = ins.pword0();
-		auto*      objtype_ptr    = std::bit_cast<asCObjectType*>(objtype_raw);
-		const auto objtype_symbol = emit_type_info_lookup(state, *objtype_ptr);
-		emit_stack_push_ins(state, fmt::format("(asPWORD)&{}", objtype_symbol), pword);
 		break;
 	}
 
@@ -1730,6 +1679,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 				current_arg_dwords -= 2;
 			} else if (push_info.type == var_types::pword) {
 				current_arg_pwords -= 1;
+			} else if (push_info.type == var_types::void_ptr) {
+				current_arg_pwords -= 1;
 			} else {
 				angelsea_assert(false);
 			}
@@ -2125,15 +2076,12 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 	return {.ok = true, .fail_reason = {}};
 }
 
-void BytecodeToC::emit_stack_push_ins(FnState& state, std::string_view expr, VarType type) {
+void BytecodeToC::emit_stack_push_ins(FnState& state, const bcins::StackPush& push) {
+	const VarType type = make_local_from_operand(state, "v", push.value);
 	if (state.stack_push_infos.contains(state.ins.offset)) {
-		// cast ain't gonna cut it if the expression is of float type - if this happen, you'll need to be smarter
-		// about tmp variable declaration, right now they're all QWORD
-		angelsea_assert(type != var_types::f32 && type != var_types::f64);
-
-		emit("\t\tpush_tmp{ID} = {EXPR};\n", fmt::arg("ID", state.ins.offset), fmt::arg("EXPR", expr));
+		emit("\t\tpush_tmp{ID} = v;\n", fmt::arg("ID", state.ins.offset));
 	} else {
-		emit_stack_push(state, expr, type);
+		emit_stack_push(state, "v", type);
 	}
 }
 
@@ -2162,13 +2110,13 @@ void BytecodeToC::emit_assign_ins(FnState& state, std::string_view dst, std::str
 }
 
 void BytecodeToC::emit_stack_push(FnState& state, std::string_view expr, VarType type) {
-	if (type == var_types::pword) {
+	if (type == var_types::pword || type == var_types::void_ptr) {
 		emit("\t\tsp = (asea_var*)((char*)sp - sizeof(asPWORD));\n");
 	} else {
 		emit("\t\tsp = (asea_var*)((char*)sp - {});\n", type.size);
 	}
 
-	emit("\t\tsp->as_{TYPE} = {EXPR};\n", fmt::arg("TYPE", type.c), fmt::arg("EXPR", expr));
+	emit("\t\tsp->as_{TYPE} = {EXPR};\n", fmt::arg("TYPE", type.var_accessor), fmt::arg("EXPR", expr));
 }
 
 void BytecodeToC::emit_cond_branch(FnState& state, std::string_view expr, std::size_t target_offset) {

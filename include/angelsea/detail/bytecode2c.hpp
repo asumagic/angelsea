@@ -283,7 +283,7 @@ class BytecodeToC {
 	/// Emits the complete handler for a stack push instruction. In case of stack pushes that are relevant to a function
 	/// call, the actual stack push may be omitted and instead redirect to a temporary variable, see \ref
 	/// discover_function_call_pushes.
-	void emit_stack_push_ins(FnState& state, std::string_view expr, VarType type);
+	void emit_stack_push_ins(FnState& state, const bcins::StackPush& push);
 
 	/// In context of the \ref discover_function_call_pushes optimization, if we failed to emit a direct call, whatever
 	/// fallback option we use will be manipulating arguments via the stack. Thus, this pushes all the push elimination
@@ -376,13 +376,16 @@ class BytecodeToC {
 
 	std::size_t m_module_idx;
 
-	template<class T> void make_local_from_operand(FnState& state, std::string_view name, const T& value) {
-		std::visit([&](auto&& v) { make_local_from_operand(state, name, v); }, value);
+	/// Make a local variable using some operand, where `value` is either a known operand type or a variant of known
+	/// operand types. Returns the type of the created variable.
+	template<class T> VarType make_local_from_operand(FnState& state, std::string_view name, const T& value) {
+		// TODO: maybe less of a mess if we just use overloaded {}...
+		return std::visit([&](auto&& v) { return make_local_from_operand(state, name, v); }, value);
 	}
 };
 
 template<>
-inline void BytecodeToC::make_local_from_operand<operands::Immediate<asINT32>>(
+inline VarType BytecodeToC::make_local_from_operand<operands::Immediate<asINT32>>(
     [[maybe_unused]] FnState&           state,
     std::string_view                    name,
     const operands::Immediate<asINT32>& value
@@ -392,10 +395,11 @@ inline void BytecodeToC::make_local_from_operand<operands::Immediate<asINT32>>(
 	    fmt::arg("NAME", name),
 	    fmt::arg("VALUE", imm_int(value.value, var_types::s32))
 	);
+	return var_types::s32;
 }
 
 template<>
-inline void BytecodeToC::make_local_from_operand<operands::Immediate<asDWORD>>(
+inline VarType BytecodeToC::make_local_from_operand<operands::Immediate<asDWORD>>(
     [[maybe_unused]] FnState&           state,
     std::string_view                    name,
     const operands::Immediate<asDWORD>& value
@@ -405,10 +409,39 @@ inline void BytecodeToC::make_local_from_operand<operands::Immediate<asDWORD>>(
 	    fmt::arg("NAME", name),
 	    fmt::arg("VALUE", imm_int(value.value, var_types::u32))
 	);
+	return var_types::u32;
 }
 
 template<>
-inline void BytecodeToC::make_local_from_operand<operands::Immediate<float>>(
+inline VarType BytecodeToC::make_local_from_operand<operands::Immediate<asQWORD>>(
+    [[maybe_unused]] FnState&           state,
+    std::string_view                    name,
+    const operands::Immediate<asQWORD>& value
+) {
+	emit(
+	    "\t\tasQWORD {NAME} = {VALUE};\n",
+	    fmt::arg("NAME", name),
+	    fmt::arg("VALUE", imm_int(value.value, var_types::u32))
+	);
+	return var_types::u64;
+}
+
+template<>
+inline VarType BytecodeToC::make_local_from_operand<operands::PointerImmediate>(
+    [[maybe_unused]] FnState&         state,
+    std::string_view                  name,
+    const operands::PointerImmediate& value
+) {
+	emit(
+	    "\t\tasPWORD {NAME} = {VALUE};\n",
+	    fmt::arg("NAME", name),
+	    fmt::arg("VALUE", imm_int(value.value, var_types::pword))
+	);
+	return var_types::pword;
+}
+
+template<>
+inline VarType BytecodeToC::make_local_from_operand<operands::Immediate<float>>(
     [[maybe_unused]] FnState&         state,
     std::string_view                  name,
     const operands::Immediate<float>& value
@@ -419,20 +452,75 @@ inline void BytecodeToC::make_local_from_operand<operands::Immediate<float>>(
 	    fmt::arg("NAME", name),
 	    fmt::arg("VALUE", imm_int(std::bit_cast<asDWORD>(value.value), var_types::u32))
 	);
+	return var_types::f32;
 }
 
 template<>
-inline void BytecodeToC::make_local_from_operand<operands::FrameVariable>(
+inline VarType BytecodeToC::make_local_from_operand<operands::FrameVariable>(
     FnState&                       state,
     std::string_view               name,
     const operands::FrameVariable& value
 ) {
+	// FIXME: can't handle fp yet
 	emit(
 	    "\t\t{TYPE} {NAME} = {VAR};\n",
 	    fmt::arg("TYPE", value.type.c),
 	    fmt::arg("NAME", name),
 	    fmt::arg("VAR", frame_var(value.idx, value.type))
 	);
+	return value.type;
+}
+
+template<>
+inline VarType BytecodeToC::make_local_from_operand<operands::FrameVariablePointer>(
+    FnState&                              state,
+    std::string_view                      name,
+    const operands::FrameVariablePointer& value
+) {
+	emit("\t\tvoid* {NAME} = {VAR};\n", fmt::arg("NAME", name), fmt::arg("VAR", frame_ptr(value.idx)));
+	return var_types::void_ptr;
+}
+
+template<>
+inline VarType BytecodeToC::make_local_from_operand<operands::GlobalVariable>(
+    FnState&                        state,
+    std::string_view                name,
+    const operands::GlobalVariable& value
+) {
+	std::string symbol = emit_global_lookup(state, value.ptr, !value.can_refer_to_str);
+	if (value.dereference) {
+		emit(
+		    "\t\t{TYPE} {NAME} = *({TYPE}*)&{GLOBAL};\n",
+		    fmt::arg("TYPE", value.type.c),
+		    fmt::arg("NAME", name),
+		    fmt::arg("GLOBAL", symbol)
+		);
+		return value.type;
+	}
+	emit("\t\tvoid* {NAME} = &{GLOBAL};\n", fmt::arg("NAME", name), fmt::arg("GLOBAL", symbol));
+	return var_types::void_ptr;
+}
+
+template<>
+inline VarType BytecodeToC::make_local_from_operand<operands::ObjectType>(
+    FnState&                    state,
+    std::string_view            name,
+    const operands::ObjectType& value
+) {
+	const auto objtype_symbol = emit_type_info_lookup(state, *value.ptr);
+	emit("\t\tasCObjectType* {NAME} = &{OBJ_TYPE};\n", fmt::arg("NAME", name), fmt::arg("OBJ_TYPE", objtype_symbol));
+	return var_types::void_ptr;
+}
+
+template<>
+inline VarType BytecodeToC::make_local_from_operand<operands::ValueRegister>(
+    FnState&                       state,
+    std::string_view               name,
+    const operands::ValueRegister& value
+) {
+	// FIXME: can't handle fp yet
+	emit("\t\t{TYPE} {NAME} = value_reg;\n", fmt::arg("TYPE", value.type.c), fmt::arg("NAME", name));
+	return value.type;
 }
 
 } // namespace angelsea::detail
