@@ -1848,6 +1848,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		emit_save_pc(state, true);
 	} else {
 		// write stack pointer in case the syscall causes a nested script call; otherwise our stack may get stomped
+		// TODO: this may be possible to elide if we detect that the sp hasn't gone downwards since
 		emit("\t\tregs->sp = sp;\n");
 	}
 
@@ -2030,6 +2031,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 		emit_save_pc(state, true);
 	} else {
 		// write stack pointer in case the syscall causes a nested script call; otherwise our stack may get stomped
+		// TODO: this may be possible to elide if we detect that the sp hasn't gone downwards since
 		emit("\t\tregs->sp = sp;\n");
 	}
 
