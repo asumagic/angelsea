@@ -6,6 +6,7 @@
 #include <angelsea/config.hpp>
 #include <angelsea/detail/bytecodeinstruction.hpp>
 #include <as_property.h>
+#include <as_scriptengine.h>
 #include <as_scriptfunction.h>
 #include <fmt/format.h>
 #include <functional>
@@ -355,7 +356,7 @@ class BytecodeToC {
 	std::string stack_var(int offset, VarType type);
 
 	const JitConfig* m_config;
-	asIScriptEngine* m_script_engine;
+	asCScriptEngine* m_script_engine;
 	std::string      m_c_symbol_prefix;
 
 	OnMapFunctionCallback m_on_map_function_callback;

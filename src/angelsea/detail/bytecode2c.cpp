@@ -32,7 +32,10 @@ namespace angelsea::detail {
 // TODO: format immediate functions instead of using fmt::format/to_string for it
 
 BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix) :
-    m_config(&config), m_script_engine(&engine), m_c_symbol_prefix(std::move(c_symbol_prefix)), m_module_idx(-1) {}
+    m_config(&config),
+    m_script_engine(static_cast<asCScriptEngine*>(&engine)),
+    m_c_symbol_prefix(std::move(c_symbol_prefix)),
+    m_module_idx(-1) {}
 
 void BytecodeToC::prepare_new_context() {
 	++m_module_idx;
@@ -338,7 +341,7 @@ void BytecodeToC::discover_branch_targets(FnState& state) {
 void BytecodeToC::discover_function_calls(FnState& state) {
 	for (InsRef ins : get_bytecode(*state.fn)) {
 		if (auto call = bcins::try_as<bcins::CallSystemDirect>(ins); call.has_value()) {
-			const auto& fn = call->function(*static_cast<asCScriptEngine*>(m_script_engine));
+			const auto& fn = call->function(*m_script_engine);
 			if (fn.sysFuncIntf->callConv == ICC_GENERIC_FUNC || fn.sysFuncIntf->callConv == ICC_GENERIC_METHOD) {
 				state.has_direct_generic_call = true;
 			}
@@ -356,7 +359,7 @@ void BytecodeToC::discover_function_call_pushes(FnState& state) {
 		    || state.branch_targets.contains(ins.offset)) {
 			current_pushes.clear();
 		} else if (auto call = bcins::try_as<bcins::CallSystemDirect>(ins); call.has_value()) {
-			// const auto& fn = call->function(*static_cast<asCScriptEngine*>(m_script_engine));
+			// const auto& fn = call->function(*m_script_engine);
 			// printf("call @%d of fn %s:\n", int(ins.offset), fn.GetDeclaration());
 			for (auto& [push_offset, push_info] : current_pushes) {
 				state.stack_push_infos.emplace(push_offset, push_info);
@@ -522,8 +525,6 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	using namespace var_types;
 	auto& ins = state.ins;
 
-	// asCScriptEngine& engine = static_cast<asCScriptEngine&>(m_script_engine);
-
 	if (m_config->c.human_readable) {
 		emit("\t/* bytecode: {} */\n", disassemble(*m_script_engine, ins));
 	}
@@ -686,7 +687,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		}
 
 		if ((type->flags & asOBJ_SCRIPT_OBJECT) != 0) {
-			asCScriptFunction& fn = *static_cast<asCScriptEngine*>(m_script_engine)->scriptFunctions[fn_idx];
+			asCScriptFunction& fn             = *m_script_engine->scriptFunctions[fn_idx];
 			const auto         objtype_symbol = emit_type_info_lookup(state, *type);
 			emit(
 			    "\t\tvoid* new_obj = asea_new_script_object((asCObjectType*)&{OBJECT_TYPE});\n"
@@ -1011,11 +1012,9 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		// TODO: devirtualization optimization using `final` like asllvm did -- in fact, could we infer `final`
 		// ourselves? i don't know if we can look at the descendants safely from within our module
 
-		auto& engine = *static_cast<asCScriptEngine*>(m_script_engine);
-
 		const auto fn_idx = ins.int0();
 		// const std::string  fn_symbol = fmt::format("{}_scriptfn{}", m_c_symbol_prefix, fn_idx);
-		asCScriptFunction* virtual_fn = engine.scriptFunctions[fn_idx];
+		asCScriptFunction* virtual_fn = m_script_engine->scriptFunctions[fn_idx];
 
 		if (virtual_fn->funcType == asFUNC_INTERFACE) {
 			// TODO: write tests with a few interfaces then implement
@@ -1372,12 +1371,10 @@ void BytecodeToC::emit_primitive_cast_var_ins(FnState& state, VarType src, VarTy
 
 std::string
 BytecodeToC::emit_global_lookup([[maybe_unused]] FnState& state, void* pointer, [[maybe_unused]] bool global_var_only) {
-	auto& engine = *static_cast<asCScriptEngine*>(m_script_engine);
-
 	std::string                            fn_symbol;
 	asSMapNode<void*, asCGlobalProperty*>* var_cursor = nullptr;
-	if (engine.varAddressMap.MoveTo(&var_cursor, pointer)) {
-		asCGlobalProperty* property = engine.varAddressMap.GetValue(var_cursor);
+	if (m_script_engine->varAddressMap.MoveTo(&var_cursor, pointer)) {
+		asCGlobalProperty* property = m_script_engine->varAddressMap.GetValue(var_cursor);
 		angelsea_assert(property != nullptr);
 
 		fn_symbol = fmt::format("{}_g{}", m_c_symbol_prefix, property->id);
@@ -1476,8 +1473,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 	// TODO: figure out a way to inline callees. maybe we can find simple functions and trigger their generation in a
 	// way that ensures they will be compiled? or we can just bring them into our module??
 
-	auto& engine           = *static_cast<asCScriptEngine*>(m_script_engine);
-	bool  will_emit_direct = m_config->experimental_fast_script_call && m_config->hack_ignore_suspend;
+	bool will_emit_direct = m_config->experimental_fast_script_call && m_config->hack_ignore_suspend;
 
 	std::string        fn_expr;
 	asCScriptFunction* reference_fn;       // reference fn, only its signature is checked
@@ -1486,7 +1482,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 	if (const auto* call_by_idx = std::get_if<ScriptCallByIdx>(&call); call_by_idx != nullptr) {
 		std::string fn_raw_name = fmt::format("{}_scriptfn{}", m_c_symbol_prefix, call_by_idx->fn_idx);
 		fn_expr                 = fmt::format("(asCScriptFunction*)&{}", fn_raw_name);
-		known_fn = reference_fn = engine.scriptFunctions[call_by_idx->fn_idx];
+		known_fn = reference_fn = m_script_engine->scriptFunctions[call_by_idx->fn_idx];
 
 		if (m_on_map_extern_callback) {
 			m_on_map_extern_callback(fn_raw_name.c_str(), ExternScriptFunction{call_by_idx->fn_idx}, known_fn);
@@ -1580,9 +1576,7 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 	if (m_config->c.human_readable) {
 		emit(
 		    "\t\t/* Attempt direct system call for `{}` */\n",
-		    static_cast<asCScriptEngine*>(m_script_engine)
-		        ->scriptFunctions[call.fn_idx]
-		        ->GetDeclaration(true, true, true)
+		    m_script_engine->scriptFunctions[call.fn_idx]->GetDeclaration(true, true, true)
 		);
 	}
 
@@ -1634,11 +1628,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& 
 		return {.ok = false, .fail_reason = "Direct system call failed: hack_ignore_suspend == false"};
 	}
 
-	auto& engine = *static_cast<asCScriptEngine*>(m_script_engine);
-
 	const std::string           fn_callable_symbol = fmt::format("{}_sysfnptr{}", m_c_symbol_prefix, call.fn_idx);
 	const std::string           fn_desc_symbol     = fmt::format("{}_sysfn{}", m_c_symbol_prefix, call.fn_idx);
-	asCScriptFunction&          script_fn          = *engine.scriptFunctions[call.fn_idx];
+	asCScriptFunction&          script_fn          = *m_script_engine->scriptFunctions[call.fn_idx];
 	asSSystemFunctionInterface& sys_fn             = *script_fn.sysFuncIntf;
 	const internalCallConv      abi                = sys_fn.callConv;
 
@@ -1669,7 +1661,6 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		return {.ok = false, .fail_reason = "Direct native call failed: experimental_direct_native_call == false"};
 	}
 
-	auto&                       engine = *static_cast<asCScriptEngine*>(m_script_engine);
 	asSSystemFunctionInterface& sys_fn = *fn.sysFuncIntf;
 
 	if (sys_fn.isCompositeIndirect) {
@@ -2064,7 +2055,6 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 		return {.ok = false, .fail_reason = "Direct generic call failed: experimental_direct_generic_call == false"};
 	}
 
-	auto&                       engine = *static_cast<asCScriptEngine*>(m_script_engine);
 	asSSystemFunctionInterface& sys_fn = *fn.sysFuncIntf;
 
 	const internalCallConv abi = sys_fn.callConv;
@@ -2076,7 +2066,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 			return {.ok = false, .fail_reason = "Direct generic call failed: Variadics not supported yet"};
 		}
 
-		if (sys_fn.returnAutoHandle && engine.ep.genericCallMode == 1) {
+		if (sys_fn.returnAutoHandle && m_script_engine->ep.genericCallMode == 1) {
 			return {.ok = false, .fail_reason = "Direct generic call failed: Auto handles not supported yet"};
 		}
 	}
