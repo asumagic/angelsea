@@ -9,6 +9,6 @@ namespace angelsea::detail {
 
 class MirJit;
 
-std::string disassemble(asIScriptEngine& engine, BytecodeInstruction instruction);
+std::string disassemble(asIScriptEngine& engine, InsRef instruction);
 
 } // namespace angelsea::detail

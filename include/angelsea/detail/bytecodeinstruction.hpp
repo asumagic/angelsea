@@ -16,22 +16,25 @@
 #include <variant>
 
 namespace angelsea::detail {
-struct BytecodeInstruction {
+/// Lightweight view to a bytecode instruction that holds offset information (as it is regularly used) and provides
+/// convenient argument fetching among other metadata.
+struct InsRef {
 	asDWORD*         pointer;
-	const asSBCInfo* info;
 	std::size_t      offset;
-	std::size_t      size;
+	asEBCInstr       opcode() const { return info().bc; }
+	const asSBCInfo& info() const { return asBCInfo[*std::bit_cast<asBYTE*>(pointer)]; }
+	std::size_t      size() const { return asBCTypeSize[info().type]; };
 
-	asDWORD& dword0(std::size_t offset = 0) { return asBC_DWORDARG(pointer + offset); }
-	int&     int0(std::size_t offset = 0) { return asBC_INTARG(pointer + offset); }
-	asQWORD& qword0(std::size_t offset = 0) { return asBC_QWORDARG(pointer + offset); }
-	float&   float0(std::size_t offset = 0) { return asBC_FLOATARG(pointer + offset); }
-	asPWORD& pword0(std::size_t offset = 0) { return asBC_PTRARG(pointer + offset); }
-	asWORD&  word0(std::size_t offset = 0) { return asBC_WORDARG0(pointer + offset); }
-	asWORD&  word1(std::size_t offset = 0) { return asBC_WORDARG1(pointer + offset); }
-	short&   sword0(std::size_t offset = 0) { return asBC_SWORDARG0(pointer + offset); }
-	short&   sword1(std::size_t offset = 0) { return asBC_SWORDARG1(pointer + offset); }
-	short&   sword2(std::size_t offset = 0) { return asBC_SWORDARG2(pointer + offset); }
+	asDWORD& dword0(std::size_t offset = 0) const { return asBC_DWORDARG(pointer + offset); }
+	int&     int0(std::size_t offset = 0) const { return asBC_INTARG(pointer + offset); }
+	asQWORD& qword0(std::size_t offset = 0) const { return asBC_QWORDARG(pointer + offset); }
+	float&   float0(std::size_t offset = 0) const { return asBC_FLOATARG(pointer + offset); }
+	asPWORD& pword0(std::size_t offset = 0) const { return asBC_PTRARG(pointer + offset); }
+	asWORD&  word0(std::size_t offset = 0) const { return asBC_WORDARG0(pointer + offset); }
+	asWORD&  word1(std::size_t offset = 0) const { return asBC_WORDARG1(pointer + offset); }
+	short&   sword0(std::size_t offset = 0) const { return asBC_SWORDARG0(pointer + offset); }
+	short&   sword1(std::size_t offset = 0) const { return asBC_SWORDARG1(pointer + offset); }
+	short&   sword2(std::size_t offset = 0) const { return asBC_SWORDARG2(pointer + offset); }
 };
 
 /// Describes the type of a value on the stack, which is useful to abstract its
@@ -55,13 +58,16 @@ template<class... Ts> struct overloaded : Ts... {
 template<typename T> inline std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
 
 namespace operands {
-struct Var {
+
+/// Models a reference to a specific variable slot in the current function's stack frame.
+struct FrameVariable {
 	short   idx;
 	VarType type;
 
-	bool operator==(const Var&) const = default;
+	bool operator==(const FrameVariable&) const = default;
 };
 
+/// Models a value that is directly embedded in the code.
 template<class T> struct Immediate {
 	T value;
 
@@ -78,11 +84,11 @@ static constexpr VarType s8{"asINT8", "asINT8", 1}, s16{"asINT16", "asINT16", 2}
 
 /// Groups semantically similar bytecode instructions under common structs with metadata
 namespace bcins {
-template<typename T> bool is_specific_ins(const BytecodeInstruction& bc) {
-	return std::find(T::valid_opcodes.begin(), T::valid_opcodes.end(), bc.info->bc) != T::valid_opcodes.end();
+template<typename T> bool is_specific_ins(const InsRef& bc) {
+	return std::find(T::valid_opcodes.begin(), T::valid_opcodes.end(), bc.opcode()) != T::valid_opcodes.end();
 }
 
-template<typename T> std::optional<T> try_as(const BytecodeInstruction& ins) {
+template<typename T> std::optional<T> try_as(const InsRef& ins) {
 	if (is_specific_ins<T>(ins)) {
 		return T{ins};
 	}
@@ -90,16 +96,16 @@ template<typename T> std::optional<T> try_as(const BytecodeInstruction& ins) {
 }
 
 /// Conditional or unconditional jump instruction, excluding switches.
-struct Jump : BytecodeInstruction {
+struct Jump : InsRef {
 	public:
 	static constexpr std::array valid_opcodes
 	    = {asBC_JMP, asBC_JZ, asBC_JLowZ, asBC_JNZ, asBC_JLowNZ, asBC_JS, asBC_JNS, asBC_JP, asBC_JNP};
-	explicit Jump(const BytecodeInstruction& ins) : BytecodeInstruction(ins) {
+	explicit Jump(const InsRef& ins) : InsRef(ins) {
 		using namespace var_types;
 
 		angelsea_assert(is_specific_ins<Jump>(ins));
 
-		switch (ins.info->bc) {
+		switch (ins.info().bc) {
 		case asBC_JZ:     cond_expr = {s32, "=="}; break;
 		case asBC_JLowZ:  cond_expr = {u8, "=="}; break;
 		case asBC_JNZ:    cond_expr = {s32, "!="}; break;
@@ -112,7 +118,7 @@ struct Jump : BytecodeInstruction {
 		}
 	}
 
-	int relative_offset() { return int0() + int(size); }
+	int relative_offset() { return int0() + int(size()); }
 	int target_offset() { return int(offset) + relative_offset(); }
 
 	struct CondExpr {
@@ -124,7 +130,7 @@ struct Jump : BytecodeInstruction {
 
 /// Comparison of an integral or floating-point type, where the result is -1, 0 or 1 for `lhs < rhs`, `lhs == rhs`, or
 /// `lhs > rhs` respectively.
-struct Compare : BytecodeInstruction {
+struct Compare : InsRef {
 	static constexpr std::array valid_opcodes
 	    = {asBC_CMPi,
 	       asBC_CMPu,
@@ -137,67 +143,71 @@ struct Compare : BytecodeInstruction {
 	       asBC_CMPIu,
 	       asBC_CMPIf};
 
-	explicit Compare(const BytecodeInstruction& ins) : BytecodeInstruction(ins) {
+	explicit Compare(const InsRef& ins) : InsRef(ins) {
 		using namespace var_types;
 		using namespace operands;
 
 		angelsea_assert(is_specific_ins<Compare>(ins));
 
-		switch (ins.info->bc) {
+		switch (ins.opcode()) {
 		case asBC_CMPi:
-			lhs = Var{sword0(), s32};
-			rhs = Var{sword1(), s32};
+			lhs = FrameVariable{sword0(), s32};
+			rhs = FrameVariable{sword1(), s32};
 			break;
 		case asBC_CMPu:
-			lhs = Var{sword0(), u32};
-			rhs = Var{sword1(), u32};
+			lhs = FrameVariable{sword0(), u32};
+			rhs = FrameVariable{sword1(), u32};
 			break;
 		case asBC_CMPi64:
-			lhs = Var{sword0(), s64};
-			rhs = Var{sword1(), s64};
+			lhs = FrameVariable{sword0(), s64};
+			rhs = FrameVariable{sword1(), s64};
 			break;
 		case asBC_CMPu64:
-			lhs = Var{sword0(), u64};
-			rhs = Var{sword1(), u64};
+			lhs = FrameVariable{sword0(), u64};
+			rhs = FrameVariable{sword1(), u64};
 			break;
 		case asBC_CmpPtr:
-			lhs = Var{sword0(), pword};
-			rhs = Var{sword1(), pword};
+			lhs = FrameVariable{sword0(), pword};
+			rhs = FrameVariable{sword1(), pword};
 			break;
 		case asBC_CMPf:
-			lhs = Var{sword0(), f32};
-			rhs = Var{sword1(), f32};
+			lhs = FrameVariable{sword0(), f32};
+			rhs = FrameVariable{sword1(), f32};
 			break;
 		case asBC_CMPd:
-			lhs = Var{sword0(), f64};
-			rhs = Var{sword1(), f64};
+			lhs = FrameVariable{sword0(), f64};
+			rhs = FrameVariable{sword1(), f64};
 			break;
 		case asBC_CMPIi:
-			lhs = Var{sword0(), s32};
+			lhs = FrameVariable{sword0(), s32};
 			rhs = Immediate<asINT32>{int0()};
 			break;
 		case asBC_CMPIu:
-			lhs = Var{sword0(), u32};
+			lhs = FrameVariable{sword0(), u32};
 			rhs = Immediate<asDWORD>{dword0()};
 			break;
 		case asBC_CMPIf:
-			lhs = Var{sword0(), f32};
+			lhs = FrameVariable{sword0(), f32};
 			rhs = Immediate<float>{std::bit_cast<float>(dword0())};
 			break;
 		default: break;
 		}
 	}
 
-	operands::Var lhs;
-	std::variant<operands::Var, operands::Immediate<asDWORD>, operands::Immediate<asINT32>, operands::Immediate<float>>
+	operands::FrameVariable lhs;
+	std::variant<
+	    operands::FrameVariable,
+	    operands::Immediate<asDWORD>,
+	    operands::Immediate<asINT32>,
+	    operands::Immediate<float>>
 	    rhs;
 };
 
 /// System call (aka app function) to a known function or to a virtual method.
-struct CallSystemDirect : BytecodeInstruction {
+struct CallSystemDirect : InsRef {
 	public:
 	static constexpr std::array valid_opcodes = {asBC_CALLSYS, asBC_Thiscall1};
-	explicit CallSystemDirect(const BytecodeInstruction& ins) : BytecodeInstruction(ins) {
+	explicit CallSystemDirect(const InsRef& ins) : InsRef(ins) {
 		angelsea_assert(is_specific_ins<CallSystemDirect>(ins));
 	}
 

@@ -220,8 +220,8 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 	}
 
 	std::vector<std::pair<asPWORD*, asPWORD>> jit_entry_args;
-	for (BytecodeInstruction ins : get_bytecode(*fn.script_function)) {
-		if (ins.info->bc == asBC_JitEntry) {
+	for (InsRef ins : get_bytecode(*fn.script_function)) {
+		if (ins.opcode() == asBC_JitEntry) {
 			jit_entry_args.emplace_back(&ins.pword0(), ins.pword0());
 		}
 	}
@@ -420,8 +420,8 @@ void MirJit::link_function(AsyncMirFunction& fn) {
 }
 
 void MirJit::setup_jit_callback(asIScriptFunction& function, asJITFunction callback, void* ud, bool ignore_unregister) {
-	for (BytecodeInstruction ins : get_bytecode(function)) {
-		if (ins.info->bc == asBC_JitEntry) {
+	for (InsRef ins : get_bytecode(function)) {
+		if (ins.opcode() == asBC_JitEntry) {
 			ins.pword0() = std::bit_cast<asPWORD>(ud);
 		}
 	}

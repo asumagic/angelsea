@@ -114,7 +114,7 @@ class BytecodeToC {
 	struct FnState {
 		asIScriptFunction* fn;
 		/// Current instruction being translated (if in a callee of translate_instruction)
-		BytecodeInstruction ins;
+		InsRef ins;
 
 		/// Any Jitentry that is not the first?
 		bool has_any_late_jit_entries = true;
@@ -423,8 +423,11 @@ inline void BytecodeToC::make_local_from_operand<operands::Immediate<float>>(
 }
 
 template<>
-inline void
-BytecodeToC::make_local_from_operand<operands::Var>(FnState& state, std::string_view name, const operands::Var& value) {
+inline void BytecodeToC::make_local_from_operand<operands::FrameVariable>(
+    FnState&                       state,
+    std::string_view               name,
+    const operands::FrameVariable& value
+) {
 	emit(
 	    "\t\t{TYPE} {NAME} = {VAR};\n",
 	    fmt::arg("TYPE", value.type.c),

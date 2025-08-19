@@ -204,7 +204,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 
 	emit_entry_dispatch(state);
 
-	for (BytecodeInstruction ins : get_bytecode(fn)) {
+	for (InsRef ins : get_bytecode(fn)) {
 		state.ins = ins;
 		translate_instruction(state);
 	}
@@ -233,9 +233,9 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 
 	auto bytecode = get_bytecode(*state.fn);
 	for (auto it = bytecode.begin(), prev = it; it != bytecode.end(); prev = it, ++it) {
-		BytecodeInstruction ins = *it;
+		InsRef ins = *it;
 
-		if (ins.info->bc == asBC_JitEntry) {
+		if (ins.opcode() == asBC_JitEntry) {
 			if (it == bytecode.begin() || !is_trace_supported) {
 				ins.pword0() = jit_entry_id;
 				++jit_entry_id;
@@ -251,14 +251,14 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 			continue;
 		}
 
-		if (is_instruction_blacklisted(ins.info->bc)) {
+		if (is_instruction_blacklisted(ins.opcode())) {
 			is_trace_supported = false;
 			continue;
 		}
 
 		// consider skipping some JitEntry we believe the VM should never be hitting. this is useful to avoid
 		// pessimizing optimizations, so that the optimizer can merge subsequent basic blocks.
-		switch (ins.info->bc) {
+		switch (ins.opcode()) {
 		case asBC_SUSPEND: // TODO: falls back as of writing, remove when fixed
 			is_trace_supported = m_config->hack_ignore_suspend;
 			break;
@@ -292,7 +292,7 @@ void BytecodeToC::configure_jit_entries(FnState& state) {
 		case asBC_POWu64:       is_trace_supported = false; break;
 
 		// only skip if it's a known instruction as of writing
-		default:                is_trace_supported = ins.info->bc <= asBC_Thiscall1;
+		default:                is_trace_supported = ins.opcode() <= asBC_Thiscall1;
 		}
 
 		// NOTE: this doesn't seem to need to care about branch targets: we normally support basically all branching
@@ -309,12 +309,12 @@ void BytecodeToC::discover_switch_map(FnState& state) {
 	// discover mappings from the offset of every asBC_JMPP instruction and the branch targets
 	std::vector<std::size_t>* current_mapping = nullptr;
 
-	for (BytecodeInstruction ins : get_bytecode(*state.fn)) {
-		if (ins.info->bc == asBC_JMPP) {
+	for (InsRef ins : get_bytecode(*state.fn)) {
+		if (ins.opcode() == asBC_JMPP) {
 			current_mapping = &state.switch_map[ins.offset]; // create
-		} else if (ins.info->bc == asBC_JMP) {
+		} else if (ins.opcode() == asBC_JMP) {
 			if (current_mapping != nullptr) {
-				current_mapping->emplace_back(ins.offset + ins.size + ins.int0());
+				current_mapping->emplace_back(ins.offset + ins.size() + ins.int0());
 			}
 		} else {
 			current_mapping = nullptr;
@@ -323,8 +323,8 @@ void BytecodeToC::discover_switch_map(FnState& state) {
 }
 
 void BytecodeToC::discover_branch_targets(FnState& state) {
-	for (BytecodeInstruction ins : get_bytecode(*state.fn)) {
-		if (ins.info->bc == asBC_JitEntry && ins.pword0() != 0) {
+	for (InsRef ins : get_bytecode(*state.fn)) {
+		if (ins.opcode() == asBC_JitEntry && ins.pword0() != 0) {
 			state.branch_targets.emplace(ins.offset);
 		}
 
@@ -335,7 +335,7 @@ void BytecodeToC::discover_branch_targets(FnState& state) {
 }
 
 void BytecodeToC::discover_function_calls(FnState& state) {
-	for (BytecodeInstruction ins : get_bytecode(*state.fn)) {
+	for (InsRef ins : get_bytecode(*state.fn)) {
 		if (auto call = bcins::try_as<bcins::CallSystemDirect>(ins); call.has_value()) {
 			const auto& fn = call->function(*static_cast<asCScriptEngine*>(m_script_engine));
 			if (fn.sysFuncIntf->callConv == ICC_GENERIC_FUNC || fn.sysFuncIntf->callConv == ICC_GENERIC_METHOD) {
@@ -349,9 +349,9 @@ void BytecodeToC::discover_function_call_pushes(FnState& state) {
 	auto bytecode_view = get_bytecode(*state.fn);
 
 	std::vector<std::pair<std::size_t, StackPushInfo>> current_pushes;
-	for (BytecodeInstruction ins : bytecode_view) {
+	for (InsRef ins : bytecode_view) {
 		// TODO: refactor the condition into a function?
-		if (is_instruction_blacklisted(ins.info->bc) || ins.info->bc == m_config->debug.fallback_after_instruction
+		if (is_instruction_blacklisted(ins.opcode()) || ins.opcode() == m_config->debug.fallback_after_instruction
 		    || state.branch_targets.contains(ins.offset)) {
 			current_pushes.clear();
 		} else if (auto call = bcins::try_as<bcins::CallSystemDirect>(ins); call.has_value()) {
@@ -375,7 +375,7 @@ void BytecodeToC::discover_function_call_pushes(FnState& state) {
 
 			current_pushes.clear();
 		} else {
-			switch (ins.info->bc) {
+			switch (ins.opcode()) {
 				// TODO: ChkNullS (and probably others) can appear in the stack push pattern; we should support those
 				// TODO: also handle in-place stack ops like RDSPtr
 
@@ -419,7 +419,7 @@ void BytecodeToC::discover_peephole(FnState& state) {
 			break;
 		}
 
-		if (is_instruction_blacklisted((*it).info->bc) || is_instruction_blacklisted((*next).info->bc)) {
+		if (is_instruction_blacklisted((*it).opcode()) || is_instruction_blacklisted((*next).opcode())) {
 			continue;
 		}
 
@@ -447,8 +447,8 @@ void BytecodeToC::emit_entry_dispatch(FnState& state) {
 		    "\tstatic const void *const entry[] = {{\n"
 		    "\t\t&&bc0,\n" // because index 0 is meaningless
 		);
-		for (BytecodeInstruction ins : get_bytecode(*state.fn)) {
-			if (ins.info->bc == asBC_JitEntry && ins.pword0() != 0) {
+		for (InsRef ins : get_bytecode(*state.fn)) {
+			if (ins.opcode() == asBC_JitEntry && ins.pword0() != 0) {
 				emit("\t\t&&bc{},\n", ins.offset);
 			}
 		}
@@ -458,8 +458,8 @@ void BytecodeToC::emit_entry_dispatch(FnState& state) {
 		);
 	} else {
 		emit("\tswitch(entryLabel) {{\n");
-		for (BytecodeInstruction ins : get_bytecode(*state.fn)) {
-			if (ins.info->bc == asBC_JitEntry && ins.pword0() != 0) {
+		for (InsRef ins : get_bytecode(*state.fn)) {
+			if (ins.opcode() == asBC_JitEntry && ins.pword0() != 0) {
 				emit("\tcase {}: goto bc{};\n", ins.pword0(), ins.offset);
 			}
 		}
@@ -537,7 +537,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		}
 	}
 
-	if (is_instruction_blacklisted(ins.info->bc)) {
+	if (is_instruction_blacklisted(ins.opcode())) {
 		emit_vm_fallback(state, "instruction blacklisted by config.debug, force fallback");
 		emit("\t}}\n");
 		return;
@@ -570,7 +570,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		);
 
 		// TODO: dedup footer here
-		if (ins.info->bc == m_config->debug.fallback_after_instruction) {
+		if (ins.opcode() == m_config->debug.fallback_after_instruction) {
 			emit_vm_fallback(state, "debug.fallback_after_instruction");
 		}
 
@@ -578,7 +578,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		return;
 	}
 
-	switch (ins.info->bc) {
+	switch (ins.opcode()) {
 	case asBC_JitEntry: break;
 	case asBC_STR:      emit_vm_fallback(state, "deprecated instruction"); break;
 
@@ -1303,7 +1303,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 	}
 
-	if (ins.info->bc == m_config->debug.fallback_after_instruction) {
+	if (ins.opcode() == m_config->debug.fallback_after_instruction) {
 		emit_vm_fallback(state, "debug.fallback_after_instruction");
 	}
 
@@ -1347,12 +1347,12 @@ void BytecodeToC::emit_save_sp([[maybe_unused]] FnState& state) { emit("\t\tregs
 void BytecodeToC::emit_save_pc(FnState& state, bool next_pc) {
 	emit(
 	    "\t\tregs->pc = base_pc + {INS_OFFSET};\n",
-	    fmt::arg("INS_OFFSET", state.ins.offset + (next_pc ? state.ins.size : 0))
+	    fmt::arg("INS_OFFSET", state.ins.offset + (next_pc ? state.ins.size() : 0))
 	);
 }
 void BytecodeToC::emit_primitive_cast_var_ins(FnState& state, VarType src, VarType dst) {
-	BytecodeInstruction& ins      = state.ins;
-	const bool           in_place = ins.size == 1;
+	InsRef&    ins      = state.ins;
+	const bool in_place = ins.size() == 1;
 
 	if (src.size != dst.size && dst.size < 4) {
 		emit(
@@ -1505,7 +1505,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 			    "\t\tasea_prepare_script_stack(_regs, {FN}, base_pc + {INS_OFFSET}, sp, fp);\n",
 			    fmt::arg("FN", fn_expr),
 			    fmt::arg("BYTECODE", m_module_state.fn_bytecode_ptr),
-			    fmt::arg("INS_OFFSET", state.ins.offset + state.ins.size)
+			    fmt::arg("INS_OFFSET", state.ins.offset + state.ins.size())
 			);
 			bool emitted_fp_var = false;
 			// setup stack with our knowledge
@@ -1536,7 +1536,7 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 			    "\t\tasea_prepare_script_stack_and_vars(_regs, {FN}, base_pc + {INS_OFFSET}, sp, fp);\n",
 			    fmt::arg("FN", fn_expr),
 			    fmt::arg("BYTECODE", m_module_state.fn_bytecode_ptr),
-			    fmt::arg("INS_OFFSET", state.ins.offset + state.ins.size)
+			    fmt::arg("INS_OFFSET", state.ins.offset + state.ins.size())
 			);
 		}
 
@@ -2260,12 +2260,12 @@ void BytecodeToC::emit_prefixop_valuereg_ins(FnState& state, std::string_view op
 }
 
 void BytecodeToC::emit_unop_var_inplace_ins(FnState& state, std::string_view op, VarType type) {
-	BytecodeInstruction& ins = state.ins;
+	InsRef& ins = state.ins;
 	emit("\t\t{VAR} = {OP} {VAR};\n", fmt::arg("OP", op), fmt::arg("VAR", frame_var(ins.sword0(), type)));
 }
 
 void BytecodeToC::emit_binop_var_var_ins(FnState& state, std::string_view op, VarType lhs, VarType rhs, VarType dst) {
-	BytecodeInstruction& ins = state.ins;
+	InsRef& ins = state.ins;
 	emit(
 	    "\t\t{DST} = {LHS} {OP} {RHS};\n",
 	    fmt::arg("OP", op),
@@ -2282,7 +2282,7 @@ void BytecodeToC::emit_binop_var_imm_ins(
     std::string_view rhs_expr,
     VarType          dst
 ) {
-	BytecodeInstruction& ins = state.ins;
+	InsRef& ins = state.ins;
 	emit(
 	    "\t\t{DST} = {LHS} {OP} {RHS};\n",
 	    fmt::arg("OP", op),
@@ -2293,7 +2293,7 @@ void BytecodeToC::emit_binop_var_imm_ins(
 }
 
 void BytecodeToC::emit_divmod_var_float_ins(FnState& state, std::string_view op, VarType type) {
-	BytecodeInstruction& ins = state.ins;
+	InsRef& ins = state.ins;
 	emit(
 	    "\t\t{TYPE} lhs = {LHS};\n"
 	    "\t\t{TYPE} divider = {RHS};\n"
@@ -2314,7 +2314,7 @@ void BytecodeToC::emit_divmod_var_int_ins(
     std::uint64_t    lhs_overflow_value,
     VarType          type
 ) {
-	BytecodeInstruction& ins = state.ins;
+	InsRef& ins = state.ins;
 	emit(
 	    "\t\t{TYPE} lhs = {LHS};\n"
 	    "\t\t{TYPE} divider = {RHS};\n"
@@ -2334,7 +2334,7 @@ void BytecodeToC::emit_divmod_var_int_ins(
 }
 
 void BytecodeToC::emit_divmod_var_unsigned_ins(FnState& state, std::string_view op, VarType type) {
-	BytecodeInstruction& ins = state.ins;
+	InsRef& ins = state.ins;
 	emit(
 	    "\t\t{TYPE} divider = {RHS};\n"
 	    "\t\tif (divider == 0) {{ {ERR_DIVIDE_BY_ZERO_HANDLER}  }}\n"

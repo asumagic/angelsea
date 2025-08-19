@@ -14,22 +14,17 @@ class BytecodeView {
 	class Iterator {
 		public:
 		using difference_type = std::ptrdiff_t;
-		using element_type    = BytecodeInstruction;
+		using element_type    = InsRef;
 
 		Iterator() { angelsea_assert(false); }
 		element_type operator*() const {
-			const asSBCInfo&  info             = asBCInfo[*reinterpret_cast<const asBYTE*>(bytecode_current)];
-			const std::size_t instruction_size = asBCTypeSize[info.type];
-
-			return BytecodeInstruction{
+			return InsRef{
 			    .pointer = bytecode_current,
-			    .info    = &info,
 			    .offset  = std::size_t(std::distance(bytecode_start, bytecode_current)),
-			    .size    = instruction_size,
 			};
 		}
 		Iterator& operator++() {
-			bytecode_current += (**this).size;
+			bytecode_current += (**this).size();
 			return *this;
 		}
 		Iterator operator++(int) {
