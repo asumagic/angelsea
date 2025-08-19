@@ -8,6 +8,7 @@
 #include <array>
 #include <as_scriptengine.h>
 #include <as_scriptfunction.h>
+#include <bit>
 #include <cstddef>
 #include <fmt/core.h>
 #include <optional>
@@ -57,10 +58,14 @@ namespace operands {
 struct Var {
 	short   idx;
 	VarType type;
+
+	bool operator==(const Var&) const = default;
 };
 
 template<class T> struct Immediate {
 	T value;
+
+	bool operator==(const Immediate<T>&) const = default;
 };
 } // namespace operands
 
