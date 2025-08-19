@@ -51,10 +51,6 @@ struct VarType {
 	bool operator==(const VarType& other) const { return c == other.c; };
 };
 
-template<class... Ts> struct overloaded : Ts... {
-	using Ts::operator()...;
-};
-
 template<typename T> inline std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
 
 namespace operands {

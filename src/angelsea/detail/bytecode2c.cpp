@@ -12,6 +12,7 @@
 #include <angelsea/detail/log.hpp>
 #include <angelsea/detail/runtimeheader.hpp>
 #include <angelsea/detail/stringutil.hpp>
+#include <angelsea/detail/util.hpp>
 #include <as_callfunc.h>
 #include <as_config.h>
 #include <as_context.h>
