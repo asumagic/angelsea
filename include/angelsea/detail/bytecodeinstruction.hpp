@@ -133,49 +133,50 @@ struct Compare : BytecodeInstruction {
 
 	explicit Compare(BytecodeInstruction& ins) : BytecodeInstruction(ins) {
 		using namespace var_types;
+		using namespace operands;
 
 		angelsea_assert(is_specific_ins<Compare>(ins));
 
 		switch (ins.info->bc) {
 		case asBC_CMPi:
-			lhs = operands::Var{sword0(), s32};
-			rhs = operands::Var{sword1(), s32};
+			lhs = Var{sword0(), s32};
+			rhs = Var{sword1(), s32};
 			break;
 		case asBC_CMPu:
-			lhs = operands::Var{sword0(), u32};
-			rhs = operands::Var{sword1(), u32};
+			lhs = Var{sword0(), u32};
+			rhs = Var{sword1(), u32};
 			break;
 		case asBC_CMPi64:
-			lhs = operands::Var{sword0(), s64};
-			rhs = operands::Var{sword1(), s64};
+			lhs = Var{sword0(), s64};
+			rhs = Var{sword1(), s64};
 			break;
 		case asBC_CMPu64:
-			lhs = operands::Var{sword0(), u64};
-			rhs = operands::Var{sword1(), u64};
+			lhs = Var{sword0(), u64};
+			rhs = Var{sword1(), u64};
 			break;
 		case asBC_CmpPtr:
-			lhs = operands::Var{sword0(), pword};
-			rhs = operands::Var{sword1(), pword};
+			lhs = Var{sword0(), pword};
+			rhs = Var{sword1(), pword};
 			break;
 		case asBC_CMPf:
-			lhs = operands::Var{sword0(), f32};
-			rhs = operands::Var{sword1(), f32};
+			lhs = Var{sword0(), f32};
+			rhs = Var{sword1(), f32};
 			break;
 		case asBC_CMPd:
-			lhs = operands::Var{sword0(), f64};
-			rhs = operands::Var{sword1(), f64};
+			lhs = Var{sword0(), f64};
+			rhs = Var{sword1(), f64};
 			break;
 		case asBC_CMPIi:
-			lhs = operands::Var{sword0(), s32};
-			rhs = operands::Immediate<asINT32>{int0()};
+			lhs = Var{sword0(), s32};
+			rhs = Immediate<asINT32>{int0()};
 			break;
 		case asBC_CMPIu:
-			lhs = operands::Var{sword0(), u32};
-			rhs = operands::Immediate<asDWORD>{dword0()};
+			lhs = Var{sword0(), u32};
+			rhs = Immediate<asDWORD>{dword0()};
 			break;
 		case asBC_CMPIf:
-			lhs = operands::Var{sword0(), f32};
-			rhs = operands::Immediate<float>{std::bit_cast<float>(dword0())};
+			lhs = Var{sword0(), f32};
+			rhs = Immediate<float>{std::bit_cast<float>(dword0())};
 			break;
 		default: break;
 		}
