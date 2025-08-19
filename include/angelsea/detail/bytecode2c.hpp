@@ -380,8 +380,6 @@ class BytecodeToC {
 	}
 };
 
-std::size_t relative_jump_target(std::size_t base_offset, int relative_offset);
-
 template<>
 inline void BytecodeToC::make_local_from_operand<operands::Immediate<asINT32>>(
     [[maybe_unused]] FnState&           state,

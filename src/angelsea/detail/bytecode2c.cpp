@@ -2375,8 +2375,4 @@ std::string BytecodeToC::stack_var(int offset, VarType type) {
 	return fmt::format("((asea_var*)((asDWORD*)sp + {}))->as_{}", fmt::to_string(offset), type.c);
 }
 
-std::size_t relative_jump_target(std::size_t base_offset, int relative_offset) {
-	return std::size_t(std::int64_t(base_offset) + std::int64_t(relative_offset));
-}
-
 } // namespace angelsea::detail
