@@ -108,15 +108,6 @@ template<class T> struct Immediate {
 	bool operator==(const Immediate<T>&) const = default;
 };
 
-/// Models a pointer-sized immediate, although it does not have to point to an actual address in memory.
-struct PointerImmediate {
-	asPWORD value;
-
-	static constexpr VarType get_type() { return var_types::pword; }
-
-	bool operator==(const PointerImmediate&) const = default;
-};
-
 /// Models a pointer to a global variable. The pointer points directly to the actual value. Figuring out what the global
 /// variable is relies inspecting the script engine context.
 struct GlobalVariable {
@@ -234,8 +225,8 @@ struct StackPush : InsRef {
 		case asBC_PshG4:   value = GlobalVariable{std::bit_cast<void*>(ins.pword0()), u32, true, true}; break;
 		case asBC_PshC8:   value = Immediate<asQWORD>{ins.qword0()}; break;
 		case asBC_PshV8:   value = FrameVariable{ins.sword0(), u64}; break;
-		case asBC_VAR:     value = PointerImmediate{asPWORD(ins.sword0())}; break;
-		case asBC_PshNull: value = PointerImmediate{0}; break;
+		case asBC_VAR:     value = Immediate<asPWORD>{asPWORD(ins.sword0())}; break;
+		case asBC_PshNull: value = Immediate<asPWORD>{0}; break;
 		case asBC_PshVPtr: value = FrameVariable{ins.sword0(), pword}; break;
 		case asBC_PshGPtr: value = GlobalVariable{std::bit_cast<void*>(ins.pword0()), pword, true, true}; break;
 		case asBC_PshRPtr: value = ValueRegister{pword}; break;
@@ -252,8 +243,7 @@ struct StackPush : InsRef {
 	    operands::ObjectType,
 	    operands::ValueRegister,
 	    operands::Immediate<asDWORD>,
-	    operands::Immediate<asQWORD>,
-	    operands::PointerImmediate>
+	    operands::Immediate<asQWORD>>
 	    value;
 };
 
