@@ -71,12 +71,13 @@ static constexpr VarType s8{"asINT8", "asINT8", 1}, s16{"asINT16", "asINT16", 2}
     void_ptr{"void*", "ptr", 8 /* same as pword */}, f32{"float", "float", 4}, f64{"double", "double", 8};
 } // namespace var_types
 
+/// Groups semantically similar bytecode instructions under common structs with metadata
 namespace bcins {
 template<typename T> bool is_specific_ins(const BytecodeInstruction& bc) {
 	return std::find(T::valid_opcodes.begin(), T::valid_opcodes.end(), bc.info->bc) != T::valid_opcodes.end();
 }
 
-template<typename T> std::optional<T> try_as(BytecodeInstruction& ins) {
+template<typename T> std::optional<T> try_as(const BytecodeInstruction& ins) {
 	if (is_specific_ins<T>(ins)) {
 		return T{ins};
 	}
@@ -88,7 +89,7 @@ struct Jump : BytecodeInstruction {
 	public:
 	static constexpr std::array valid_opcodes
 	    = {asBC_JMP, asBC_JZ, asBC_JLowZ, asBC_JNZ, asBC_JLowNZ, asBC_JS, asBC_JNS, asBC_JP, asBC_JNP};
-	explicit Jump(BytecodeInstruction& ins) : BytecodeInstruction(ins) {
+	explicit Jump(const BytecodeInstruction& ins) : BytecodeInstruction(ins) {
 		using namespace var_types;
 
 		angelsea_assert(is_specific_ins<Jump>(ins));
@@ -131,7 +132,7 @@ struct Compare : BytecodeInstruction {
 	       asBC_CMPIu,
 	       asBC_CMPIf};
 
-	explicit Compare(BytecodeInstruction& ins) : BytecodeInstruction(ins) {
+	explicit Compare(const BytecodeInstruction& ins) : BytecodeInstruction(ins) {
 		using namespace var_types;
 		using namespace operands;
 
@@ -191,7 +192,7 @@ struct Compare : BytecodeInstruction {
 struct CallSystemDirect : BytecodeInstruction {
 	public:
 	static constexpr std::array valid_opcodes = {asBC_CALLSYS, asBC_Thiscall1};
-	explicit CallSystemDirect(BytecodeInstruction& ins) : BytecodeInstruction(ins) {
+	explicit CallSystemDirect(const BytecodeInstruction& ins) : BytecodeInstruction(ins) {
 		angelsea_assert(is_specific_ins<CallSystemDirect>(ins));
 	}
 
@@ -200,4 +201,23 @@ struct CallSystemDirect : BytecodeInstruction {
 };
 
 } // namespace bcins
+
+/// Virtual instructions in angelsea
+namespace virtins {
+
+/// Conditional jump that bypasses the compare's write to the value register.
+struct FusedCompareJump {
+	bcins::Compare compare;
+	bcins::Jump    jump;
+};
+
+/// No-op that does not do anything. Used to mask over
+struct Nop {};
+
+} // namespace virtins
+
+// TODO: pretty inefficient, at some point we probably want to just translate the whole bytecode to a vector of our own
+// that is more compact than a vector of std::variant
+using VirtualInstruction = std::variant<virtins::FusedCompareJump, virtins::Nop>;
+
 } // namespace angelsea::detail

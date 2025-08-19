@@ -109,6 +109,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	    .branch_targets           = {},    // populated by discover_branch_targets
 	    .stack_push_infos         = {},    // populated by discover_function_call_pushes
 	    .fn_to_stack_push         = {},    // ^
+	    .overriden_instructions   = {},    // populated by discover_peephole
 	    .emitted_symbols          = {},    // populated by whatever emits extern declarations
 	    .has_direct_generic_call  = false, // populated by discover_function_calls
 	    .error_handlers_mask      = 0,     // populated by any translate_instruction
@@ -121,6 +122,7 @@ void BytecodeToC::translate_function(std::string_view internal_module_name, asIS
 	if (m_config->experimental_stack_elision) {
 		discover_function_call_pushes(state);
 	}
+	discover_peephole(state);
 
 	if (m_config->experimental_direct_generic_call /* && state.has_direct_generic_call*/) {
 		// FIXME: has_direct_generic_call is broken with refcpyv
@@ -409,6 +411,29 @@ void BytecodeToC::discover_function_call_pushes(FnState& state) {
 	}
 }
 
+void BytecodeToC::discover_peephole(FnState& state) {
+	auto bytecode = get_bytecode(*state.fn);
+	for (auto it = bytecode.begin(); it != bytecode.end(); ++it) {
+		auto next = std::next(it);
+		if (next == bytecode.end()) {
+			break;
+		}
+
+		if (is_instruction_blacklisted((*it).info->bc) || is_instruction_blacklisted((*next).info->bc)) {
+			continue;
+		}
+
+		{
+			auto compare = bcins::try_as<bcins::Compare>(*it);
+			auto jump    = bcins::try_as<bcins::Jump>(*next);
+			if (compare.has_value() && jump.has_value() && jump->cond_expr.has_value()) {
+				state.overriden_instructions.emplace((*it).offset, virtins::Nop{});
+				state.overriden_instructions.emplace((*next).offset, virtins::FusedCompareJump{*compare, *jump});
+			}
+		}
+	}
+}
+
 void BytecodeToC::emit_entry_dispatch(FnState& state) {
 	if (!state.has_any_late_jit_entries) {
 		if (m_config->c.human_readable) {
@@ -514,6 +539,41 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	if (is_instruction_blacklisted(ins.info->bc)) {
 		emit_vm_fallback(state, "instruction blacklisted by config.debug, force fallback");
+		emit("\t}}\n");
+		return;
+	}
+
+	if (auto virt_it = state.overriden_instructions.find(ins.offset); virt_it != state.overriden_instructions.end()) {
+		if (m_config->c.human_readable) {
+			emit("\t\t/* Virtual instruction injected by optimizer */\n");
+		}
+
+		std::visit(
+		    overloaded{
+		        [&](virtins::FusedCompareJump& fused) {
+			        make_local_from_operand(state, "lhs", fused.compare.lhs);
+			        make_local_from_operand(state, "rhs", fused.compare.rhs);
+			        emit(
+			            "\t\tif (lhs {OP} rhs) {{ goto bc{TARGET}; }}\n",
+			            fmt::arg("LHS_TYPE", fused.jump.cond_expr->lhs_type.c),
+			            fmt::arg("OP", fused.jump.cond_expr->c_comparison_op),
+			            fmt::arg("TARGET", fused.jump.target_offset())
+			        );
+		        },
+		        [&](virtins::Nop&) {
+			        if (m_config->c.human_readable) {
+				        emit("\t\t/* no-op from fusing with another bytecodeinstruction */\n");
+			        }
+		        }
+		    },
+		    virt_it->second
+		);
+
+		// TODO: dedup footer here
+		if (ins.info->bc == m_config->debug.fallback_after_instruction) {
+			emit_vm_fallback(state, "debug.fallback_after_instruction");
+		}
+
 		emit("\t}}\n");
 		return;
 	}

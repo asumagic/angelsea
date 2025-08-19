@@ -133,6 +133,8 @@ class BytecodeToC {
 		/// Complementary to \ref stack_push_to_fn
 		std::unordered_map<std::size_t, std::vector<std::size_t>> fn_to_stack_push;
 
+		std::unordered_map<std::size_t, VirtualInstruction> overriden_instructions;
+
 		/// Symbols that already have been emitted, to avoid duplicated declarations
 		std::unordered_set<std::string> emitted_symbols; // (might be good to find a way to remove?)
 
@@ -202,6 +204,9 @@ class BytecodeToC {
 	///
 	/// This function depends on \ref discover_branch_targets being executed prior.
 	void discover_function_call_pushes(FnState& state);
+
+	/// Discover peephole optimizations to populate the virtual instructions.
+	void discover_peephole(FnState& state);
 
 	void emit_entry_dispatch(FnState& state);
 	void emit_error_handlers(FnState& state);
