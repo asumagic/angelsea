@@ -378,10 +378,10 @@ class BytecodeToC {
 std::size_t relative_jump_target(std::size_t base_offset, int relative_offset);
 
 template<>
-inline void BytecodeToC::make_local_from_operand<bcins::operands::Immediate<asINT32>>(
-    [[maybe_unused]] FnState&                  state,
-    std::string_view                           name,
-    const bcins::operands::Immediate<asINT32>& value
+inline void BytecodeToC::make_local_from_operand<operands::Immediate<asINT32>>(
+    [[maybe_unused]] FnState&           state,
+    std::string_view                    name,
+    const operands::Immediate<asINT32>& value
 ) {
 	emit(
 	    "\t\tasINT32 {NAME} = {VALUE};\n",
@@ -391,10 +391,10 @@ inline void BytecodeToC::make_local_from_operand<bcins::operands::Immediate<asIN
 }
 
 template<>
-inline void BytecodeToC::make_local_from_operand<bcins::operands::Immediate<asDWORD>>(
-    [[maybe_unused]] FnState&                  state,
-    std::string_view                           name,
-    const bcins::operands::Immediate<asDWORD>& value
+inline void BytecodeToC::make_local_from_operand<operands::Immediate<asDWORD>>(
+    [[maybe_unused]] FnState&           state,
+    std::string_view                    name,
+    const operands::Immediate<asDWORD>& value
 ) {
 	emit(
 	    "\t\tasDWORD {NAME} = {VALUE};\n",
@@ -404,10 +404,10 @@ inline void BytecodeToC::make_local_from_operand<bcins::operands::Immediate<asDW
 }
 
 template<>
-inline void BytecodeToC::make_local_from_operand<bcins::operands::Immediate<float>>(
-    [[maybe_unused]] FnState&                state,
-    std::string_view                         name,
-    const bcins::operands::Immediate<float>& value
+inline void BytecodeToC::make_local_from_operand<operands::Immediate<float>>(
+    [[maybe_unused]] FnState&         state,
+    std::string_view                  name,
+    const operands::Immediate<float>& value
 ) {
 	emit(
 	    "\t\tasea_i2f_inst.i = {VALUE};\n"
@@ -418,11 +418,8 @@ inline void BytecodeToC::make_local_from_operand<bcins::operands::Immediate<floa
 }
 
 template<>
-inline void BytecodeToC::make_local_from_operand<bcins::operands::Var>(
-    FnState&                    state,
-    std::string_view            name,
-    const bcins::operands::Var& value
-) {
+inline void
+BytecodeToC::make_local_from_operand<operands::Var>(FnState& state, std::string_view name, const operands::Var& value) {
 	emit(
 	    "\t\t{TYPE} {NAME} = {VAR};\n",
 	    fmt::arg("TYPE", value.type.c),

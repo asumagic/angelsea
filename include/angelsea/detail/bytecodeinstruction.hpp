@@ -53,6 +53,17 @@ template<class... Ts> struct overloaded : Ts... {
 
 template<typename T> inline std::string imm_int(T v, VarType type) { return fmt::format("({}){}", type.c, v); }
 
+namespace operands {
+struct Var {
+	short   idx;
+	VarType type;
+};
+
+template<class T> struct Immediate {
+	T value;
+};
+} // namespace operands
+
 namespace var_types {
 static constexpr VarType s8{"asINT8", "asINT8", 1}, s16{"asINT16", "asINT16", 2}, s32{"asINT32", "asINT32", 4},
     s64{"asINT64", "asINT64", 8}, u8{"asBYTE", "asBYTE", 1}, u16{"asWORD", "asWORD", 2}, u32{"asDWORD", "asDWORD", 4},
@@ -71,17 +82,6 @@ template<typename T> std::optional<T> try_as(BytecodeInstruction& ins) {
 	}
 	return {};
 }
-
-namespace operands {
-struct Var {
-	short   idx;
-	VarType type;
-};
-
-template<class T> struct Immediate {
-	T value;
-};
-} // namespace operands
 
 /// Conditional or unconditional jump instruction, excluding switches.
 struct Jump : BytecodeInstruction {
