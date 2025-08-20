@@ -1317,7 +1317,7 @@ std::string BytecodeToC::emit_type_info_lookup([[maybe_unused]] FnState& state, 
 	// if (m_config->c.human_readable) {
 	// 	emit("\t\t/* type info `{}` */\n", type.GetName());
 	// }
-	emit_forward_declaration(state, type_info_symbol, "extern void* {};\n", type_info_symbol);
+	emit_forward_declaration(state, type_info_symbol, "extern char {}[];\n", type_info_symbol);
 	if (m_on_map_extern_callback) {
 		m_on_map_extern_callback(type_info_symbol.c_str(), ExternTypeInfo{&type}, &type);
 	}
