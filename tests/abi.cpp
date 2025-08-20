@@ -54,6 +54,8 @@ void generic_return_string(asIScriptGeneric* gen) {
 
 void generic_take_noisy(asIScriptGeneric* gen) {}
 
+void take_noisy(NoisyClass a, NoisyClass b) {}
+
 void bind_generic_functions(asIScriptEngine& e) {
 	e.RegisterGlobalFunction("int noarg()", asFUNCTION(generic_noarg_hack), asCALL_GENERIC);
 	e.RegisterGlobalFunction("int sum3int(int, int, int)", asFUNCTION(generic_sum3int), asCALL_GENERIC);
@@ -198,22 +200,19 @@ void bind_native_functions(asIScriptEngine& e) {
 	    asCALL_CDECL
 	);
 
-	// e.RegisterObjectType("NoisyClass", sizeof(SomeClass), asOBJ_VALUE | asGetTypeTraits<NoisyClass>());
-	// e.RegisterObjectBehaviour("NoisyClass", asBEHAVE_CONSTRUCT, "void f()", WRAP_CON(NoisyClass, ()),
-	// asCALL_GENERIC); e.RegisterObjectBehaviour(
-	//     "NoisyClass",
-	//     asBEHAVE_CONSTRUCT,
-	//     "void f(const NoisyClass &in)",
-	//     WRAP_CON(NoisyClass, (const NoisyClass&)),
-	//     asCALL_GENERIC
-	// );
-	// e.RegisterObjectBehaviour("NoisyClass", asBEHAVE_DESTRUCT, "void f()", WRAP_DES(NoisyClass), asCALL_GENERIC);
+	// TODO: cdecl behs
+	e.RegisterObjectType("NoisyClass", sizeof(SomeClass), asOBJ_VALUE | asGetTypeTraits<NoisyClass>());
+	e.RegisterObjectBehaviour("NoisyClass", asBEHAVE_CONSTRUCT, "void f()", WRAP_CON(NoisyClass, ()), asCALL_GENERIC);
+	e.RegisterObjectBehaviour(
+	    "NoisyClass",
+	    asBEHAVE_CONSTRUCT,
+	    "void f(const NoisyClass &in)",
+	    WRAP_CON(NoisyClass, (const NoisyClass&)),
+	    asCALL_GENERIC
+	);
+	e.RegisterObjectBehaviour("NoisyClass", asBEHAVE_DESTRUCT, "void f()", WRAP_DES(NoisyClass), asCALL_GENERIC);
 
-	// e.RegisterGlobalFunction(
-	//     "void take_noisy(NoisyClass a, NoisyClass b)",
-	//     asFUNCTION(generic_take_noisy),
-	//     asCALL_GENERIC
-	// );
+	e.RegisterGlobalFunction("void take_noisy(NoisyClass a, NoisyClass b)", asFUNCTION(take_noisy), asCALL_CDECL);
 
 	e.RegisterGlobalFunction(
 	    "int native_manyargs(int x0, int x1, int x2, int x3, int x4, int x5, int x6, int x7, int x8, float y1, "
@@ -260,6 +259,9 @@ TEST_CASE("native calling convention pass by value", "[abi][conv_native]") {
 	    run_string(context, "SomeClass a; a.a = 123; SomeClass b; b.a = 456; print(''+pass_trivial_by_value(a, b));")
 	    == "579\n"
 	);
+
+	// involves cleanargs
+	REQUIRE(run_string(context, "take_noisy(NoisyClass(), NoisyClass());") == "ConCpyDesConCpyDesDesDes");
 }
 
 TEST_CASE("native abi benchmark", "[abi][conv_native][benchmark]") {

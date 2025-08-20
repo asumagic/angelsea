@@ -1574,6 +1574,11 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
     std::string_view   fn_desc_symbol,
     std::string_view   fn_callable_symbol
 ) {
+	// FIXME: this thing is an abomination and it haunts my dreams (frankly, almost literally)
+	// i have no excuse for it and i keep postponing the inevitable. and yet it's 3am, and i'm still considering adding
+	// an unordered map that tracks *yet another* thing and i fear that if i keep going clang will ultimately gain
+	// consciousness just enough for it to remove itself from my drive
+
 	if (!m_config->experimental_direct_native_call) {
 		return {.ok = false, .fail_reason = "Direct native call failed: experimental_direct_native_call == false"};
 	}
@@ -1601,10 +1606,6 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	if (sys_fn.returnAutoHandle) {
 		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle auto handles in return yet"};
-	}
-
-	if (sys_fn.cleanArgs.GetLength() > 0) {
-		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle arg cleanup yet"};
 	}
 
 	std::vector<std::string> struct_decls;
@@ -1662,15 +1663,15 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	// gather arguments to build C signature (and early fail on unsupported types)
 
-	std::vector<VarType>     arg_types;
-	std::vector<std::string> arg_exprs;
-	std::string              obj_expr;
-	std::string              to_emit_before_call;
-	std::string              to_emit_after_call;
-	std::string              return_target_override;
+	std::vector<std::pair<VarType, std::string>> args;
+	std::unordered_map<int, std::size_t>         stack_to_arg_mapping;
+	std::int64_t                                 current_arg_dwords = 0;
+	std::int64_t                                 current_arg_pwords = 0;
 
-	std::int64_t current_arg_dwords = 0;
-	std::int64_t current_arg_pwords = 0;
+	std::string obj_expr;
+	std::string to_emit_before_call;
+	std::string to_emit_after_call;
+	std::string return_target_override;
 
 	// TODO: abstract the stack pop logic elsewhere
 
@@ -1741,6 +1742,18 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		);
 	};
 
+	const auto push_abi_argument = [&](VarType type, std::string expr, std::optional<int> stack_offset = std::nullopt) {
+		if (stack_offset.has_value()) {
+			stack_to_arg_mapping.emplace(*stack_offset, args.size());
+		}
+		args.emplace_back(type, std::move(expr));
+	};
+
+	const auto current_stack_offset = [&] { return current_arg_dwords + (current_arg_pwords * AS_PTR_SIZE); };
+
+	const auto push_stack_argument
+	    = [&](VarType type) { push_abi_argument(type, arg_current_stack_ptr_expr(type), current_stack_offset()); };
+
 	if (sys_fn.callConv >= ICC_THISCALL) {
 		// always load `this` from the first position in the stack
 		if (call.object_pointer_override.empty()) {
@@ -1751,7 +1764,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	if (is_complex_passed_by_value(fn.returnType)) {
 		to_emit_before_call
-		    += fmt::format("\t\tvoid* ret_ptr = (void*){};\n", arg_current_stack_ptr_expr(var_types::void_ptr));
+		    += fmt::format("\t\tvoid* ret_ptr = {};\n", arg_current_stack_ptr_expr(var_types::void_ptr));
 		current_arg_pwords += 1;
 	} else if (fn.DoesReturnOnStack()) {
 		return_target_override = fmt::format(
@@ -1764,15 +1777,13 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	if (is_complex_passed_by_value(fn.returnType)) {
 		// FIXME: pretty sure different ABIs pass this in different locations (e.g. iirc MSVC have them swapped?)
-		arg_types.emplace_back(var_types::void_ptr);
-		arg_exprs.emplace_back("ret_ptr");
+		push_abi_argument(var_types::void_ptr, "ret_ptr", std::nullopt);
 	}
 
 	if (sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
 	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST || sys_fn.callConv == ICC_CDECL_OBJFIRST) {
 		// where the argument actually lands depends on the convention
-		arg_types.emplace_back(var_types::void_ptr);
-		arg_exprs.emplace_back("obj");
+		push_abi_argument(var_types::void_ptr, "obj", std::nullopt);
 	}
 
 	for (std::size_t i = 0; i < fn.parameterTypes.GetLength(); ++i) {
@@ -1781,31 +1792,24 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		if (param_type.GetTokenType() == ttQuestion) {
 			return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle variable arguments yet"};
 		} else if (param_type.IsReference() || param_type.IsObjectHandle()) {
-			arg_types.emplace_back(var_types::void_ptr);
-			arg_exprs.emplace_back(arg_current_stack_ptr_expr(var_types::void_ptr));
+			push_stack_argument(var_types::void_ptr);
 			current_arg_pwords += 1;
 		} else if (param_type.IsPrimitive()) {
-			arg_types.emplace_back(get_var_type(param_type));
-			arg_exprs.emplace_back(arg_current_stack_ptr_expr(arg_types.back()));
+			push_stack_argument(get_var_type(param_type));
 			current_arg_dwords += param_type.GetSizeOnStackDWords();
+		} else if (is_complex_passed_by_value(param_type)) {
+			push_stack_argument(var_types::void_ptr);
+			current_arg_pwords += 1;
 		} else {
 			// we have a pointer on stack to a pass-by-value argument. make a dummy type (when possible) to use as an
 			// argument for that function, and dereference the stack pointer to get the argument
-			VarType arg_type = get_var_type(param_type);
-			arg_types.emplace_back(arg_type.c);
-			std::string arg_ptr = fmt::format(
-			    "({TYPE}*){VOID_PTR}",
-			    fmt::arg("TYPE", arg_type.c),
-			    fmt::arg("VOID_PTR", arg_current_stack_ptr_expr(var_types::void_ptr))
-			);
-			arg_exprs.emplace_back(fmt::format("*{}", arg_ptr));
-
-			if (arg_type.c.empty()) {
-				return {
-				    .ok          = false,
-				    .fail_reason = "Direct native call failed: Unsupported type for pass-by-value for now"
-				};
-			}
+			VarType     arg_type = get_var_type(param_type);
+			std::string arg_ptr  = fmt::format(
+                "({TYPE}*){VOID_PTR}",
+                fmt::arg("TYPE", arg_type.c),
+                fmt::arg("VOID_PTR", arg_current_stack_ptr_expr(var_types::void_ptr))
+            );
+			push_abi_argument(arg_type, fmt::format("*{}", arg_ptr), current_stack_offset());
 
 			// TODO: store to tmp var to avoid reloading from stack again
 			to_emit_after_call += fmt::format("\t\tasea_free({});\n", arg_ptr);
@@ -1814,8 +1818,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	}
 
 	if (sys_fn.callConv == ICC_CDECL_OBJLAST) {
-		arg_types.emplace_back("void*");
-		arg_exprs.emplace_back("obj");
+		push_abi_argument(var_types::void_ptr, "obj");
 	}
 
 	// can start emit()s from this point on
@@ -1876,9 +1879,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	std::string final_callable_name;
 
-	std::vector<std::string> formatted_arg_types(arg_types.size());
+	std::vector<std::string> formatted_arg_types(args.size());
 	for (std::size_t i = 0; i < formatted_arg_types.size(); ++i) {
-		formatted_arg_types[i] = arg_types[i].c;
+		formatted_arg_types[i] = args[i].first.c;
 	}
 
 	if (sys_fn.callConv == ICC_VIRTUAL_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST
@@ -1919,11 +1922,15 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	// perform the actual call. the expression to perform the call is always the same but the surrounding call to figure
 	// out where to store the return value differs.
-	std::string call_expression = fmt::format(
-	    "{FN}(\n\t\t\t{ARGEXPRS})",
-	    fmt::arg("FN", final_callable_name),
-	    fmt::arg("ARGEXPRS", fmt::join(arg_exprs, ",\n\t\t\t"))
-	);
+	std::string call_expression = fmt::format("{FN}(", fmt::arg("FN", final_callable_name));
+	for (auto it = args.begin(); it != args.end(); ++it) {
+		const auto& expr = it->second;
+		call_expression += fmt::format("\n\t\t\t{}", expr);
+		if (std::next(it) != args.end()) {
+			call_expression += ',';
+		}
+	}
+	call_expression += ");";
 
 	if (!return_target_override.empty()) {
 		emit(
@@ -1965,6 +1972,48 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	}
 
 	emit("{}", to_emit_after_call);
+
+	// TODO: move this out and reuse for generic convention. also suspiciously similar to asBC_FREE in shape, any reuse
+	// possible?
+	if (sys_fn.cleanArgs.GetLength() > 0) {
+		auto& clean_args = fn.sysFuncIntf->cleanArgs;
+		for (std::size_t i = 0; i < clean_args.GetLength(); ++i) {
+			const std::size_t arg_id = stack_to_arg_mapping[clean_args[i].off];
+			emit(
+			    "\t\t{{\n"
+			    "\t\tvoid* clean = {};\n",
+			    args[arg_id].second
+			);
+			if (clean_args[i].op == 0) {
+				emit("\t\tif (clean) {{\n");
+				emit_system_call(
+				    state,
+				    {.fn_idx                  = clean_args[i].ot->beh.release,
+				     .object_pointer_override = "clean",
+				     .is_internal_call        = true}
+				);
+				emit(
+				    "\t\tclean{} = 0;\n"
+				    "\t\t}}\n",
+				    i
+				);
+			} else {
+				if (clean_args[i].op == 2) {
+					emit_system_call(
+					    state,
+					    {.fn_idx                  = clean_args[i].ot->beh.destruct,
+					     .object_pointer_override = "clean",
+					     .is_internal_call        = true}
+					);
+				}
+
+				emit(
+				    "\t\tasea_free(clean);\n"
+				    "\t\t}}\n"
+				);
+			}
+		}
+	}
 
 	// pop stack arguments (at least the ones that weren't in the "virtual" stack elision stack)
 	if (!call.is_internal_call && (current_arg_dwords > 0 || current_arg_pwords > 0)) {
