@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include "angelsea/config.hpp"
 #include "common.hpp"
 
 #include "benchmark.hpp"
@@ -16,9 +17,10 @@ struct SomeClass {
 };
 
 struct NoisyClass {
-	NoisyClass() { out << "Con"; }
-	NoisyClass(const NoisyClass& other) { out << "Cpy"; }
-	~NoisyClass() { out << "Des"; }
+	NoisyClass() { out << "Con" << c; }
+	NoisyClass(const NoisyClass& other) { out << "Cpy" << c; }
+	~NoisyClass() { out << "Des" << c; }
+	std::string c = "";
 };
 
 void generic_noarg(asIScriptGeneric* gen) {
@@ -69,7 +71,7 @@ void bind_generic_functions(asIScriptEngine& e) {
 	e.RegisterObjectMethod("SomeClass", "void add_obj(int x)", asFUNCTION(generic_add_obj_hack), asCALL_GENERIC);
 	e.RegisterObjectProperty("SomeClass", "int a", asOFFSET(SomeClass, a));
 
-	e.RegisterObjectType("NoisyClass", sizeof(SomeClass), asOBJ_VALUE | asGetTypeTraits<NoisyClass>());
+	e.RegisterObjectType("NoisyClass", sizeof(NoisyClass), asOBJ_VALUE | asGetTypeTraits<NoisyClass>());
 	e.RegisterObjectBehaviour("NoisyClass", asBEHAVE_CONSTRUCT, "void f()", WRAP_CON(NoisyClass, ()), asCALL_GENERIC);
 	e.RegisterObjectBehaviour(
 	    "NoisyClass",
@@ -175,6 +177,8 @@ std::string return_string(int a, int b, const std::string& c) {
 	return ret;
 }
 
+void native_destruct_noisy(NoisyClass* c) { c->~NoisyClass(); }
+
 void bind_native_functions(asIScriptEngine& e) {
 	e.RegisterGlobalFunction("int noarg()", asFUNCTION(native_noarg), asCALL_CDECL);
 	e.RegisterGlobalFunction("int sum3int(int, int, int)", asFUNCTION(native_sum3int), asCALL_CDECL);
@@ -200,8 +204,8 @@ void bind_native_functions(asIScriptEngine& e) {
 	    asCALL_CDECL
 	);
 
-	// TODO: cdecl behs
-	e.RegisterObjectType("NoisyClass", sizeof(SomeClass), asOBJ_VALUE | asGetTypeTraits<NoisyClass>());
+	// TODO: cdecl behs?
+	e.RegisterObjectType("NoisyClass", sizeof(NoisyClass), asOBJ_VALUE | asGetTypeTraits<NoisyClass>());
 	e.RegisterObjectBehaviour("NoisyClass", asBEHAVE_CONSTRUCT, "void f()", WRAP_CON(NoisyClass, ()), asCALL_GENERIC);
 	e.RegisterObjectBehaviour(
 	    "NoisyClass",
@@ -210,7 +214,13 @@ void bind_native_functions(asIScriptEngine& e) {
 	    WRAP_CON(NoisyClass, (const NoisyClass&)),
 	    asCALL_GENERIC
 	);
-	e.RegisterObjectBehaviour("NoisyClass", asBEHAVE_DESTRUCT, "void f()", WRAP_DES(NoisyClass), asCALL_GENERIC);
+	e.RegisterObjectBehaviour(
+	    "NoisyClass",
+	    asBEHAVE_DESTRUCT,
+	    "void f()",
+	    asFUNCTION(native_destruct_noisy),
+	    asCALL_CDECL_OBJLAST
+	);
 
 	e.RegisterGlobalFunction("void take_noisy(NoisyClass a, NoisyClass b)", asFUNCTION(take_noisy), asCALL_CDECL);
 
