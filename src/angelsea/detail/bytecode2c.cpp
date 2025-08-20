@@ -1567,6 +1567,23 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& 
 	return emit_direct_system_call_native(state, call, script_fn, fn_desc_symbol, fn_callable_symbol);
 }
 
+struct VirtualStack {
+	std::int64_t dword_offset = 0, pword_offset = 0;
+	std::size_t  real_stack_offset = 0;
+
+	void take_dwords(std::size_t count) {
+		dword_offset += count;
+		real_stack_offset += count;
+	}
+	void take_pwords(std::size_t count) {
+		pword_offset += count;
+		real_stack_offset += count * AS_PTR_SIZE;
+	}
+
+	void inject_dwords(std::size_t count) { dword_offset -= count; }
+	void inject_pwords(std::size_t count) { pword_offset -= count; }
+};
+
 BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
     FnState&           state,
     SystemCall         call,
@@ -1664,9 +1681,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	// gather arguments to build C signature (and early fail on unsupported types)
 
 	std::vector<std::pair<VarType, std::string>> args;
-	std::unordered_map<int, std::size_t>         stack_to_arg_mapping;
-	std::int64_t                                 current_arg_dwords = 0;
-	std::int64_t                                 current_arg_pwords = 0;
+	std::unordered_map<int, std::size_t>         stack_offset_to_arg_id;
+
+	VirtualStack virtual_stack;
 
 	std::string obj_expr;
 	std::string to_emit_before_call;
@@ -1684,7 +1701,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		push_offset_idx = std::int64_t(push_offsets->size()) - 1;
 	}
 
-	const auto arg_current_stack_ptr_expr = [&](VarType type) {
+	const auto virtual_stack_pop_expr = [&](VarType type) {
 		if (push_offsets != nullptr && push_offset_idx >= 0) {
 			const auto push_ins_offset = (*push_offsets)[push_offset_idx];
 			const auto push_info       = state.stack_push_infos.at(push_ins_offset);
@@ -1693,13 +1710,13 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 			--push_offset_idx;
 
 			if (push_info.type == var_types::u32) {
-				current_arg_dwords -= 1;
+				virtual_stack.inject_dwords(1);
 			} else if (push_info.type == var_types::u64) {
-				current_arg_dwords -= 2;
+				virtual_stack.inject_dwords(2);
 			} else if (push_info.type == var_types::pword) {
-				current_arg_pwords -= 1;
+				virtual_stack.inject_pwords(1);
 			} else if (push_info.type == var_types::void_ptr) {
-				current_arg_pwords -= 1;
+				virtual_stack.inject_pwords(1);
 			} else {
 				angelsea_assert(false);
 			}
@@ -1735,71 +1752,63 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		}
 
 		return fmt::format(
-		    "((asea_var*)((asDWORD*)sp + {DWORDS} + {PWORDS}*(sizeof(asPWORD)/4)))->as_{ACCESSOR}",
-		    fmt::arg("DWORDS", current_arg_dwords),
-		    fmt::arg("PWORDS", current_arg_pwords),
+		    "((asea_var*)((char*)sp + {DWORDS}*sizeof(asDWORD) + {PWORDS}*sizeof(asPWORD)))->as_{ACCESSOR}",
+		    fmt::arg("DWORDS", virtual_stack.dword_offset),
+		    fmt::arg("PWORDS", virtual_stack.pword_offset),
 		    fmt::arg("ACCESSOR", type.var_accessor)
 		);
 	};
 
-	const auto push_abi_argument = [&](VarType type, std::string expr, std::optional<int> stack_offset = std::nullopt) {
-		if (stack_offset.has_value()) {
-			stack_to_arg_mapping.emplace(*stack_offset, args.size());
-		}
-		args.emplace_back(type, std::move(expr));
-	};
-
-	const auto current_stack_offset = [&] { return current_arg_dwords + (current_arg_pwords * AS_PTR_SIZE); };
-
-	const auto push_stack_argument
-	    = [&](VarType type) { push_abi_argument(type, arg_current_stack_ptr_expr(type), current_stack_offset()); };
+	const auto push_abi_argument   = [&](VarType type, std::string expr) { args.emplace_back(type, std::move(expr)); };
+	const auto push_stack_argument = [&](VarType type) { push_abi_argument(type, virtual_stack_pop_expr(type)); };
 
 	if (sys_fn.callConv >= ICC_THISCALL) {
 		// always load `this` from the first position in the stack
 		if (call.object_pointer_override.empty()) {
-			obj_expr = arg_current_stack_ptr_expr(var_types::void_ptr);
-			current_arg_pwords += 1;
+			obj_expr = virtual_stack_pop_expr(var_types::void_ptr);
+			virtual_stack.take_pwords(1);
 		}
 	}
 
 	if (is_complex_passed_by_value(fn.returnType)) {
-		to_emit_before_call
-		    += fmt::format("\t\tvoid* ret_ptr = {};\n", arg_current_stack_ptr_expr(var_types::void_ptr));
-		current_arg_pwords += 1;
+		to_emit_before_call += fmt::format("\t\tvoid* ret_ptr = {};\n", virtual_stack_pop_expr(var_types::void_ptr));
+		virtual_stack.take_pwords(1);
 	} else if (fn.DoesReturnOnStack()) {
 		return_target_override = fmt::format(
 		    "*({TYPE}*){EXPR}",
 		    fmt::arg("TYPE", return_type.c),
-		    fmt::arg("EXPR", arg_current_stack_ptr_expr(var_types::void_ptr))
+		    fmt::arg("EXPR", virtual_stack_pop_expr(var_types::void_ptr))
 		);
-		current_arg_pwords += 1;
+		virtual_stack.take_pwords(1);
 	}
 
 	if (is_complex_passed_by_value(fn.returnType)) {
 		// FIXME: pretty sure different ABIs pass this in different locations (e.g. iirc MSVC have them swapped?)
-		push_abi_argument(var_types::void_ptr, "ret_ptr", std::nullopt);
+		push_abi_argument(var_types::void_ptr, "ret_ptr");
 	}
 
 	if (sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
 	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST || sys_fn.callConv == ICC_CDECL_OBJFIRST) {
 		// where the argument actually lands depends on the convention
-		push_abi_argument(var_types::void_ptr, "obj", std::nullopt);
+		push_abi_argument(var_types::void_ptr, "obj");
 	}
 
 	for (std::size_t i = 0; i < fn.parameterTypes.GetLength(); ++i) {
 		const auto& param_type = fn.parameterTypes[i];
 
+		stack_offset_to_arg_id.emplace(virtual_stack.real_stack_offset, i);
+
 		if (param_type.GetTokenType() == ttQuestion) {
 			return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle variable arguments yet"};
 		} else if (param_type.IsReference() || param_type.IsObjectHandle()) {
 			push_stack_argument(var_types::void_ptr);
-			current_arg_pwords += 1;
+			virtual_stack.take_pwords(1);
 		} else if (param_type.IsPrimitive()) {
 			push_stack_argument(get_var_type(param_type));
-			current_arg_dwords += param_type.GetSizeOnStackDWords();
+			virtual_stack.take_dwords(param_type.GetSizeOnStackDWords());
 		} else if (is_complex_passed_by_value(param_type)) {
 			push_stack_argument(var_types::void_ptr);
-			current_arg_pwords += 1;
+			virtual_stack.take_pwords(1);
 		} else {
 			// we have a pointer on stack to a pass-by-value argument. make a dummy type (when possible) to use as an
 			// argument for that function, and dereference the stack pointer to get the argument
@@ -1807,13 +1816,13 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 			std::string arg_ptr  = fmt::format(
                 "({TYPE}*){VOID_PTR}",
                 fmt::arg("TYPE", arg_type.c),
-                fmt::arg("VOID_PTR", arg_current_stack_ptr_expr(var_types::void_ptr))
+                fmt::arg("VOID_PTR", virtual_stack_pop_expr(var_types::void_ptr))
             );
-			push_abi_argument(arg_type, fmt::format("*{}", arg_ptr), current_stack_offset());
+			push_abi_argument(arg_type, fmt::format("*{}", arg_ptr));
 
 			// TODO: store to tmp var to avoid reloading from stack again
 			to_emit_after_call += fmt::format("\t\tasea_free({});\n", arg_ptr);
-			current_arg_pwords += 1;
+			virtual_stack.take_pwords(1);
 		}
 	}
 
@@ -1978,7 +1987,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	if (sys_fn.cleanArgs.GetLength() > 0) {
 		auto& clean_args = fn.sysFuncIntf->cleanArgs;
 		for (std::size_t i = 0; i < clean_args.GetLength(); ++i) {
-			const std::size_t arg_id = stack_to_arg_mapping[clean_args[i].off];
+			const std::size_t arg_id = stack_offset_to_arg_id[clean_args[i].off];
 			emit(
 			    "\t\t{{\n"
 			    "\t\tvoid* clean = {};\n",
@@ -2016,11 +2025,11 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	}
 
 	// pop stack arguments (at least the ones that weren't in the "virtual" stack elision stack)
-	if (!call.is_internal_call && (current_arg_dwords > 0 || current_arg_pwords > 0)) {
+	if (!call.is_internal_call && (virtual_stack.dword_offset > 0 || virtual_stack.pword_offset > 0)) {
 		emit(
 		    "\t\tsp = (asea_var*)((asDWORD*)sp + {STACK_DWORDS} + {STACK_PWORDS} * (sizeof(asPWORD) / 4));\n",
-		    fmt::arg("STACK_DWORDS", current_arg_dwords),
-		    fmt::arg("STACK_PWORDS", current_arg_pwords)
+		    fmt::arg("STACK_DWORDS", virtual_stack.dword_offset),
+		    fmt::arg("STACK_PWORDS", virtual_stack.pword_offset)
 		);
 	}
 
