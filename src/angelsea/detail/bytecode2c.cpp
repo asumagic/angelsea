@@ -1796,7 +1796,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	for (std::size_t i = 0; i < fn.parameterTypes.GetLength(); ++i) {
 		const auto& param_type = fn.parameterTypes[i];
 
-		stack_offset_to_arg_id.emplace(virtual_stack.real_stack_offset, i);
+		stack_offset_to_arg_id.emplace(virtual_stack.real_stack_offset, args.size());
 
 		if (param_type.GetTokenType() == ttQuestion) {
 			return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle variable arguments yet"};
@@ -1987,7 +1987,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	if (sys_fn.cleanArgs.GetLength() > 0) {
 		auto& clean_args = fn.sysFuncIntf->cleanArgs;
 		for (std::size_t i = 0; i < clean_args.GetLength(); ++i) {
-			const std::size_t arg_id = stack_offset_to_arg_id[clean_args[i].off];
+			const std::size_t arg_id = stack_offset_to_arg_id.at(clean_args[i].off);
 			emit(
 			    "\t\t{{\n"
 			    "\t\tvoid* clean = {};\n",
