@@ -1930,7 +1930,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 			call_expression += ',';
 		}
 	}
-	call_expression += ");";
+	call_expression += ')';
 
 	if (!return_target_override.empty()) {
 		emit(
