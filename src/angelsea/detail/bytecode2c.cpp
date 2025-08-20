@@ -1325,6 +1325,21 @@ std::string BytecodeToC::emit_type_info_lookup([[maybe_unused]] FnState& state, 
 	return type_info_symbol;
 }
 
+bool BytecodeToC::is_complex_passed_by_value(const asCDataType& type) const {
+	if (!type.IsObject() || type.IsReference()) {
+		return false;
+	}
+
+	if (type.GetTypeInfo() == nullptr) {
+		return false;
+	}
+
+	const auto& type_info = *type.GetTypeInfo();
+	const auto& flags     = type_info.flags;
+
+	return (flags & (asOBJ_APP_CLASS_DESTRUCTOR | asOBJ_APP_CLASS_COPY_CONSTRUCTOR | asOBJ_APP_ARRAY)) != 0;
+}
+
 std::string BytecodeToC::emit_dummy_struct_declaration(FnState& state, const asCDataType& type) {
 	if (type.GetTypeInfo() == nullptr) {
 		return {};
@@ -1334,7 +1349,7 @@ std::string BytecodeToC::emit_dummy_struct_declaration(FnState& state, const asC
 	const auto&       flags     = type_info.flags;
 	const std::size_t size      = type.GetSizeInMemoryBytes();
 
-	if ((flags & (asOBJ_APP_CLASS_DESTRUCTOR | asOBJ_APP_CLASS_COPY_CONSTRUCTOR | asOBJ_APP_ARRAY)) != 0) {
+	if (is_complex_passed_by_value(type)) {
 		log(*m_config,
 		    *m_script_engine,
 		    LogSeverity::PERF_HINT,
@@ -1361,8 +1376,7 @@ std::string BytecodeToC::emit_dummy_struct_declaration(FnState& state, const asC
 		log(*m_config,
 		    *m_script_engine,
 		    LogSeverity::PERF_HINT,
-		    "Type `{}` has unsupported layout for pass/return-by-value, which would be too complex to support. Native "
-		    "call will fall back to VM.",
+		    "Type `{}` has unsupported layout for pass/return-by-value. Native call will fall back to VM.",
 		    type_info.GetName());
 		return {};
 	}
@@ -1625,10 +1639,14 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		return {std::string_view{struct_decls.back()}, {}, std::size_t(type.GetSizeInMemoryBytes())};
 	};
 
-	VarType return_type = get_var_type(fn.returnType);
+	VarType return_type = {"void", {}, 0};
 
-	if (return_type.c.empty()) {
-		return {.ok = false, .fail_reason = "Direct native call failed: Return type cannot be handled"};
+	if (!is_complex_passed_by_value(fn.returnType)) {
+		return_type = get_var_type(fn.returnType);
+
+		if (return_type.c.empty()) {
+			return {.ok = false, .fail_reason = "Direct native call failed: Return type cannot be handled"};
+		}
 	}
 
 	// FIXME: set m_callingsystemfunction when config requests
@@ -1731,13 +1749,23 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		}
 	}
 
-	if (fn.DoesReturnOnStack()) {
+	if (is_complex_passed_by_value(fn.returnType)) {
+		to_emit_before_call
+		    += fmt::format("\t\tvoid* ret_ptr = (void*){};\n", arg_current_stack_ptr_expr(var_types::void_ptr));
+		current_arg_pwords += 1;
+	} else if (fn.DoesReturnOnStack()) {
 		return_target_override = fmt::format(
 		    "*({TYPE}*){EXPR}",
 		    fmt::arg("TYPE", return_type.c),
 		    fmt::arg("EXPR", arg_current_stack_ptr_expr(var_types::void_ptr))
 		);
 		current_arg_pwords += 1;
+	}
+
+	if (is_complex_passed_by_value(fn.returnType)) {
+		// FIXME: pretty sure different ABIs pass this in different locations (e.g. iirc MSVC have them swapped?)
+		arg_types.emplace_back(var_types::void_ptr);
+		arg_exprs.emplace_back("ret_ptr");
 	}
 
 	if (sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
@@ -1794,15 +1822,6 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	emit("{}", to_emit_before_call);
 
-	if (!m_config->hack_ignore_context_inspect) {
-		emit_save_sp(state);
-		emit_save_pc(state, true);
-	} else {
-		// write stack pointer in case the syscall causes a nested script call; otherwise our stack may get stomped
-		// TODO: this may be possible to elide if we detect that the sp hasn't gone downwards since
-		emit("\t\tregs->sp = sp;\n");
-	}
-
 	// restore stack pushes that were *not* for us
 	if (push_offsets != nullptr && push_offset_idx >= 0) {
 		if (m_config->c.human_readable) {
@@ -1844,6 +1863,15 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		    "#endif\n",
 		    fmt::arg("BASE_OFFSET", sys_fn.baseOffset)
 		);
+	}
+
+	if (!m_config->hack_ignore_context_inspect) {
+		emit_save_sp(state);
+		emit_save_pc(state, true);
+	} else {
+		// write stack pointer in case the syscall causes a nested script call; otherwise our stack may get stomped
+		// TODO: this may be possible to elide if we detect that the sp hasn't gone downwards since
+		emit("\t\tregs->sp = sp;\n");
 	}
 
 	std::string final_callable_name;
@@ -1912,8 +1940,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		if (return_type.c == "void*") {
 			emit("\t\tvalue_reg = (asPWORD){};\n", call_expression);
 		} else {
-			// should be handled by return pointer override case above
-			angelsea_assert(false);
+			// return-by-value: the return value is passed by pointer as part of the argument list
+			emit("\t\t{};\n", call_expression);
 		}
 	} else if (return_type.c != "void") {
 		if (return_type.c == "void*") {
