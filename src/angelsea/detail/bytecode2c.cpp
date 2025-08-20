@@ -1985,9 +1985,21 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	// TODO: move this out and reuse for generic convention. also suspiciously similar to asBC_FREE in shape, any reuse
 	// possible?
 	if (sys_fn.cleanArgs.GetLength() > 0) {
-		auto& clean_args = fn.sysFuncIntf->cleanArgs;
+		auto& clean_args        = fn.sysFuncIntf->cleanArgs;
+		int   clean_base_offset = 0;
+
+		// the clean base offsets are offset by those... should figure out a cleaner way to do this, especially as
+		// upstream AS may modify this behavior
+		if (fn.DoesReturnOnStack()) {
+			clean_base_offset += AS_PTR_SIZE;
+		}
+
+		if (sys_fn.callConv >= ICC_THISCALL && sys_fn.auxiliary == nullptr) {
+			clean_base_offset += AS_PTR_SIZE;
+		}
+
 		for (std::size_t i = 0; i < clean_args.GetLength(); ++i) {
-			const std::size_t arg_id = stack_offset_to_arg_id.at(clean_args[i].off);
+			const std::size_t arg_id = stack_offset_to_arg_id.at(clean_args[i].off + clean_base_offset);
 			emit(
 			    "\t\t{{\n"
 			    "\t\tvoid* clean = {};\n",
