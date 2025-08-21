@@ -29,7 +29,6 @@
 namespace angelsea::detail {
 
 // TODO: fix indent level for all of those that use this...
-// TODO: format immediate functions instead of using fmt::format/to_string for it
 
 BytecodeToC::BytecodeToC(const JitConfig& config, asIScriptEngine& engine, std::string c_symbol_prefix) :
     m_config(&config),
