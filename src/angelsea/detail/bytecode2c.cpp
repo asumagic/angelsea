@@ -469,31 +469,38 @@ void BytecodeToC::translate_instruction(FnState& state) {
 		return;
 	}
 
+	const auto virt_visitor = overloaded{
+	    [&](virtins::FusedCompareJump& fused) {
+		    make_local_from_operand(state, "lhs", fused.compare.lhs);
+		    make_local_from_operand(state, "rhs", fused.compare.rhs);
+		    if (m_config->c.use_builtin_expect) {
+			    emit(
+			        "\t\tif (__builtin_expect(lhs {OP} rhs, {EXPECTED_BRANCH_VALUE})) {{ goto bc{TARGET}; }}\n",
+			        fmt::arg("OP", fused.jump.cond_expr->c_comparison_op),
+			        fmt::arg("TARGET", fused.jump.target_offset()),
+			        fmt::arg("EXPECTED_BRANCH_VALUE", fused.jump.target_offset() < int(state.ins.offset) ? 1 : 0)
+			    );
+		    } else {
+			    emit(
+			        "\t\tif (lhs {OP} rhs) {{ goto bc{TARGET}; }}\n",
+			        fmt::arg("OP", fused.jump.cond_expr->c_comparison_op),
+			        fmt::arg("TARGET", fused.jump.target_offset())
+			    );
+		    }
+	    },
+	    [&](virtins::Nop&) {
+		    if (m_config->c.human_readable) {
+			    emit("\t\t/* no-op from fusing with another bytecodeinstruction */\n");
+		    }
+	    },
+	};
+
 	if (auto virt_it = state.overriden_instructions.find(ins.offset); virt_it != state.overriden_instructions.end()) {
 		if (m_config->c.human_readable) {
 			emit("\t\t/* Virtual instruction injected by optimizer */\n");
 		}
 
-		std::visit(
-		    overloaded{
-		        [&](virtins::FusedCompareJump& fused) {
-			        make_local_from_operand(state, "lhs", fused.compare.lhs);
-			        make_local_from_operand(state, "rhs", fused.compare.rhs);
-			        emit(
-			            "\t\tif (lhs {OP} rhs) {{ goto bc{TARGET}; }}\n",
-			            fmt::arg("LHS_TYPE", fused.jump.cond_expr->lhs_type.c),
-			            fmt::arg("OP", fused.jump.cond_expr->c_comparison_op),
-			            fmt::arg("TARGET", fused.jump.target_offset())
-			        );
-		        },
-		        [&](virtins::Nop&) {
-			        if (m_config->c.human_readable) {
-				        emit("\t\t/* no-op from fusing with another bytecodeinstruction */\n");
-			        }
-		        }
-		    },
-		    virt_it->second
-		);
+		std::visit(virt_visitor, virt_it->second);
 
 		// TODO: dedup footer here
 		if (ins.opcode() == m_config->debug.fallback_after_instruction) {
@@ -1010,8 +1017,8 @@ void BytecodeToC::translate_instruction(FnState& state) {
 	}
 
 	case asBC_ADDSi: {
-		// NOTE: memory GVN: if we store &ASEA_STACK_TOP.as_asPWORD to a temporary and use it, then we get corruption
-		// with load GVN (angelsea -O3 mode as of writing), again.
+		// NOTE: memory GVN: if we store &ASEA_STACK_TOP.as_asPWORD to a temporary and use it, then we get
+		// corruption with load GVN (angelsea -O3 mode as of writing), again.
 		emit(
 		    "\t\tif (sp->as_asPWORD == 0) {{ {ERR_NULL_HANDLER} }}\n"
 		    "\t\tsp->as_asPWORD += {SWORD0};\n",
@@ -1242,8 +1249,8 @@ std::string BytecodeToC::jump_to_error_handler_code(FnState& state, ErrorHandler
 }
 
 // we don't ever need to save the fp back to the VM registers because the fp is constant within a function, and
-// initialized from the VM registers. it will be saved and reloaded as part of the call state or elsewhere by  the AS
-// engine, but that is distinct from the register save sequence.
+// initialized from the VM registers. it will be saved and reloaded as part of the call state or elsewhere by  the
+// AS engine, but that is distinct from the register save sequence.
 
 void BytecodeToC::emit_save_sp([[maybe_unused]] FnState& state) { emit("\t\tregs->sp = sp;\n"); }
 void BytecodeToC::emit_save_pc(FnState& state, bool next_pc) {
@@ -1352,7 +1359,8 @@ std::string BytecodeToC::emit_dummy_struct_declaration(FnState& state, const asC
 		log(*m_config,
 		    *m_script_engine,
 		    LogSeverity::PERF_HINT,
-		    "Type `{}` has non-trivial C++ ABI, which we currently don't emulate pass/return by value yet for. Native "
+		    "Type `{}` has non-trivial C++ ABI, which we currently don't emulate pass/return by value yet for. "
+		    "Native "
 		    "call will fall back to VM.",
 		    type_info.GetName());
 		return {};
@@ -1386,8 +1394,8 @@ std::string BytecodeToC::emit_dummy_struct_declaration(FnState& state, const asC
 }
 
 void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<ScriptCallByIdx, ScriptCallByExpr> call) {
-	// TODO: figure out a way to inline callees. maybe we can find simple functions and trigger their generation in a
-	// way that ensures they will be compiled? or we can just bring them into our module??
+	// TODO: figure out a way to inline callees. maybe we can find simple functions and trigger their generation in
+	// a way that ensures they will be compiled? or we can just bring them into our module??
 
 	bool will_emit_direct = m_config->experimental_fast_script_call && m_config->hack_ignore_suspend;
 
@@ -1463,8 +1471,8 @@ void BytecodeToC::emit_direct_script_call_ins(FnState& state, std::variant<Scrip
 			    fmt::arg("SELF", m_module_state.fn_name)
 			);
 		} else {
-			// look up JITFunction to branch into directly. if it doesn't exist that's fine; in both case we drop to the
-			// vm right after
+			// look up JITFunction to branch into directly. if it doesn't exist that's fine; in both case we drop to
+			// the vm right after
 			emit(
 			    "\t\tvoid* script_data = *(void**)((char*)({FN}) + {OFF_SCRIPTFN_SCRIPTDATA});\n"
 			    "\t\tasea_jit_fn jit_fn = *(asea_jit_fn*)((char*)script_data + {OFF_SCRIPTDATA_JITFN});\n"
@@ -1591,9 +1599,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
     std::string_view   fn_callable_symbol
 ) {
 	// FIXME: this thing is an abomination and it haunts my dreams (frankly, almost literally)
-	// i have no excuse for it and i keep postponing the inevitable. and yet it's 3am, and i'm still considering adding
-	// an unordered map that tracks *yet another* thing and i fear that if i keep going clang will ultimately gain
-	// consciousness just enough for it to remove itself from my drive
+	// i have no excuse for it and i keep postponing the inevitable. and yet it's 3am, and i'm still considering
+	// adding an unordered map that tracks *yet another* thing and i fear that if i keep going clang will ultimately
+	// gain consciousness just enough for it to remove itself from my drive
 
 	if (!m_config->experimental_direct_native_call) {
 		return {.ok = false, .fail_reason = "Direct native call failed: experimental_direct_native_call == false"};
@@ -1723,12 +1731,13 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 			// HORRIFYING for a layer of reasons
 			// one being that it is still possible to fallback at this point and leave useless vars but w/e
 			// also MIR miscompiles if we abuse the comma operator to do this e.g. `(asea_i2f_inst.i = 123,
-			// asea_i2f_inst.f)` so instead we go through a new temporary variable. this in itself doesn't really change
-			// anything, but it means we emit it before here
+			// asea_i2f_inst.f)` so instead we go through a new temporary variable. this in itself doesn't really
+			// change anything, but it means we emit it before here
 			//
-			// TODO: it would be nice if the code on the push side knew about the type we're expecting on the argument
-			// side. at the moment, MIR requires int-float bit casts (effectively what we do via unions) to happen by a
-			// memory load and store instead of a register move (see https://github.com/vnmakarov/mir/issues/293)
+			// TODO: it would be nice if the code on the push side knew about the type we're expecting on the
+			// argument side. at the moment, MIR requires int-float bit casts (effectively what we do via unions) to
+			// happen by a memory load and store instead of a register move (see
+			// https://github.com/vnmakarov/mir/issues/293)
 			if (type == var_types::f32) {
 				to_emit_before_call += fmt::format(
 				    "\t\tasea_i2f_inst.i = {};\n"
@@ -1809,8 +1818,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 			push_stack_argument(var_types::void_ptr);
 			virtual_stack.take_pwords(1);
 		} else {
-			// we have a pointer on stack to a pass-by-value argument. make a dummy type (when possible) to use as an
-			// argument for that function, and dereference the stack pointer to get the argument
+			// we have a pointer on stack to a pass-by-value argument. make a dummy type (when possible) to use as
+			// an argument for that function, and dereference the stack pointer to get the argument
 			VarType     arg_type = get_var_type(param_type);
 			std::string arg_ptr  = fmt::format(
                 "({TYPE}*){VOID_PTR}",
@@ -1894,8 +1903,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	if (sys_fn.callConv == ICC_VIRTUAL_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST
 	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJLAST) {
-		// dereference pointer via the vtable. this is janky! we are in C, so we essentially have to emulate the C++ ABI
-		// here. TODO: option to disable virtual calls specifically?
+		// dereference pointer via the vtable. this is janky! we are in C, so we essentially have to emulate the C++
+		// ABI here. TODO: option to disable virtual calls specifically?
 
 		// NOTE: we have a MSVC codepath but realistically it is untested! it happens to be modelled after what most
 		// ABIs AS supports, with the exception of MSVC. we also don't check for clang as if it identifies self as
@@ -1928,8 +1937,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		final_callable_name = fn_callable_symbol;
 	}
 
-	// perform the actual call. the expression to perform the call is always the same but the surrounding call to figure
-	// out where to store the return value differs.
+	// perform the actual call. the expression to perform the call is always the same but the surrounding call to
+	// figure out where to store the return value differs.
 	std::string call_expression = fmt::format("{FN}(", fmt::arg("FN", final_callable_name));
 	for (auto it = args.begin(); it != args.end(); ++it) {
 		const auto& expr = it->second;
@@ -1981,8 +1990,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	emit("{}", to_emit_after_call);
 
-	// TODO: move this out and reuse for generic convention. also suspiciously similar to asBC_FREE in shape, any reuse
-	// possible?
+	// TODO: move this out and reuse for generic convention. also suspiciously similar to asBC_FREE in shape, any
+	// reuse possible?
 	if (sys_fn.cleanArgs.GetLength() > 0) {
 		auto& clean_args        = fn.sysFuncIntf->cleanArgs;
 		int   clean_base_offset = 0;
@@ -2185,7 +2194,8 @@ void BytecodeToC::emit_stack_push_ins(FnState& state, const bcins::StackPush& pu
 void BytecodeToC::flush_stack_push_optimization(FnState& state) {
 	if (m_config->c.human_readable) {
 		emit(
-		    "\t\t/* Stack elision optimization must be cancelled because we're falling back to VM; pushing back the "
+		    "\t\t/* Stack elision optimization must be cancelled because we're falling back to VM; pushing back "
+		    "the "
 		    "elided pushes */\n"
 		);
 	}
