@@ -2164,7 +2164,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 			const auto ret_type_info_expr = emit_type_info_lookup(state, *ret_type_info);
 			emit(
 			    "\t\tregs->obj = g.objectRegister;\n"
-			    "\t\tregs->obj_type = {RETTYPEINFO};\n",
+			    "\t\tregs->obj_type = (asITypeInfo*){RETTYPEINFO};\n",
 			    fmt::arg("RETTYPEINFO", ret_type_info_expr)
 			);
 		} else {

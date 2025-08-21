@@ -439,7 +439,7 @@ inline VarType BytecodeToC::make_local_from_operand(FnState& state, std::string_
 	    [&](const operands::ObjectType& v) {
 		    const auto objtype_symbol = emit_type_info_lookup(state, *v.ptr);
 		    emit(
-		        "\t\tasCObjectType* {NAME} = &{OBJ_TYPE};\n",
+		        "\t\tasCObjectType* {NAME} = (asCObjectType*)&{OBJ_TYPE};\n",
 		        fmt::arg("NAME", name),
 		        fmt::arg("OBJ_TYPE", objtype_symbol)
 		    );
