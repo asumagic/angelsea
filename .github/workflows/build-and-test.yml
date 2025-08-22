@@ -79,5 +79,5 @@ jobs:
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ctest -j 4 --test-dir ${{ steps.strings.outputs.build-output-dir }}/tests --rerun-failed --output-on-failure --build-config ${{ matrix.build_type }}
+      run: ASEA_DUMP_C=1 ctest -j 4 --test-dir ${{ steps.strings.outputs.build-output-dir }}/tests --rerun-failed --output-on-failure --build-config ${{ matrix.build_type }}
       # FIXME: how do we exclude benchmarks when using ctest??
