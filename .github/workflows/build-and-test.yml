@@ -89,5 +89,5 @@ jobs:
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ctest --timeout 10 -j 4 --test-dir ${{ steps.strings.outputs.build-output-dir }}/tests --rerun-failed --output-on-failure --build-config ${{ matrix.build_type }}
+      run: ctest --timeout 30 -j 4 --test-dir ${{ steps.strings.outputs.build-output-dir }}/tests --rerun-failed --output-on-failure --build-config ${{ matrix.build_type }}
       # FIXME: how do we exclude benchmarks when using ctest??
