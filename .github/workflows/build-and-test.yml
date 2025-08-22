@@ -16,14 +16,7 @@ jobs:
     strategy:
       fail-fast: false
 
-      # test linux x86-64 via ubuntu 22.04 with both gcc and clang
-      # test linux aarch64 via ubuntu 24.04 as there are C++20 build issues on the 22.04 build image
-      # test windows with MSVC
-      # test macOS aarch64 with appleclang (macos-15 is an arm64 image)
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04-arm, windows-2025, macos-15]
-        build_type: [Release]
-        c_compiler: [gcc, clang, cl, x86_64-w64-mingw32-gcc]
         include:
           - os: windows-2025
             c_compiler: cl
@@ -49,28 +42,14 @@ jobs:
             c_compiler: clang
             cpp_compiler: clang++
             cmake_generator: Ninja
-        exclude: # FIXME: is what we want possible without this mess of exclusions??
-          - os: windows-2025
+          # https://www.gamedev.net/forums/topic/717863-build-failure-on-x86-macos/
+          # The macOS 15 update breaks building of angelscript due to CFI related stuff.
+          # TODO: investigate and provide help to fix it upstream? not sure i know what's going on here.
+          - os: macos-14
             c_compiler: clang
-          - os: windows-2025
-            c_compiler: gcc
-          - os: ubuntu-22.04
-            c_compiler: cl
-          - os: ubuntu-24.04-arm
-            c_compiler: cl
-          - os: macos-15
-            c_compiler: cl
-          - os: ubuntu-22.04
-            c_compiler: x86_64-w64-mingw32-gcc
-          - os: ubuntu-24.04-arm
-            c_compiler: x86_64-w64-mingw32-gcc
-          - os: macos-15
-            c_compiler: x86_64-w64-mingw32-gcc
-          # don't bother testing gcc twice and burning worker time, it's the same ABI and we don't expect issues
-          - os: ubuntu-24.04-arm
-            c_compiler: gcc
-          - os: macos-15
-            c_compiler: gcc
+            cpp_compiler: clang++
+            cmake_generator: Ninja
+            extra_cmake_flags: -DCMAKE_OSX_ARCHITECTURES=x86_64
 
     steps:
     - uses: msys2/setup-msys2@v2
@@ -92,14 +71,15 @@ jobs:
         "-G${{ matrix.cmake_generator }}"
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DASEA_ENABLE_TESTING=1
+        ${{ matrix.extra_cmake_flags }}
         -S ${{ github.workspace }}
 
     - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel 4
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config RelWithDebInfo --parallel 4
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ctest --timeout 30 -j 4 --test-dir ${{ steps.strings.outputs.build-output-dir }}/tests --rerun-failed --output-on-failure --build-config ${{ matrix.build_type }}
+      run: ctest --timeout 30 -j 4 --test-dir ${{ steps.strings.outputs.build-output-dir }}/tests --rerun-failed --output-on-failure --build-config RelWithDebInfo
       # FIXME: how do we exclude benchmarks when using ctest??
