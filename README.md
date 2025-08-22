@@ -48,8 +48,8 @@ We would [like to support](https://github.com/asumagic/angelsea/issues?q=is%3Ais
 - ℹ️ MinGW x86-64 (not actively tested, needs improvement, but could run a commercial app)
 - ❌ Linux aarch64 (broken last time tested)
 - ❓ macOS aarch64
-- ❓ macOS x86-64
-- ❓ MSVC x86-64
+- ❌ macOS x86-64 (major failures)
+- ❌ MSVC x86-64 (minor failures + broken native calling convention for certain signatures)
 
 32-bit support is not planned because MIR supports no such platform.
 [BlindMindStudio's JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler) supports 32-bit and 64-bit x86.
