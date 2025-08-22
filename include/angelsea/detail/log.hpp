@@ -9,7 +9,9 @@
 
 namespace angelsea::detail {
 
-enum class LogSeverity { VERBOSE, INFO, WARNING, PERF_HINT, ERROR };
+// despite using an enum class, we prefix the enum values with ASEA_ to avoid clashing with very broadly named macros in
+// some platforms' standard includes. i probably don't need to explain which.
+enum class LogSeverity { ASEA_VERBOSE, ASEA_INFO, ASEA_WARNING, ASEA_PERF_HINT, ASEA_ERROR };
 
 template<typename... Ts>
 void log_at(
@@ -26,23 +28,23 @@ void log_at(
 
 	const auto& targets = config.log_targets;
 	switch (severity) {
-	case LogSeverity::VERBOSE: {
+	case LogSeverity::ASEA_VERBOSE: {
 		type = targets.verbose;
 		break;
 	}
-	case LogSeverity::INFO: {
+	case LogSeverity::ASEA_INFO: {
 		type = targets.info;
 		break;
 	}
-	case LogSeverity::PERF_HINT: {
+	case LogSeverity::ASEA_PERF_HINT: {
 		type = targets.performance_hint;
 		break;
 	}
-	case LogSeverity::WARNING: {
+	case LogSeverity::ASEA_WARNING: {
 		type = targets.warning;
 		break;
 	}
-	case LogSeverity::ERROR: {
+	case LogSeverity::ASEA_ERROR: {
 		type = targets.error;
 		break;
 	}

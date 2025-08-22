@@ -102,7 +102,7 @@ void MirJit::register_function(asIScriptFunction& script_function) {
 		log(m_config,
 		    *m_engine,
 		    script_function,
-		    LogSeverity::WARNING,
+		    LogSeverity::ASEA_WARNING,
 		    "Function not considered for JIT compilation because it is too complex");
 		return;
 	}
@@ -213,7 +213,7 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 	if (m_c_generator.get_fallback_count() > 0) {
 		log(config(),
 		    engine(),
-		    LogSeverity::PERF_HINT,
+		    LogSeverity::ASEA_PERF_HINT,
 		    "Number of fallbacks for module \"{}\": {}",
 		    name,
 		    m_c_generator.get_fallback_count());
@@ -302,7 +302,7 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 		InputData input_data(fn.c_source);
 		if (c2mir_compile(compile_mir, &c_options, c2mir_getc_callback, &input_data, fn.pretty_name.c_str(), nullptr)
 		    == 0) {
-			log(config(), engine(), LogSeverity::ERROR, "Failed to compile C for \"{}\"", fn.pretty_name.c_str());
+			log(config(), engine(), LogSeverity::ASEA_ERROR, "Failed to compile C for \"{}\"", fn.pretty_name.c_str());
 			angelsea_assert(false); // FIXME: error handling
 		}
 
@@ -340,7 +340,7 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 			}
 
 			if (!found) {
-				log(config(), engine(), LogSeverity::ERROR, "Function compile failed!");
+				log(config(), engine(), LogSeverity::ASEA_ERROR, "Function compile failed!");
 				setup_jit_callback(*fn.script_function, nullptr, nullptr, true);
 				m_async_codegen_functions.erase(fn.script_function);
 				return;

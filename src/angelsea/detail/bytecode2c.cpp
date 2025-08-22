@@ -1358,7 +1358,7 @@ std::string BytecodeToC::emit_dummy_struct_declaration(FnState& state, const asC
 	if (is_complex_passed_by_value(type)) {
 		log(*m_config,
 		    *m_script_engine,
-		    LogSeverity::PERF_HINT,
+		    LogSeverity::ASEA_PERF_HINT,
 		    "Type `{}` has non-trivial C++ ABI, which we currently don't emulate pass/return by value yet for. "
 		    "Native "
 		    "call will fall back to VM.",
@@ -1382,7 +1382,7 @@ std::string BytecodeToC::emit_dummy_struct_declaration(FnState& state, const asC
 	} else {
 		log(*m_config,
 		    *m_script_engine,
-		    LogSeverity::PERF_HINT,
+		    LogSeverity::ASEA_PERF_HINT,
 		    "Type `{}` has unsupported layout for pass/return-by-value. Native call will fall back to VM.",
 		    type_info.GetName());
 		return {};
