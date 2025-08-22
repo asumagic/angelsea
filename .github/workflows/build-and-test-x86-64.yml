@@ -43,6 +43,9 @@ jobs:
             c_compiler: cl
           - os: ubuntu-22.04-arm
             c_compiler: cl
+          # don't bother testing gcc twice and burning worker time, it's the same ABI and we don't expect issues
+          - os: ubuntu-22.04-arm
+            c_compiler: gcc
 
     steps:
     - uses: actions/checkout@v4
