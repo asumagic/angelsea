@@ -38,8 +38,8 @@ void message_callback(const asSMessageInfo* info, [[maybe_unused]] void* param) 
 
 void print(const std::string& message) { out << message << '\n'; }
 
-void print_int(long value) { out << value << '\n'; }
-void print_uint(unsigned long value) { out << value << '\n'; }
+void print_int(std::int32_t value) { out << value << '\n'; }
+void print_uint(std::uint32_t value) { out << value << '\n'; }
 void print_char(char value) { out << value; }
 } // namespace bindings
 
