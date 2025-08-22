@@ -44,11 +44,11 @@ bother trying big-endian).
 
 We would [like to support](https://github.com/asumagic/angelsea/issues?q=is%3Aissue%20state%3Aopen%20label%3Atargets):
 
-- ✅ **Linux x86-64** (main test platform)
-- ⚠️ MinGW x86-64 (minor failures)
-- ❌ MSVC x86-64 (minor failures + broken native calling convention for certain signatures)
-- ❌ Linux aarch64 (broken C handling last time tested)
-- ❓ macOS aarch64 (major failures)
+- ✅ **Linux x86-64** (CI pass, tested on KAG)
+- ✅ MinGW x86-64 (CI pass, tested on KAG)
+- ❌ MSVC x86-64 (broken native calling convention for certain signatures, not tested on KAG)
+- ❌ Linux aarch64 (broken C compilation last time tested, likely MIR bug to investigate)
+- ❓ macOS aarch64 (major breakage, need to investigate ABI issues)
 - ❓ macOS x86-64 (cannot easily test via CI)
 
 32-bit support is not planned because MIR supports no such platform.
