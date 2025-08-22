@@ -48,7 +48,7 @@ We would [like to support](https://github.com/asumagic/angelsea/issues?q=is%3Ais
 - ✅ MinGW x86-64 (CI pass, tested on KAG)
 - ❌ MSVC x86-64 (broken native calling convention for certain signatures, not tested on KAG)
 - ❌ Linux aarch64 (broken C compilation last time tested, likely MIR bug to investigate)
-- ❓ macOS aarch64 (major breakage, need to investigate ABI issues)
+- ❌ macOS aarch64 (major breakage, need to investigate ABI issues)
 - ❓ macOS x86-64 (cannot easily test via CI)
 
 32-bit support is not planned because MIR supports no such platform.
