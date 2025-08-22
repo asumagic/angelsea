@@ -54,6 +54,8 @@ jobs:
             c_compiler: clang
           - os: windows-2025
             c_compiler: gcc
+          - os: ubuntu-22.04
+            c_compiler: x86_64-w64-mingw32-gcc
           - os: ubuntu-24.04-arm
             c_compiler: x86_64-w64-mingw32-gcc
           - os: macos-15
