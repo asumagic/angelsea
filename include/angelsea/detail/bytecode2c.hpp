@@ -11,6 +11,7 @@
 #include <as_scriptfunction.h>
 #include <fmt/format.h>
 #include <functional>
+#include <iterator>
 #include <string>
 #include <string_view>
 #include <unordered_map>
