@@ -46,9 +46,9 @@ We would [like to support](https://github.com/asumagic/angelsea/issues?q=is%3Ais
 
 - ✅ **Linux x86-64** (main test platform)
 - ℹ️ MinGW x86-64 (not actively tested, needs improvement, but could run a commercial app)
-- ❌ Linux aarch64 (broken last time tested)
-- ❓ macOS aarch64
-- ❌ macOS x86-64 (major failures)
+- ❌ Linux aarch64 (broken C handling last time tested)
+- ❓ macOS aarch64 (major failures)
+- ❓ macOS x86-64 (cannot easily test via CI)
 - ❌ MSVC x86-64 (minor failures + broken native calling convention for certain signatures)
 
 32-bit support is not planned because MIR supports no such platform.
