@@ -28,7 +28,7 @@ jobs:
           - os: windows-2025
             c_compiler: cl
             cpp_compiler: cl
-            cmake_generator: Visual Studio 17 2022
+            cmake_generator: "Visual Studio 17 2022"
           - os: windows-2025
             c_compiler: x86_64-w64-mingw32-gcc
             cpp_compiler: x86_64-w64-mingw32-g++
