@@ -29,9 +29,6 @@ jobs:
             c_compiler: clang
             cpp_compiler: clang++
           - os: ubuntu-22.04-arm
-            c_compiler: gcc
-            cpp_compiler: g++
-          - os: ubuntu-22.04-arm
             c_compiler: clang
             cpp_compiler: clang++
         exclude:
