@@ -21,6 +21,12 @@ struct NoisyClass {
 	NoisyClass(const NoisyClass& other) { out << "Cpy" << c; }
 	~NoisyClass() { out << "Des" << c; }
 	std::string c = "";
+
+	NoisyClass thiscall_returning_complex_type() {
+		NoisyClass ret;
+		ret.c = "ret";
+		return ret;
+	}
 };
 
 void generic_noarg(asIScriptGeneric* gen) {
@@ -221,6 +227,12 @@ void bind_native_functions(asIScriptEngine& e) {
 	    asFUNCTION(native_destruct_noisy),
 	    asCALL_CDECL_OBJLAST
 	);
+	e.RegisterObjectMethod(
+	    "NoisyClass",
+	    "NoisyClass thiscall_returning_complex_type()",
+	    asMETHOD(NoisyClass, thiscall_returning_complex_type),
+	    asCALL_THISCALL
+	);
 
 	e.RegisterGlobalFunction("void take_noisy(NoisyClass a, NoisyClass b)", asFUNCTION(take_noisy), asCALL_CDECL);
 
@@ -272,6 +284,16 @@ TEST_CASE("native calling convention pass by value", "[abi][conv_native]") {
 
 	// involves cleanargs
 	REQUIRE(run_string(context, "take_noisy(NoisyClass(), NoisyClass());") == "ConCpyDesConCpyDesDesDes");
+}
+
+TEST_CASE("native calling convention complex return with thiscall", "[abi][conv_native]") {
+	EngineContext context;
+	bind_native_functions(*context.engine);
+
+	// returning a "complex" ABI return type is handled differently on different platforms wrt. argument order when
+	// using the thiscall calling convention.
+
+	REQUIRE(run_string(context, "NoisyClass().thiscall_returning_complex_type()") == "ConConDesDesret");
 }
 
 TEST_CASE("native abi benchmark", "[abi][conv_native][benchmark]") {
