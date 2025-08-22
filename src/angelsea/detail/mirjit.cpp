@@ -11,6 +11,7 @@
 #include <angelsea/detail/runtime.hpp>
 #include <as_generic.h>
 #include <bit>
+#include <cmath>
 #include <mir-gen.h>
 #include <mir.h>
 #include <string>
