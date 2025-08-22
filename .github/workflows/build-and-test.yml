@@ -23,7 +23,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04-arm, windows-2025, macos-15]
         build_type: [Release]
-        c_compiler: [gcc, clang]
+        c_compiler: [gcc, clang, x86_64-w64-mingw32-gcc]
         include:
           - os: windows-2025
             c_compiler: cl
@@ -54,6 +54,10 @@ jobs:
             c_compiler: clang
           - os: windows-2025
             c_compiler: gcc
+          - os: ubuntu-24.04-arm
+            c_compiler: x86_64-w64-mingw32-gcc
+          - os: macos-15
+            c_compiler: x86_64-w64-mingw32-gcc
           # don't bother testing gcc twice and burning worker time, it's the same ABI and we don't expect issues
           - os: ubuntu-24.04-arm
             c_compiler: gcc
