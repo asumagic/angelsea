@@ -277,6 +277,9 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 		std::array<c2mir_macro_command, 1> macros{{
 		    // Trigger the various definitions and macros of the generated header
 		    {.def_p = int(true), .name = "ASEA_SUPPORT", .def = "1"},
+#ifdef AS_ARM64
+		    {.def_p = int(true), .name = "AS_ARM64", .def = "1"},
+#endif
 		}};
 
 		c2mir_options c_options{

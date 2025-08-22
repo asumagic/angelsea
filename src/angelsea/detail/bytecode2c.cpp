@@ -1875,8 +1875,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	if (sys_fn.baseOffset > 0) {
 		// we preserve the arm/aarch64 check from AS here but it is untested!
 		emit(
-		    "#if (defined(__GNUC__) && (defined(AS_ARM64) || defined(AS_ARM) || defined(AS_MIPS))) || "
-		    "defined(AS_PSVITA)\n"
+		    "#if ((defined(__GNUC__) || defined(__MIRC__)) && (defined(AS_ARM64) || defined(AS_ARM) || "
+		    "defined(AS_MIPS))) || defined(AS_PSVITA)\n"
 		    "\t\tobj = (char*)obj + {BASE_OFFSET} >> 1;\n"
 		    "#else\n"
 		    "\t\tobj = (char*)obj + {BASE_OFFSET};\n"
