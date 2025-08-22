@@ -279,11 +279,11 @@ compilation will be triggered, potentially asynchronously.
 Currently, the `asCALL_GENERIC` calling convention is the best supported (though
 some things are not covered).
 
-There is experimental support for the native calling convention (on by default),
-but it is early and as such will often fall back to the VM.
+There is experimental support for the native calling convention (on by default).
+Many cases should be covered, but some are omitted.
 
-For cases that are supported, system calls are much faster with the JIT with
-either the generic or native calling convention.
+Supported system calls are much faster with the JIT with either the generic or
+native calling convention.
 
 There is also an experimental "stack elision" optimization
 (`experimental_stack_elision`) that can improve the native calling convention
