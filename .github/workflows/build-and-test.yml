@@ -42,7 +42,10 @@ jobs:
             c_compiler: clang
             cpp_compiler: clang++
             cmake_generator: Ninja
-          - os: macos-15
+          # https://www.gamedev.net/forums/topic/717863-build-failure-on-x86-macos/
+          # The macOS 15 update breaks building of angelscript due to CFI related stuff.
+          # TODO: investigate and provide help to fix it upstream? not sure i know what's going on here.
+          - os: macos-14
             c_compiler: clang
             cpp_compiler: clang++
             cmake_generator: Ninja
