@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ '*' ]
 
+env:
+  ASEA_DUMP_C: 1
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -80,5 +83,5 @@ jobs:
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ASEA_DUMP_C=1 ctest --timeout 10 -j 4 --test-dir ${{ steps.strings.outputs.build-output-dir }}/tests --rerun-failed --output-on-failure --build-config ${{ matrix.build_type }}
+      run: ctest --timeout 10 -j 4 --test-dir ${{ steps.strings.outputs.build-output-dir }}/tests --rerun-failed --output-on-failure --build-config ${{ matrix.build_type }}
       # FIXME: how do we exclude benchmarks when using ctest??
