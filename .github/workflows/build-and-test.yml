@@ -25,6 +25,9 @@ jobs:
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
+          - os: windows-latest
+            c_compiler: gcc
+            cpp_compiler: g++
           - os: ubuntu-22.04
             c_compiler: gcc
             cpp_compiler: g++
@@ -38,8 +41,6 @@ jobs:
             c_compiler: clang
             cpp_compiler: clang++
         exclude: # FIXME: is what we want possible without this mess of exclusions??
-          - os: windows-latest
-            c_compiler: gcc
           - os: windows-latest
             c_compiler: clang
           - os: ubuntu-22.04
