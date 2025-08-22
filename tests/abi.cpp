@@ -156,7 +156,7 @@ TEST_CASE("generic abi benchmark", "[abi][conv_generic][benchmark]") {
 int native_noarg() { return 123; }
 
 int native_sum3int(int a, int b, int c) { return a + b + c; }
-int native_sum3float(float a, float b, float c) { return a + b + c; }
+int native_sum3float(float a, float b, float c) { return int(a + b + c); }
 
 // clang-format off
 int native_manyargs(int x0, int x1, int x2, int x3, int x4, int x5, int x6, int x7, int x8, float y1, float y2, float y3, float y4, int x9, int x10, int x11, int x12, int x13, int x14, int x15, int x16) { // clang-format on
