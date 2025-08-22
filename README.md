@@ -45,11 +45,11 @@ bother trying big-endian).
 We would [like to support](https://github.com/asumagic/angelsea/issues?q=is%3Aissue%20state%3Aopen%20label%3Atargets):
 
 - ✅ **Linux x86-64** (main test platform)
-- ℹ️ MinGW x86-64 (not actively tested, needs improvement, but could run a commercial app)
+- ⚠️ MinGW x86-64 (minor failures)
+- ❌ MSVC x86-64 (minor failures + broken native calling convention for certain signatures)
 - ❌ Linux aarch64 (broken C handling last time tested)
 - ❓ macOS aarch64 (major failures)
 - ❓ macOS x86-64 (cannot easily test via CI)
-- ❌ MSVC x86-64 (minor failures + broken native calling convention for certain signatures)
 
 32-bit support is not planned because MIR supports no such platform.
 [BlindMindStudio's JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler) supports 32-bit and 64-bit x86.
