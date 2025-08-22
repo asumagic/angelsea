@@ -27,7 +27,6 @@ C2Mir::~C2Mir() { c2mir_finish(m_ctx); }
 
 static void bind_runtime(Mir& mir) {
 #define ASEA_BIND_MIR(name) MIR_load_external(mir, #name, std::bit_cast<void*>(&(name)))
-#define ASEA_BIND_MIR_CONST(name) MIR_load_external(mir, #name, std::bit_cast<void*>(&name))
 	ASEA_BIND_MIR(asea_call_script_function);
 	ASEA_BIND_MIR(asea_call_system_function);
 	ASEA_BIND_MIR(asea_call_object_method);
@@ -43,8 +42,8 @@ static void bind_runtime(Mir& mir) {
 	ASEA_BIND_MIR(asea_new_script_object);
 	ASEA_BIND_MIR(memcpy);
 	ASEA_BIND_MIR(memset);
-	ASEA_BIND_MIR(fmod);
-	ASEA_BIND_MIR(fmodf);
+	MIR_load_external(mir, "fmod", std::bit_cast<void*>(+[](double a, double b) { return fmod(a, b); }));
+	MIR_load_external(mir, "fmodf", std::bit_cast<void*>(+[](float a, float b) { return fmodf(a, b); }));
 #undef ASEA_BIND_MIR
 }
 
