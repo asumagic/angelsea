@@ -1,4 +1,4 @@
-name: CMake tests for Windows x64 cl, Linux x86-64 gcc+clang
+name: CMake tests for various platforms
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
 
       # windows+cl, ubuntu 22.04+gcc x86-64 AND aarch64, ubuntu 22.04+clang x86-64 AND aarch64
       matrix:
-        os: [ubuntu-22.04, ubuntu-22.04-arm, windows-latest]
+        os: [ubuntu-22.04, ubuntu-22.04-arm, windows-latest, macos-15, macos-15-arm]
         build_type: [Release]
         c_compiler: [gcc, clang, cl]
         include:
@@ -31,7 +31,7 @@ jobs:
           - os: ubuntu-22.04-arm
             c_compiler: clang
             cpp_compiler: clang++
-        exclude:
+        exclude: # FIXME: is what we want possible without this mess of exclusions??
           - os: windows-latest
             c_compiler: gcc
           - os: windows-latest
@@ -40,8 +40,16 @@ jobs:
             c_compiler: cl
           - os: ubuntu-22.04-arm
             c_compiler: cl
+          - os: macos-15
+            c_compiler: cl
+          - os: macos-15-arm
+            c_compiler: cl
           # don't bother testing gcc twice and burning worker time, it's the same ABI and we don't expect issues
           - os: ubuntu-22.04-arm
+            c_compiler: gcc
+          - os: macos-15
+            c_compiler: gcc
+          - os: macos-15-arm
             c_compiler: gcc
 
     steps:
