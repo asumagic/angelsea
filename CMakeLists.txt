@@ -88,6 +88,8 @@ if (NOT ASEA_ANGELSCRIPT_SYSTEM)
     if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(angelscript PRIVATE -fno-strict-aliasing)
     endif()
+    # compile AS with whatever std version we'll use anyway, otherwise it won't specify it and AppleClang may not default to C++11
+    target_compile_features(angelscript PUBLIC cxx_std_20)
 endif()
 
 # AngelScript CMake module doesn't give us the include, make a target that does
