@@ -31,6 +31,12 @@ jobs:
           - os: ubuntu-22.04-arm
             c_compiler: clang
             cpp_compiler: clang++
+          - os: macos-15
+            c_compiler: clang
+            cpp_compiler: clang++
+          - os: macos-15-arm
+            c_compiler: clang
+            cpp_compiler: clang++
         exclude: # FIXME: is what we want possible without this mess of exclusions??
           - os: windows-latest
             c_compiler: gcc
