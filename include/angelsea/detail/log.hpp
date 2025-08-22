@@ -24,7 +24,7 @@ void log_at(
     fmt::format_string<Ts...> format_string,
     Ts&&... fmt_args
 ) {
-	int type;
+	int type = -1;
 
 	const auto& targets = config.log_targets;
 	switch (severity) {
