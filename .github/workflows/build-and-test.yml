@@ -46,9 +46,7 @@ jobs:
             c_compiler: clang
             cpp_compiler: clang++
             cmake_generator: Ninja
-            extra_cmake_flags:
-              - -DCMAKE_C_FLAGS="-target x86_64-apple-macos15"
-              - -DCMAKE_CXX_FLAGS="-target x86_64-apple-macos15"
+            extra_cmake_flags: -DCMAKE_C_FLAGS="-target x86_64-apple-macos15" -DCMAKE_CXX_FLAGS="-target x86_64-apple-macos15"
 
     steps:
     - uses: msys2/setup-msys2@v2
