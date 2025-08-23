@@ -112,6 +112,8 @@ typedef struct asCScriptEngine_t asCScriptEngine;
 typedef struct asCScriptObject_t asCScriptObject;
 typedef struct asSTypeBehaviour_t asSTypeBehaviour;
 
+extern void* memcpy (void *restrict, const void *restrict, __SIZE_TYPE__);
+
 #endif
 
 typedef struct {)___"
