@@ -1936,7 +1936,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		}
 		case AbiMask::LINUX_GCC_AARCH64:
 		case AbiMask::MACOS_AARCH64:     {
-			emit("\t\tobj = (char*)obj + {BASE_OFFSET} >> 1;\n", fmt::arg("BASE_OFFSET", sys_fn.baseOffset));
+			emit("\t\tobj = (char*)obj + ({BASE_OFFSET} >> 1);\n", fmt::arg("BASE_OFFSET", sys_fn.baseOffset));
 			break;
 		}
 		case AbiMask::GENERIC:
