@@ -45,7 +45,7 @@ bother trying big-endian).
 We would [like to support](https://github.com/asumagic/angelsea/issues?q=is%3Aissue%20state%3Aopen%20label%3Atargets):
 
 - ✅ **Linux x86-64** (CI pass, tested on real app)
-- ✅ MinGW x86-64 (CI pass, tested on real app)
+- ✅ **MinGW x86-64** (CI pass, tested on real app)
 - ✅ MSVC x86-64 (CI pass, not tested on real app)
 - ❌ Linux aarch64 (compiles, need ABI fixes)
 - ❌ macOS aarch64 (compiles, need ABI fixes)
