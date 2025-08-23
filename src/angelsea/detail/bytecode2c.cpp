@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include "angelsea/config.hpp"
 #include "angelsea/detail/runtime.hpp"
 #include "as_objecttype.h"
 #include <algorithm>
@@ -1798,6 +1799,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	const auto push_abi_argument   = [&](VarType type, std::string expr) { args.emplace_back(type, std::move(expr)); };
 	const auto push_stack_argument = [&](VarType type) { push_abi_argument(type, virtual_stack_pop_expr(type)); };
 
+	const bool is_virtual_objfirst = sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
+	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST || sys_fn.callConv == ICC_CDECL_OBJFIRST;
+
 	if (sys_fn.callConv >= ICC_THISCALL) {
 		// always load `this` from the first position in the stack
 		if (call.object_pointer_override.empty()) {
@@ -1818,15 +1822,27 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		virtual_stack.take_pwords(1);
 	}
 
-	if (is_complex_passed_by_value(fn.returnType)) {
-		// FIXME: pretty sure different ABIs pass this in different locations (e.g. iirc MSVC have them swapped?)
-		push_abi_argument(var_types::void_ptr, "ret_ptr");
+	if (abi == AbiMask::LINUX_GCC_X86_64 || abi == AbiMask::LINUX_GCC_X86_64) {
+		if (is_complex_passed_by_value(fn.returnType)) {
+			push_abi_argument(var_types::void_ptr, "ret_ptr");
+		}
 	}
 
-	if (sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
-	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST || sys_fn.callConv == ICC_CDECL_OBJFIRST) {
+	if (is_virtual_objfirst) {
 		// where the argument actually lands depends on the convention
 		push_abi_argument(var_types::void_ptr, "obj");
+	}
+
+	if (abi == AbiMask::WINDOWS_MSVC_X86_64) {
+		if (is_complex_passed_by_value(fn.returnType)) {
+			push_abi_argument(var_types::void_ptr, "ret_ptr");
+		}
+	}
+
+	if (abi == AbiMask::MACOS_X86_64 || abi == AbiMask::MACOS_AARCH64) {
+		if (is_complex_passed_by_value(fn.returnType)) {
+			return {.ok = false, .fail_reason = "Complex return types not implemented on macOS yet"};
+		}
 	}
 
 	for (std::size_t i = 0; i < fn.parameterTypes.GetLength(); ++i) {
