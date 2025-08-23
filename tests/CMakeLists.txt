@@ -33,9 +33,6 @@ add_executable(angelsea-tests
 
 target_include_directories(angelsea-tests PRIVATE vendor/nanobench/src/include)
 target_link_libraries(angelsea-tests PRIVATE asea_angelscript_internal angelsea angelscript-addons Catch2::Catch2WithMain)
-if (APPLE)
-	target_link_options(angelsea-tests PRIVATE "-Wl,-stack_size" "-Wl,3f00000")
-endif()
 
 list(APPEND CMAKE_MODULE_PATH ${CATCH2_ROOT}/extras)
 include(CTest)
