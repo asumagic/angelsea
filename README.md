@@ -47,7 +47,7 @@ We would [like to support](https://github.com/asumagic/angelsea/issues?q=is%3Ais
 - ✅ **Linux x86-64** (CI pass, tested on real app)
 - ✅ MinGW x86-64 (CI pass, tested on real app)
 - ✅ MSVC x86-64 (CI pass, not tested on real app)
-- ❌ Linux aarch64 (broken C compilation last time tested, likely MIR bug to investigate)
+- ❌ Linux aarch64 (major breakage, need to investigate ABI issues)
 - ❌ macOS aarch64 (major breakage, need to investigate ABI issues)
 - ❌ macOS x86-64 (broken native calling convention for certain signatures + requires macOS 14 due to upstream AS issue with macOS 15)
 
