@@ -2308,7 +2308,7 @@ void BytecodeToC::emit_cond_branch(FnState& state, std::string_view expr, std::s
 		emit(
 		    "\t\tif (__builtin_expect({TEST}, {EXPECTED_BRANCH_VALUE})) {{\n",
 		    fmt::arg("TEST", expr),
-		    fmt::arg("EXPECTED_BRANCH_VALUE", target_offset < int(state.ins.offset) ? 1 : 0)
+		    fmt::arg("EXPECTED_BRANCH_VALUE", target_offset < state.ins.offset ? 1 : 0)
 		);
 	} else {
 		emit("\t\tif ({TEST}) {{\n", fmt::arg("TEST", expr));
