@@ -40,7 +40,9 @@ static void bind_runtime(Mir& mir) {
 	ASEA_BIND_MIR(asea_alloc);
 	ASEA_BIND_MIR(asea_free);
 	ASEA_BIND_MIR(asea_new_script_object);
-	ASEA_BIND_MIR(memcpy);
+	MIR_load_external(mir, "memcpy", std::bit_cast<void*>(+[](void* dst, const void* src, std::size_t size) {
+		                  return std::memcpy(dst, src, size);
+	                  }));
 	ASEA_BIND_MIR(memset);
 	MIR_load_external(mir, "fmod", std::bit_cast<void*>(+[](double a, double b) { return fmod(a, b); }));
 	MIR_load_external(mir, "fmodf", std::bit_cast<void*>(+[](float a, float b) { return fmodf(a, b); }));

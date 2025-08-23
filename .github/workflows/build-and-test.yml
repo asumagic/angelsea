@@ -71,15 +71,15 @@ jobs:
         "-G${{ matrix.cmake_generator }}"
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DCMAKE_BUILD_TYPE=Debug
         -DASEA_ENABLE_TESTING=1
         ${{ matrix.extra_cmake_flags }}
         -S ${{ github.workspace }}
 
     - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config RelWithDebInfo --parallel 4
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config Debug --parallel 4
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ctest --timeout 30 -j 4 --test-dir ${{ steps.strings.outputs.build-output-dir }}/tests --rerun-failed --output-on-failure --build-config RelWithDebInfo
+      run: ctest --timeout 30 -j 4 --test-dir ${{ steps.strings.outputs.build-output-dir }}/tests --rerun-failed --output-on-failure --build-config Debug
       # FIXME: how do we exclude benchmarks when using ctest??

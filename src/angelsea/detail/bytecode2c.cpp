@@ -21,6 +21,7 @@
 #include <as_scriptengine.h>
 #include <as_texts.h>
 #include <bit>
+#include <deque>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <variant>
@@ -1563,11 +1564,9 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 	emit_for_abi(AbiMask::LINUX_GCC_AARCH64);
 	emit("#elif defined(__APPLE__) && defined(__aarch64__)\n");
 	emit_for_abi(AbiMask::MACOS_AARCH64);
-	emit(
-	    "#else\n"
-	    "#error unknown ABI!\n"
-	    "#endif\n"
-	);
+	emit("#else\n");
+	emit_for_abi(AbiMask::GENERIC);
+	emit("#endif\n");
 }
 
 BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& state, SystemCall call, AbiMask abi) {
@@ -1660,7 +1659,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle auto handles in return yet"};
 	}
 
-	std::vector<std::string> struct_decls;
+	std::deque<std::string> struct_decls; // for pointer stability as we refer to the strings
 
 	const auto get_var_type = [&](const asCDataType& type) -> VarType {
 		if (type.IsReference() || type.IsObjectHandle()) {
@@ -1717,6 +1716,12 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	std::vector<std::pair<VarType, std::string>> args;
 	std::unordered_map<int, std::size_t>         stack_offset_to_arg_id;
+
+	/// Maximum estimated number of general purpose registers & floating-point registers used for this call. This is
+	/// used to work around issues on some platforms where passing things via the stack causes corruptions (e.g. MIR
+	/// seems broken when passing many `int32` on macOS aarch64). This is not an exact amount and is just used for
+	/// safety checks, and lets us avoid blacklisting the native convention for aarch64 macOS outright...
+	std::size_t max_regs_used = 0;
 
 	VirtualStack virtual_stack;
 
@@ -1795,7 +1800,10 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		);
 	};
 
-	const auto push_abi_argument   = [&](VarType type, std::string expr) { args.emplace_back(type, std::move(expr)); };
+	const auto push_abi_argument = [&](VarType type, std::string expr) {
+		args.emplace_back(type, std::move(expr));
+		max_regs_used += (type.size + 7) / 8; // pad to QWORD
+	};
 	const auto push_stack_argument = [&](VarType type) { push_abi_argument(type, virtual_stack_pop_expr(type)); };
 
 	const bool is_thiscall_objfirst = sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
@@ -1893,6 +1901,21 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		push_abi_argument(var_types::void_ptr, "obj");
 	}
 
+	if (abi == AbiMask::MACOS_AARCH64) {
+		if (max_regs_used > 8) {
+			// this function *might* have passed arguments on the stack (the heuristic is conservative). this is known
+			// problematic on MIR with macOS aarch64 due to argument alignment differences. aarch64 macOS allows denser
+			// packing of non-8-byte-aligned functions, which can result in corruptions for functions passing a lot of
+			// ints (e.g. see `native_manyargs` test)
+			return {
+			    .ok = false,
+			    .fail_reason
+			    = "Complex function. Working around macOS ABI related bug in MIR. See bytecode2c source code for "
+			      "details."
+			};
+		}
+	}
+
 	// can start emit()s from this point on
 
 	emit("{}", to_emit_before_call);
@@ -1928,14 +1951,23 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	}
 
 	if (sys_fn.baseOffset > 0) {
-		emit(
-		    "#if ((defined(__GNUC__) || defined(__MIRC__)) && defined(__aarch64__)\n"
-		    "\t\tobj = (char*)obj + {BASE_OFFSET} >> 1;\n"
-		    "#else\n"
-		    "\t\tobj = (char*)obj + {BASE_OFFSET};\n"
-		    "#endif\n",
-		    fmt::arg("BASE_OFFSET", sys_fn.baseOffset)
-		);
+		switch (abi) {
+		case AbiMask::LINUX_GCC_X86_64:
+		case AbiMask::WINDOWS_MSVC_X86_64:
+		case AbiMask::WINDOWS_MINGW_X86_64:
+		case AbiMask::MACOS_X86_64:         {
+			emit("\t\tobj = (char*)obj + {BASE_OFFSET};\n", fmt::arg("BASE_OFFSET", sys_fn.baseOffset));
+			break;
+		}
+		case AbiMask::LINUX_GCC_AARCH64:
+		case AbiMask::MACOS_AARCH64:     {
+			emit("\t\tobj = (char*)obj + ({BASE_OFFSET} >> 1);\n", fmt::arg("BASE_OFFSET", sys_fn.baseOffset));
+			break;
+		}
+		case AbiMask::GENERIC:
+		default:
+			return {.ok = false, .fail_reason = "baseOffset (from multiple inheritance) is not supported on this ABI."};
+		}
 	}
 
 	if (!m_config->hack_ignore_context_inspect) {
@@ -1959,24 +1991,39 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		// dereference pointer via the vtable. this is janky! we are in C, so we essentially have to emulate the C++
 		// ABI here. TODO: option to disable virtual calls specifically?
 
-		// NOTE: we have a MSVC codepath but realistically it is untested! it happens to be modelled after what most
-		// ABIs AS supports, with the exception of MSVC. we also don't check for clang as if it identifies self as
-		// _MSC_VER then it is implementing the MSVC ABI.
 		emit_forward_declaration(state, std::string(fn_callable_symbol), "extern char {}[];\n", fn_callable_symbol);
 
 		emit(
-		    "typedef {RETTYPE} (*virtfn)({ARGTYPES});\n"
-		    "#if defined(_MSC_VER) || defined(ASEA_ABI_MSVC)\n"
-		    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
-		    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} >> 2];\n"
-		    "#else\n"
-		    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
-		    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} / sizeof(void*)];\n"
-		    "#endif\n",
+		    "typedef {RETTYPE} (*virtfn)({ARGTYPES});\n",
 		    fmt::arg("RETTYPE", return_type.c),
-		    fmt::arg("ARGTYPES", fmt::join(formatted_arg_types, ",")),
-		    fmt::arg("FNCALLABLE", fn_callable_symbol)
+		    fmt::arg("ARGTYPES", fmt::join(formatted_arg_types, ","))
 		);
+
+		switch (abi) {
+		case AbiMask::LINUX_GCC_X86_64:
+		case AbiMask::WINDOWS_MINGW_X86_64:
+		case AbiMask::MACOS_X86_64:
+		case AbiMask::LINUX_GCC_AARCH64:
+		case AbiMask::MACOS_AARCH64:        {
+			emit(
+			    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
+			    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} / sizeof(void*)];\n",
+			    fmt::arg("FNCALLABLE", fn_callable_symbol)
+			);
+			break;
+		}
+		case AbiMask::WINDOWS_MSVC_X86_64: {
+			emit(
+			    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
+			    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} >> 2];\n",
+			    fmt::arg("FNCALLABLE", fn_callable_symbol)
+			);
+			break;
+		}
+		case AbiMask::GENERIC:
+		default:               return {.ok = false, .fail_reason = "Virtual functions are not supported on this ABI."};
+		}
+
 		final_callable_name = "fn";
 	} else {
 		emit_forward_declaration(
@@ -2122,7 +2169,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 
 	asSSystemFunctionInterface& sys_fn = *fn.sysFuncIntf;
 
-	const internalCallConv abi = sys_fn.callConv;
+	const internalCallConv icc = sys_fn.callConv;
 
 	if (!call.is_internal_call) {
 		if (fn.IsVariadic()) {
@@ -2162,7 +2209,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 
 	// FIXME: set m_callingSystemFunction -- also relevant to the above?
 
-	if (abi == ICC_GENERIC_METHOD) {
+	if (icc == ICC_GENERIC_METHOD) {
 		if (!call.object_pointer_override.empty()) {
 			emit("\t\tg.currentObject = {};\n", call.object_pointer_override);
 		} else {
@@ -2283,7 +2330,7 @@ void BytecodeToC::emit_cond_branch(FnState& state, std::string_view expr, std::s
 		emit(
 		    "\t\tif (__builtin_expect({TEST}, {EXPECTED_BRANCH_VALUE})) {{\n",
 		    fmt::arg("TEST", expr),
-		    fmt::arg("EXPECTED_BRANCH_VALUE", target_offset < int(state.ins.offset) ? 1 : 0)
+		    fmt::arg("EXPECTED_BRANCH_VALUE", target_offset < state.ins.offset ? 1 : 0)
 		);
 	} else {
 		emit("\t\tif ({TEST}) {{\n", fmt::arg("TEST", expr));

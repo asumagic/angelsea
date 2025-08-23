@@ -166,6 +166,27 @@ int native_sum3float(float a, float b, float c) { return int(a + b + c); }
 
 // clang-format off
 int native_manyargs(int x0, int x1, int x2, int x3, int x4, int x5, int x6, int x7, int x8, float y1, float y2, float y3, float y4, int x9, int x10, int x11, int x12, int x13, int x14, int x15, int x16) { // clang-format on
+	out << x0 << ',';
+	out << x1 << ',';
+	out << x2 << ',';
+	out << x3 << ',';
+	out << x4 << ',';
+	out << x5 << ',';
+	out << x6 << ',';
+	out << x7 << ',';
+	out << x8 << ',';
+	out << y1 << ',';
+	out << y2 << ',';
+	out << y3 << ',';
+	out << y4 << ',';
+	out << x9 << ',';
+	out << x10 << ',';
+	out << x11 << ',';
+	out << x12 << ',';
+	out << x13 << ',';
+	out << x14 << ',';
+	out << x15 << ',';
+	out << x16 << ',';
 	return x0 + x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + (y1 + y2 + y3 + y4) + x9 + x10 + x11 + x12 + x13 + x14 + x15
 	    + x16;
 }
@@ -262,7 +283,7 @@ TEST_CASE("native calling convention", "[abi][conv_native]") {
 	        "print(''+native_manyargs(0, 1, 2, 3, 4, 5, 6, 7, 8, 0.5, 1.5, 3.0, 6.0, 9, 10, 11, 12, 13, 14, 15, "
 	        "16))"
 	    )
-	    == "147\n"
+	    == "0,1,2,3,4,5,6,7,8,0.5,1.5,3,6,9,10,11,12,13,14,15,16,147\n"
 	);
 }
 

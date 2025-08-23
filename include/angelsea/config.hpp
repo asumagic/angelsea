@@ -10,12 +10,16 @@
 namespace angelsea {
 
 enum class AbiMask {
-	LINUX_GCC_X86_64     = 1 << 0,
-	WINDOWS_MSVC_X86_64  = 1 << 1,
-	WINDOWS_MINGW_X86_64 = 1 << 2,
-	MACOS_X86_64         = 1 << 3,
-	LINUX_GCC_AARCH64    = 1 << 4,
-	MACOS_AARCH64        = 1 << 5,
+	/// Minimize use of C++ ABI hacks, and try to rely only on the C ABI.
+	/// Some things may still use C++ ABI hacks. For truly generic C ABI support, you may have better luck entirely
+	/// disabling native calls.
+	GENERIC              = 1 << 0,
+	LINUX_GCC_X86_64     = 1 << 1,
+	WINDOWS_MSVC_X86_64  = 1 << 2,
+	WINDOWS_MINGW_X86_64 = 1 << 3,
+	MACOS_X86_64         = 1 << 4,
+	LINUX_GCC_AARCH64    = 1 << 5,
+	MACOS_AARCH64        = 1 << 6,
 };
 
 struct JitConfig {
@@ -188,7 +192,7 @@ struct JitConfig {
 #elif defined(__APPLE__) && defined(__aarch64__)
 		AbiMask abi = AbiMask::MACOS_AARCH64;
 #else
-		AbiMask abi;
+		AbiMask abi = AbiMask::GENERIC;
 #endif
 	};
 	CGeneratorConfig c;

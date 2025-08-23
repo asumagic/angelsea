@@ -47,8 +47,8 @@ We would [like to support](https://github.com/asumagic/angelsea/issues?q=is%3Ais
 - ✅ **Linux x86-64** (CI pass, tested on real app)
 - ✅ **MinGW x86-64** (CI pass, tested on real app)
 - ✅ MSVC x86-64 (CI pass, not tested on real app)
-- ❌ Linux aarch64 (compiles, need ABI fixes)
-- ❌ macOS aarch64 (compiles, need ABI fixes)
+- ✅ Linux aarch64 (CI pass, not tested on real app)
+- ⚠️ macOS aarch64 (CI pass, but considered experimental. Please report feedback!)
 - ❌ macOS x86-64 (compiles, need ABI fixes, requires macOS 14 due to upstream AS issue with macOS 15)
 
 32-bit support is not planned because MIR supports no such platform.
