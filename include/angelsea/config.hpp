@@ -9,6 +9,14 @@
 
 namespace angelsea {
 
+enum class AbiMask {
+	LINUX_GCC_X86_64     = 1 << 0,
+	WINDOWS_MSVC_X86_64  = 1 << 1,
+	WINDOWS_MINGW_X86_64 = 1 << 2,
+	MACOS_X86_64         = 1 << 3,
+	MACOS_AARCH64        = 1 << 4,
+};
+
 struct JitConfig {
 	struct LogTargets {
 		asEMsgType verbose          = asEMsgType(-1);
@@ -163,6 +171,22 @@ struct JitConfig {
 		/// globals in C code. This results in less portable code (which does not matter for JIT). When using MIR JIT
 		/// the only allowed value is `true`.
 		bool emit_hardcoded_vm_offsets = true;
+
+		// NOTE: must mirror the ABI in native calling convention in bytecode2c, may need in mirjit in some cases to
+		// ensure the proper defines are used.
+#if defined(__linux__) && defined(__GNUC__) && defined(__x86_64__)
+		AbiMask abi = AbiMask::LINUX_GCC_X86_64;
+#elif defined(__WIN32__) && defined(__x86_64__)
+		AbiMask abi = AbiMask::WINDOWS_MINGW_X86_64;
+#elif defined(__WIN32__) && defined(_MSC_VER)
+		AbiMask abi = AbiMask::WINDOWS_MSVC_X86_64;
+#elif defined(__APPLE__) && defined(__x86_64__)
+		AbiMask abi = AbiMask::MACOS_X86_64;
+#elif defined(__APPLE__) && defined(__aarch64__)
+		AbiMask abi = AbiMask::MACOS_AARCH64;
+#else
+		AbiMask abi;
+#endif
 	};
 	CGeneratorConfig c;
 };

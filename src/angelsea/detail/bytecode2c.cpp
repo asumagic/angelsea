@@ -1504,46 +1504,73 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 		);
 	}
 
-	const auto result = emit_direct_system_call(state, call);
-	if (!result.ok) {
-		// fallback approach to ensure the call always succeeds even if we cannot emit a direct call
-		if (m_config->c.human_readable) {
-			emit("\t\t/* Fallback to VM call: {} */\n", result.fail_reason);
+	const auto emit_for_abi = [&](AbiMask abi) {
+		if ((std::uint64_t(m_config->c.abi) & std::uint64_t(abi)) == 0) {
+			if (m_config->c.human_readable) {
+				emit("\t\t/* ABI not requested in config */\n");
+			}
+			emit("#error ABI not compiled in\n");
+			return;
 		}
 
-		if (!call.is_internal_call) {
-			flush_stack_push_optimization(state);
-		}
+		const auto result = emit_direct_system_call(state, call, abi);
+		if (!result.ok) {
+			// fallback approach to ensure the call always succeeds even if we cannot emit a direct call
+			if (m_config->c.human_readable) {
+				emit("\t\t/* Fallback to VM call: {} */\n", result.fail_reason);
+			}
 
-		// push the self pointer in the fallback case
-		if (!call.is_internal_call && !call.object_pointer_override.empty()) {
-			emit(
-			    "\t\tsp = (asea_var*)((char*)sp - sizeof(asPWORD));\n"
-			    "\t\tsp->as_ptr = {};\n",
-			    call.object_pointer_override
-			);
-		}
+			if (!call.is_internal_call) {
+				flush_stack_push_optimization(state);
+			}
 
-		if (!call.is_internal_call) {
-			emit_save_sp(state);
-			emit_save_pc(state, true);
-			emit(
-			    "\t\tsp = (asea_var*)((asDWORD*)sp + asea_call_system_function(_regs, {FN}));\n"
-			    "\t\tvalue_reg = regs->value;\n",
-			    fmt::arg("FN", call.fn_idx)
-			);
+			// push the self pointer in the fallback case
+			if (!call.is_internal_call && !call.object_pointer_override.empty()) {
+				emit(
+				    "\t\tsp = (asea_var*)((char*)sp - sizeof(asPWORD));\n"
+				    "\t\tsp->as_ptr = {};\n",
+				    call.object_pointer_override
+				);
+			}
 
-			// FIXME: doprocessuspend check wrt setting *script* exceptions correctness
-		} else {
-			// TODO: assert for method
-			emit_save_sp(state);
-			emit_save_pc(state, true);
-			emit("\t\tasea_call_object_method(_regs, {}, {});\n", call.object_pointer_override, call.fn_idx);
+			if (!call.is_internal_call) {
+				emit_save_sp(state);
+				emit_save_pc(state, true);
+				emit(
+				    "\t\tsp = (asea_var*)((asDWORD*)sp + asea_call_system_function(_regs, {FN}));\n"
+				    "\t\tvalue_reg = regs->value;\n",
+				    fmt::arg("FN", call.fn_idx)
+				);
+
+				// FIXME: doprocessuspend check wrt setting *script* exceptions correctness
+			} else {
+				// TODO: assert for method
+				emit_save_sp(state);
+				emit_save_pc(state, true);
+				emit("\t\tasea_call_object_method(_regs, {}, {});\n", call.object_pointer_override, call.fn_idx);
+			}
 		}
-	}
+	};
+
+	// TODO: move this logic in its own function
+	emit("#if defined(__linux__) && (defined(__GNUC__) || defined(__MIRC__)) && defined(__x86_64__)\n");
+	emit_for_abi(AbiMask::LINUX_GCC_X86_64);
+	emit("#elif defined(__WIN32__) && defined(__x86_64__)\n");
+	emit_for_abi(AbiMask::WINDOWS_MINGW_X86_64);
+	emit("#elif defined(__WIN32__) && (defined(_MSC_VER) || defined(ASEA_ABI_MSVC))\n");
+	emit_for_abi(AbiMask::WINDOWS_MSVC_X86_64);
+	emit("#elif defined(__APPLE__) && defined(__x86_64__)\n");
+	emit_for_abi(AbiMask::MACOS_X86_64);
+	emit("#elif define(__APPLE__) && defined(__aarch64__)\n");
+	emit_for_abi(AbiMask::MACOS_AARCH64);
+	emit(
+	    "#else\n"
+	    "#error unknown ABI!\n"
+	    "#endif\n"
+	);
 }
 
-BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& state, SystemCall call) {
+BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& state, SystemCall call, AbiMask abi) {
 	if (!m_config->hack_ignore_exceptions) {
 		return {.ok = false, .fail_reason = "Direct system call failed: hack_ignore_exceptions == false"};
 	}
@@ -1556,7 +1583,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& 
 	const std::string           fn_desc_symbol     = fmt::format("{}_sysfn{}", m_c_symbol_prefix, call.fn_idx);
 	asCScriptFunction&          script_fn          = *m_script_engine->scriptFunctions[call.fn_idx];
 	asSSystemFunctionInterface& sys_fn             = *script_fn.sysFuncIntf;
-	const internalCallConv      abi                = sys_fn.callConv;
+	const internalCallConv      icc                = sys_fn.callConv;
 
 	if (m_on_map_extern_callback) {
 		m_on_map_extern_callback(fn_desc_symbol.c_str(), ExternScriptFunction{call.fn_idx}, &script_fn);
@@ -1567,11 +1594,11 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& 
 		);
 	}
 
-	if (abi == ICC_GENERIC_FUNC || abi == ICC_GENERIC_METHOD) {
+	if (icc == ICC_GENERIC_FUNC || icc == ICC_GENERIC_METHOD) {
 		return emit_direct_system_call_generic(state, call, script_fn, fn_desc_symbol, fn_callable_symbol);
 	}
 
-	return emit_direct_system_call_native(state, call, script_fn, fn_desc_symbol, fn_callable_symbol);
+	return emit_direct_system_call_native(state, call, script_fn, fn_desc_symbol, fn_callable_symbol, abi);
 }
 
 struct VirtualStack {
@@ -1596,7 +1623,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
     SystemCall         call,
     asCScriptFunction& fn,
     std::string_view   fn_desc_symbol,
-    std::string_view   fn_callable_symbol
+    std::string_view   fn_callable_symbol,
+    AbiMask            abi
 ) {
 	// FIXME: this thing is an abomination and it haunts my dreams (frankly, almost literally)
 	// i have no excuse for it and i keep postponing the inevitable. and yet it's 3am, and i'm still considering
