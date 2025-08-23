@@ -21,6 +21,7 @@
 #include <as_scriptengine.h>
 #include <as_texts.h>
 #include <bit>
+#include <deque>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <variant>
@@ -1658,7 +1659,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		return {.ok = false, .fail_reason = "Direct native call failed: Cannot handle auto handles in return yet"};
 	}
 
-	std::vector<std::string> struct_decls;
+	std::deque<std::string> struct_decls; // for pointer stability as we refer to the strings
 
 	const auto get_var_type = [&](const asCDataType& type) -> VarType {
 		if (type.IsReference() || type.IsObjectHandle()) {
