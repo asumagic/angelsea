@@ -184,7 +184,7 @@ static int c2mir_getc_callback(void* user_data) {
 		info.current_ptr = info.code->source_bits[info.current_block];
 	}
 
-	char c = *info.current_ptr;
+	std::int8_t c = *info.current_ptr;
 	++info.current_ptr;
 	return c;
 }
