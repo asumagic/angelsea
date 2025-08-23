@@ -959,6 +959,7 @@ void BytecodeToC::translate_instruction(FnState& state) {
 
 	case asBC_RET: {
 		if (!m_config->experimental_fast_script_return) {
+			emit("\t\tregs->value = value_reg;\n");
 			emit_vm_fallback(state, "experimental_fast_script_return == false");
 			break;
 		}
