@@ -8,8 +8,8 @@ project(angelsea)
 
 if (CMAKE_BUILD_TYPE MATCHES "Debug")
     if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU" AND NOT MINGW)
-        add_compile_options(-Og -fsanitize=address)
-        add_link_options(-Og -fsanitize=address)
+        add_compile_options(-Og -fsanitize=thread)
+        add_link_options(-Og -fsanitize=thread)
     endif()
 endif()
 
