@@ -261,16 +261,19 @@ class BytecodeToC {
 
 	/// Emit code to perform a direct system call (i.e. with a known signature and target). On failure, no code is
 	/// emitted and the returned result object sets `ok == false`.
-	[[nodiscard]] SystemCallEmitResult emit_direct_system_call(FnState& state, SystemCall call);
+	/// `abi` must refer to a single ABI, the caller should take care of #ifdef dispatch in case of multiple ABIs.
+	[[nodiscard]] SystemCallEmitResult emit_direct_system_call(FnState& state, SystemCall call, AbiMask abi);
 
 	/// Emit code to perform a direct system call (i.e. with a known signature and target), assuming it is of any of the
 	/// native calling conventions. On failure, no code is emitted and the returned result object sets `ok == false`.
+	/// `abi` must refer to a single ABI, the caller should take care of #ifdef dispatch in case of multiple ABIs.
 	[[nodiscard]] SystemCallEmitResult emit_direct_system_call_native(
 	    FnState&           state,
 	    SystemCall         call,
 	    asCScriptFunction& fn,
 	    std::string_view   fn_desc_symbol,
-	    std::string_view   fn_callable_symbol
+	    std::string_view   fn_callable_symbol,
+	    AbiMask            abi
 	);
 
 	/// Emit code to perform a direct system call (i.e. with a known signature and target), assuming it is of the

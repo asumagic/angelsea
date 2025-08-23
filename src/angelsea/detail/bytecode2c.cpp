@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include "angelsea/config.hpp"
 #include "angelsea/detail/runtime.hpp"
 #include "as_objecttype.h"
 #include <algorithm>
@@ -1504,46 +1505,72 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 		);
 	}
 
-	const auto result = emit_direct_system_call(state, call);
-	if (!result.ok) {
-		// fallback approach to ensure the call always succeeds even if we cannot emit a direct call
-		if (m_config->c.human_readable) {
-			emit("\t\t/* Fallback to VM call: {} */\n", result.fail_reason);
+	const auto emit_for_abi = [&](AbiMask abi) {
+		if ((std::uint64_t(m_config->c.abi) & std::uint64_t(abi)) == 0) {
+			emit("#error ABI not compiled in\n");
+			return;
 		}
 
-		if (!call.is_internal_call) {
-			flush_stack_push_optimization(state);
-		}
+		const auto result = emit_direct_system_call(state, call, abi);
+		if (!result.ok) {
+			// fallback approach to ensure the call always succeeds even if we cannot emit a direct call
+			if (m_config->c.human_readable) {
+				emit("\t\t/* Fallback to VM call: {} */\n", result.fail_reason);
+			}
 
-		// push the self pointer in the fallback case
-		if (!call.is_internal_call && !call.object_pointer_override.empty()) {
-			emit(
-			    "\t\tsp = (asea_var*)((char*)sp - sizeof(asPWORD));\n"
-			    "\t\tsp->as_ptr = {};\n",
-			    call.object_pointer_override
-			);
-		}
+			if (!call.is_internal_call) {
+				flush_stack_push_optimization(state);
+			}
 
-		if (!call.is_internal_call) {
-			emit_save_sp(state);
-			emit_save_pc(state, true);
-			emit(
-			    "\t\tsp = (asea_var*)((asDWORD*)sp + asea_call_system_function(_regs, {FN}));\n"
-			    "\t\tvalue_reg = regs->value;\n",
-			    fmt::arg("FN", call.fn_idx)
-			);
+			// push the self pointer in the fallback case
+			if (!call.is_internal_call && !call.object_pointer_override.empty()) {
+				emit(
+				    "\t\tsp = (asea_var*)((char*)sp - sizeof(asPWORD));\n"
+				    "\t\tsp->as_ptr = {};\n",
+				    call.object_pointer_override
+				);
+			}
 
-			// FIXME: doprocessuspend check wrt setting *script* exceptions correctness
-		} else {
-			// TODO: assert for method
-			emit_save_sp(state);
-			emit_save_pc(state, true);
-			emit("\t\tasea_call_object_method(_regs, {}, {});\n", call.object_pointer_override, call.fn_idx);
+			if (!call.is_internal_call) {
+				emit_save_sp(state);
+				emit_save_pc(state, true);
+				emit(
+				    "\t\tsp = (asea_var*)((asDWORD*)sp + asea_call_system_function(_regs, {FN}));\n"
+				    "\t\tvalue_reg = regs->value;\n",
+				    fmt::arg("FN", call.fn_idx)
+				);
+
+				// FIXME: doprocessuspend check wrt setting *script* exceptions correctness
+			} else {
+				// TODO: assert for method
+				emit_save_sp(state);
+				emit_save_pc(state, true);
+				emit("\t\tasea_call_object_method(_regs, {}, {});\n", call.object_pointer_override, call.fn_idx);
+			}
 		}
-	}
+	};
+
+	// TODO: move this logic in its own function
+	emit("#if defined(__linux__) && (defined(__GNUC__) || defined(__MIRC__)) && defined(__x86_64__)\n");
+	emit_for_abi(AbiMask::LINUX_GCC_X86_64);
+	emit("#elif defined(_WIN32) && (defined(_MSC_VER) || defined(ASEA_ABI_MSVC))\n"); // must precede mingw check
+	emit_for_abi(AbiMask::WINDOWS_MSVC_X86_64);
+	emit("#elif defined(_WIN32) && (defined(__GNUC__) || defined(__MIRC__)) && defined(__x86_64__)\n");
+	emit_for_abi(AbiMask::WINDOWS_MINGW_X86_64);
+	emit("#elif defined(__APPLE__) && defined(__x86_64__)\n");
+	emit_for_abi(AbiMask::MACOS_X86_64);
+	emit("#elif defined(__linux__) && (defined(__GNUC__) || defined(__MIRC__)) && defined(__aarch64__)\n");
+	emit_for_abi(AbiMask::LINUX_GCC_AARCH64);
+	emit("#elif defined(__APPLE__) && defined(__aarch64__)\n");
+	emit_for_abi(AbiMask::MACOS_AARCH64);
+	emit(
+	    "#else\n"
+	    "#error unknown ABI!\n"
+	    "#endif\n"
+	);
 }
 
-BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& state, SystemCall call) {
+BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& state, SystemCall call, AbiMask abi) {
 	if (!m_config->hack_ignore_exceptions) {
 		return {.ok = false, .fail_reason = "Direct system call failed: hack_ignore_exceptions == false"};
 	}
@@ -1556,7 +1583,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& 
 	const std::string           fn_desc_symbol     = fmt::format("{}_sysfn{}", m_c_symbol_prefix, call.fn_idx);
 	asCScriptFunction&          script_fn          = *m_script_engine->scriptFunctions[call.fn_idx];
 	asSSystemFunctionInterface& sys_fn             = *script_fn.sysFuncIntf;
-	const internalCallConv      abi                = sys_fn.callConv;
+	const internalCallConv      icc                = sys_fn.callConv;
 
 	if (m_on_map_extern_callback) {
 		m_on_map_extern_callback(fn_desc_symbol.c_str(), ExternScriptFunction{call.fn_idx}, &script_fn);
@@ -1567,11 +1594,11 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& 
 		);
 	}
 
-	if (abi == ICC_GENERIC_FUNC || abi == ICC_GENERIC_METHOD) {
+	if (icc == ICC_GENERIC_FUNC || icc == ICC_GENERIC_METHOD) {
 		return emit_direct_system_call_generic(state, call, script_fn, fn_desc_symbol, fn_callable_symbol);
 	}
 
-	return emit_direct_system_call_native(state, call, script_fn, fn_desc_symbol, fn_callable_symbol);
+	return emit_direct_system_call_native(state, call, script_fn, fn_desc_symbol, fn_callable_symbol, abi);
 }
 
 struct VirtualStack {
@@ -1596,7 +1623,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
     SystemCall         call,
     asCScriptFunction& fn,
     std::string_view   fn_desc_symbol,
-    std::string_view   fn_callable_symbol
+    std::string_view   fn_callable_symbol,
+    AbiMask            abi
 ) {
 	// FIXME: this thing is an abomination and it haunts my dreams (frankly, almost literally)
 	// i have no excuse for it and i keep postponing the inevitable. and yet it's 3am, and i'm still considering
@@ -1770,6 +1798,10 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	const auto push_abi_argument   = [&](VarType type, std::string expr) { args.emplace_back(type, std::move(expr)); };
 	const auto push_stack_argument = [&](VarType type) { push_abi_argument(type, virtual_stack_pop_expr(type)); };
 
+	const bool is_thiscall_objfirst = sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
+	    /*|| sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST*/;
+	const bool is_cdecl_objfirst = sys_fn.callConv == ICC_CDECL_OBJFIRST;
+
 	if (sys_fn.callConv >= ICC_THISCALL) {
 		// always load `this` from the first position in the stack
 		if (call.object_pointer_override.empty()) {
@@ -1790,14 +1822,37 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		virtual_stack.take_pwords(1);
 	}
 
-	if (is_complex_passed_by_value(fn.returnType)) {
-		// FIXME: pretty sure different ABIs pass this in different locations (e.g. iirc MSVC have them swapped?)
-		push_abi_argument(var_types::void_ptr, "ret_ptr");
+	// Handle complex return logic depending on active C++ ABI.
+	// For the C++ thiscall ABI, gcc always puts the return pointer as the first ABI parameter.
+	// MSVC puts it after the object parameter.
+	// CDECL_OBJFIRST is always after the return pointer since this is at application level.
+	if (abi == AbiMask::LINUX_GCC_X86_64 || abi == AbiMask::WINDOWS_MINGW_X86_64) {
+		if (is_complex_passed_by_value(fn.returnType)) {
+			push_abi_argument(var_types::void_ptr, "ret_ptr");
+		}
+
+		if (is_thiscall_objfirst) {
+			push_abi_argument(var_types::void_ptr, "obj");
+		}
+	} else if (abi == AbiMask::WINDOWS_MSVC_X86_64) {
+		if (is_thiscall_objfirst) {
+			push_abi_argument(var_types::void_ptr, "obj");
+		}
+
+		if (is_complex_passed_by_value(fn.returnType)) {
+			push_abi_argument(var_types::void_ptr, "ret_ptr");
+		}
+	} else {
+		if (is_complex_passed_by_value(fn.returnType)) {
+			return {.ok = false, .fail_reason = "Complex return types not implemented for this ABI"};
+		}
+
+		if (is_thiscall_objfirst) {
+			push_abi_argument(var_types::void_ptr, "obj");
+		}
 	}
 
-	if (sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
-	    || sys_fn.callConv == ICC_VIRTUAL_THISCALL_OBJFIRST || sys_fn.callConv == ICC_CDECL_OBJFIRST) {
-		// where the argument actually lands depends on the convention
+	if (is_cdecl_objfirst) {
 		push_abi_argument(var_types::void_ptr, "obj");
 	}
 
@@ -1873,10 +1928,8 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	}
 
 	if (sys_fn.baseOffset > 0) {
-		// we preserve the arm/aarch64 check from AS here but it is untested!
 		emit(
-		    "#if (defined(__GNUC__) && (defined(AS_ARM64) || defined(AS_ARM) || defined(AS_MIPS))) || "
-		    "defined(AS_PSVITA)\n"
+		    "#if ((defined(__GNUC__) || defined(__MIRC__)) && defined(__aarch64__)\n"
 		    "\t\tobj = (char*)obj + {BASE_OFFSET} >> 1;\n"
 		    "#else\n"
 		    "\t\tobj = (char*)obj + {BASE_OFFSET};\n"
@@ -1913,7 +1966,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 		emit(
 		    "typedef {RETTYPE} (*virtfn)({ARGTYPES});\n"
-		    "#ifdef _MSC_VER\n"
+		    "#if defined(_MSC_VER) || defined(ASEA_ABI_MSVC)\n"
 		    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
 		    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} >> 2];\n"
 		    "#else\n"

@@ -69,6 +69,9 @@ else()
         ${ASEA_MIR_ROOT}/c2mir/c2mir.h
     )
     target_include_directories(asea_mir PUBLIC ${ASEA_MIR_ROOT})
+    if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(asea_mir PRIVATE -fsigned-char)
+    endif()
 endif()
 
 # Configure AngelScript build

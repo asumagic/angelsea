@@ -184,7 +184,7 @@ static int c2mir_getc_callback(void* user_data) {
 		info.current_ptr = info.code->source_bits[info.current_block];
 	}
 
-	char c = *info.current_ptr;
+	std::int8_t c = *info.current_ptr;
 	++info.current_ptr;
 	return c;
 }
@@ -274,10 +274,13 @@ void MirJit::codegen_async_function(AsyncMirFunction& fn) {
 	{
 		C2Mir c2mir{compile_mir};
 
-		std::array<c2mir_macro_command, 1> macros{{
+		std::array macros{
 		    // Trigger the various definitions and macros of the generated header
-		    {.def_p = int(true), .name = "ASEA_SUPPORT", .def = "1"},
-		}};
+		    c2mir_macro_command{.def_p = int(true), .name = "ASEA_SUPPORT", .def = "1"},
+#ifdef _MSC_VER
+		    c2mir_macro_command{.def_p = int(true), .name = "ASEA_ABI_MSVC", .def = "1"},
+#endif
+		};
 
 		c2mir_options c_options{
 		    .message_file       = config().debug.c2mir_diagnostic_file,
