@@ -14,7 +14,8 @@ enum class AbiMask {
 	WINDOWS_MSVC_X86_64  = 1 << 1,
 	WINDOWS_MINGW_X86_64 = 1 << 2,
 	MACOS_X86_64         = 1 << 3,
-	MACOS_AARCH64        = 1 << 4,
+	LINUX_GCC_AARCH64    = 1 << 4,
+	MACOS_AARCH64        = 1 << 5,
 };
 
 struct JitConfig {
@@ -176,12 +177,14 @@ struct JitConfig {
 		// ensure the proper defines are used.
 #if defined(__linux__) && defined(__GNUC__) && defined(__x86_64__)
 		AbiMask abi = AbiMask::LINUX_GCC_X86_64;
-#elif defined(__WIN32__) && defined(__x86_64__)
+#elif defined(_WIN32) && defined(__x86_64__)
 		AbiMask abi = AbiMask::WINDOWS_MINGW_X86_64;
-#elif defined(__WIN32__) && defined(_MSC_VER)
+#elif defined(_WIN32) && defined(_MSC_VER)
 		AbiMask abi = AbiMask::WINDOWS_MSVC_X86_64;
 #elif defined(__APPLE__) && defined(__x86_64__)
 		AbiMask abi = AbiMask::MACOS_X86_64;
+#elif defined(__linux__) && (defined(__GNUC__) || defined(__MIRC__)) && defined(__arch64__)
+		AbiMask abi = AbiMask::LINUX_GCC_AARCH64;
 #elif defined(__APPLE__) && defined(__aarch64__)
 		AbiMask abi = AbiMask::MACOS_AARCH64;
 #else

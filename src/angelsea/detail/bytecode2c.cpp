@@ -1507,9 +1507,6 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 
 	const auto emit_for_abi = [&](AbiMask abi) {
 		if ((std::uint64_t(m_config->c.abi) & std::uint64_t(abi)) == 0) {
-			if (m_config->c.human_readable) {
-				emit("\t\t/* ABI not requested in config */\n");
-			}
 			emit("#error ABI not compiled in\n");
 			return;
 		}
@@ -1556,12 +1553,14 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 	// TODO: move this logic in its own function
 	emit("#if defined(__linux__) && (defined(__GNUC__) || defined(__MIRC__)) && defined(__x86_64__)\n");
 	emit_for_abi(AbiMask::LINUX_GCC_X86_64);
-	emit("#elif defined(__WIN32__) && defined(__x86_64__)\n");
+	emit("#elif defined(_WIN32) && defined(__x86_64__)\n");
 	emit_for_abi(AbiMask::WINDOWS_MINGW_X86_64);
-	emit("#elif defined(__WIN32__) && (defined(_MSC_VER) || defined(ASEA_ABI_MSVC))\n");
+	emit("#elif defined(_WIN32) && (defined(_MSC_VER) || defined(ASEA_ABI_MSVC))\n");
 	emit_for_abi(AbiMask::WINDOWS_MSVC_X86_64);
 	emit("#elif defined(__APPLE__) && defined(__x86_64__)\n");
 	emit_for_abi(AbiMask::MACOS_X86_64);
+	emit("#elif defined(__linux__) && (defined(__GNUC__) || defined(__MIRC__)) && defined(__arch64__)\n");
+	emit_for_abi(AbiMask::LINUX_GCC_AARCH64);
 	emit("#elif define(__APPLE__) && defined(__aarch64__)\n");
 	emit_for_abi(AbiMask::MACOS_AARCH64);
 	emit(
@@ -1822,7 +1821,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		virtual_stack.take_pwords(1);
 	}
 
-	if (abi == AbiMask::LINUX_GCC_X86_64 || abi == AbiMask::LINUX_GCC_X86_64) {
+	if (abi == AbiMask::LINUX_GCC_X86_64 || abi == AbiMask::WINDOWS_MINGW_X86_64) {
 		if (is_complex_passed_by_value(fn.returnType)) {
 			push_abi_argument(var_types::void_ptr, "ret_ptr");
 		}
@@ -1839,9 +1838,9 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		}
 	}
 
-	if (abi == AbiMask::MACOS_X86_64 || abi == AbiMask::MACOS_AARCH64) {
+	if (abi == AbiMask::MACOS_X86_64 || abi == AbiMask::MACOS_AARCH64 || abi == AbiMask::LINUX_GCC_AARCH64) {
 		if (is_complex_passed_by_value(fn.returnType)) {
-			return {.ok = false, .fail_reason = "Complex return types not implemented on macOS yet"};
+			return {.ok = false, .fail_reason = "Complex return types not implemented for this ABI"};
 		}
 	}
 
