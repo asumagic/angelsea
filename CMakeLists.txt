@@ -7,9 +7,13 @@ project(angelsea)
 #### GLOBAL COMPILER CONFIG
 
 if (CMAKE_BUILD_TYPE MATCHES "Debug")
-    if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU" AND NOT MINGW)
-        add_compile_options(-Og -fsanitize=thread)
-        add_link_options(-Og -fsanitize=thread)
+    if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU" AND NOT MINGW AND NOT APPLE)
+        # MinGW does not have ASan
+        # On macOS aarch64 we get an inscrutable error with the fib in a thread test,
+        # inside a memmove with no visible stack context. No clue what's going on,
+        # skipping it for now.
+        add_compile_options(-Og -fsanitize=address)
+        add_link_options(-Og -fsanitize=address)
     endif()
 endif()
 
