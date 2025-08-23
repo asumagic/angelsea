@@ -1559,7 +1559,7 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 	emit_for_abi(AbiMask::WINDOWS_MINGW_X86_64);
 	emit("#elif defined(__APPLE__) && defined(__x86_64__)\n");
 	emit_for_abi(AbiMask::MACOS_X86_64);
-	emit("#elif defined(__linux__) && (defined(__GNUC__) || defined(__MIRC__)) && defined(__arch64__)\n");
+	emit("#elif defined(__linux__) && (defined(__GNUC__) || defined(__MIRC__)) && defined(__aarch64__)\n");
 	emit_for_abi(AbiMask::LINUX_GCC_AARCH64);
 	emit("#elif defined(__APPLE__) && defined(__aarch64__)\n");
 	emit_for_abi(AbiMask::MACOS_AARCH64);

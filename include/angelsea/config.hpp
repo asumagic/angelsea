@@ -183,7 +183,7 @@ struct JitConfig {
 		AbiMask abi = AbiMask::WINDOWS_MSVC_X86_64;
 #elif defined(__APPLE__) && defined(__x86_64__)
 		AbiMask abi = AbiMask::MACOS_X86_64;
-#elif defined(__linux__) && defined(__GNUC__) && defined(__arch64__)
+#elif defined(__linux__) && defined(__GNUC__) && defined(__aarch64__)
 		AbiMask abi = AbiMask::LINUX_GCC_AARCH64;
 #elif defined(__APPLE__) && defined(__aarch64__)
 		AbiMask abi = AbiMask::MACOS_AARCH64;
