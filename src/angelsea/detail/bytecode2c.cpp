@@ -1553,10 +1553,10 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 	// TODO: move this logic in its own function
 	emit("#if defined(__linux__) && (defined(__GNUC__) || defined(__MIRC__)) && defined(__x86_64__)\n");
 	emit_for_abi(AbiMask::LINUX_GCC_X86_64);
+	emit("#elif defined(_WIN32) && (defined(_MSC_VER) || defined(ASEA_ABI_MSVC))\n"); // must precede mingw check
+	emit_for_abi(AbiMask::WINDOWS_MSVC_X86_64);
 	emit("#elif defined(_WIN32) && (defined(__GNUC__) || defined(__MIRC__)) && defined(__x86_64__)\n");
 	emit_for_abi(AbiMask::WINDOWS_MINGW_X86_64);
-	emit("#elif defined(_WIN32) && (defined(_MSC_VER) || defined(ASEA_ABI_MSVC))\n");
-	emit_for_abi(AbiMask::WINDOWS_MSVC_X86_64);
 	emit("#elif defined(__APPLE__) && defined(__x86_64__)\n");
 	emit_for_abi(AbiMask::MACOS_X86_64);
 	emit("#elif defined(__linux__) && (defined(__GNUC__) || defined(__MIRC__)) && defined(__arch64__)\n");
