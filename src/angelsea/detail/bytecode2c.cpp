@@ -1966,9 +1966,6 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		// dereference pointer via the vtable. this is janky! we are in C, so we essentially have to emulate the C++
 		// ABI here. TODO: option to disable virtual calls specifically?
 
-		// NOTE: we have a MSVC codepath but realistically it is untested! it happens to be modelled after what most
-		// ABIs AS supports, with the exception of MSVC. we also don't check for clang as if it identifies self as
-		// _MSC_VER then it is implementing the MSVC ABI.
 		emit_forward_declaration(state, std::string(fn_callable_symbol), "extern char {}[];\n", fn_callable_symbol);
 
 		emit(
