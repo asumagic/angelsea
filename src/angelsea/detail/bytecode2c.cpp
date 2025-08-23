@@ -1717,6 +1717,12 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	std::vector<std::pair<VarType, std::string>> args;
 	std::unordered_map<int, std::size_t>         stack_offset_to_arg_id;
 
+	/// Maximum estimated number of general purpose registers & floating-point registers used for this call. This is
+	/// used to work around issues on some platforms where passing things via the stack causes corruptions (e.g. MIR
+	/// seems broken when passing many `int32` on macOS aarch64). This is not an exact amount and is just used for
+	/// safety checks, and lets us avoid blacklisting the native convention for aarch64 macOS outright...
+	std::size_t max_regs_used = 0;
+
 	VirtualStack virtual_stack;
 
 	std::string obj_expr;
@@ -1794,7 +1800,10 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		);
 	};
 
-	const auto push_abi_argument   = [&](VarType type, std::string expr) { args.emplace_back(type, std::move(expr)); };
+	const auto push_abi_argument = [&](VarType type, std::string expr) {
+		args.emplace_back(type, std::move(expr));
+		max_regs_used += (type.size + 7) / 8; // pad to QWORD
+	};
 	const auto push_stack_argument = [&](VarType type) { push_abi_argument(type, virtual_stack_pop_expr(type)); };
 
 	const bool is_thiscall_objfirst = sys_fn.callConv == ICC_THISCALL || sys_fn.callConv == ICC_VIRTUAL_THISCALL
@@ -1890,6 +1899,21 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 
 	if (sys_fn.callConv == ICC_CDECL_OBJLAST) {
 		push_abi_argument(var_types::void_ptr, "obj");
+	}
+
+	if (abi == AbiMask::MACOS_AARCH64) {
+		if (max_regs_used > 8) {
+			// this function *might* have passed arguments on the stack (the heuristic is conservative). this is known
+			// problematic on MIR with macOS aarch64 due to argument alignment differences. aarch64 macOS allows denser
+			// packing of non-8-byte-aligned functions, which can result in corruptions for functions passing a lot of
+			// ints (e.g. see `native_manyargs` test)
+			return {
+			    .ok = false,
+			    .fail_reason
+			    = "Complex function. Working around macOS ABI related bug in MIR. See bytecode2c source code for "
+			      "details."
+			};
+		}
 	}
 
 	// can start emit()s from this point on
