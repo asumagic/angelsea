@@ -1563,11 +1563,9 @@ void BytecodeToC::emit_system_call(FnState& state, SystemCall call) {
 	emit_for_abi(AbiMask::LINUX_GCC_AARCH64);
 	emit("#elif defined(__APPLE__) && defined(__aarch64__)\n");
 	emit_for_abi(AbiMask::MACOS_AARCH64);
-	emit(
-	    "#else\n"
-	    "#error unknown ABI!\n"
-	    "#endif\n"
-	);
+	emit("#else\n");
+	emit_for_abi(AbiMask::GENERIC);
+	emit("#endif\n");
 }
 
 BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call(FnState& state, SystemCall call, AbiMask abi) {
@@ -1928,14 +1926,23 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 	}
 
 	if (sys_fn.baseOffset > 0) {
-		emit(
-		    "#if ((defined(__GNUC__) || defined(__MIRC__)) && defined(__aarch64__)\n"
-		    "\t\tobj = (char*)obj + {BASE_OFFSET} >> 1;\n"
-		    "#else\n"
-		    "\t\tobj = (char*)obj + {BASE_OFFSET};\n"
-		    "#endif\n",
-		    fmt::arg("BASE_OFFSET", sys_fn.baseOffset)
-		);
+		switch (abi) {
+		case AbiMask::LINUX_GCC_X86_64:
+		case AbiMask::WINDOWS_MSVC_X86_64:
+		case AbiMask::WINDOWS_MINGW_X86_64:
+		case AbiMask::MACOS_X86_64:         {
+			emit("\t\tobj = (char*)obj + {BASE_OFFSET};\n", fmt::arg("BASE_OFFSET", sys_fn.baseOffset));
+			break;
+		}
+		case AbiMask::LINUX_GCC_AARCH64:
+		case AbiMask::MACOS_AARCH64:     {
+			emit("\t\tobj = (char*)obj + {BASE_OFFSET} >> 1;\n", fmt::arg("BASE_OFFSET", sys_fn.baseOffset));
+			break;
+		}
+		case AbiMask::GENERIC:
+		default:
+			return {.ok = false, .fail_reason = "baseOffset (from multiple inheritance) is not supported on this ABI."};
+		}
 	}
 
 	if (!m_config->hack_ignore_context_inspect) {
@@ -1965,18 +1972,36 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_native(
 		emit_forward_declaration(state, std::string(fn_callable_symbol), "extern char {}[];\n", fn_callable_symbol);
 
 		emit(
-		    "typedef {RETTYPE} (*virtfn)({ARGTYPES});\n"
-		    "#if defined(_MSC_VER) || defined(ASEA_ABI_MSVC)\n"
-		    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
-		    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} >> 2];\n"
-		    "#else\n"
-		    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
-		    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} / sizeof(void*)];\n"
-		    "#endif\n",
+		    "typedef {RETTYPE} (*virtfn)({ARGTYPES});\n",
 		    fmt::arg("RETTYPE", return_type.c),
-		    fmt::arg("ARGTYPES", fmt::join(formatted_arg_types, ",")),
-		    fmt::arg("FNCALLABLE", fn_callable_symbol)
+		    fmt::arg("ARGTYPES", fmt::join(formatted_arg_types, ","))
 		);
+
+		switch (abi) {
+		case AbiMask::LINUX_GCC_X86_64:
+		case AbiMask::WINDOWS_MINGW_X86_64:
+		case AbiMask::MACOS_X86_64:
+		case AbiMask::LINUX_GCC_AARCH64:
+		case AbiMask::MACOS_AARCH64:        {
+			emit(
+			    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
+			    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} / sizeof(void*)];\n",
+			    fmt::arg("FNCALLABLE", fn_callable_symbol)
+			);
+			break;
+		}
+		case AbiMask::WINDOWS_MSVC_X86_64: {
+			emit(
+			    "\t\tvirtfn* vftable = *(virtfn**)obj;\n"
+			    "\t\tvirtfn fn = vftable[(asPWORD)&{FNCALLABLE} >> 2];\n",
+			    fmt::arg("FNCALLABLE", fn_callable_symbol)
+			);
+			break;
+		}
+		case AbiMask::GENERIC:
+		default:               return {.ok = false, .fail_reason = "Virtual functions are not supported on this ABI."};
+		}
+
 		final_callable_name = "fn";
 	} else {
 		emit_forward_declaration(
@@ -2122,7 +2147,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 
 	asSSystemFunctionInterface& sys_fn = *fn.sysFuncIntf;
 
-	const internalCallConv abi = sys_fn.callConv;
+	const internalCallConv icc = sys_fn.callConv;
 
 	if (!call.is_internal_call) {
 		if (fn.IsVariadic()) {
@@ -2162,7 +2187,7 @@ BytecodeToC::SystemCallEmitResult BytecodeToC::emit_direct_system_call_generic(
 
 	// FIXME: set m_callingSystemFunction -- also relevant to the above?
 
-	if (abi == ICC_GENERIC_METHOD) {
+	if (icc == ICC_GENERIC_METHOD) {
 		if (!call.object_pointer_override.empty()) {
 			emit("\t\tg.currentObject = {};\n", call.object_pointer_override);
 		} else {
