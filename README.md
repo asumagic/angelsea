@@ -9,32 +9,40 @@ compiler.
 
 ## Current status
 
-We don't consider it stable yet, but it works. The test suite is constantly
-checked and it is regularly tested against a test development build of
-[King Arthur's Gold](https://store.steampowered.com/app/219830/King_Arthurs_Gold).
+We have a test suite tested in CI and we test the JIT compiler against a test
+development build of [KAG](https://store.steampowered.com/app/219830/King_Arthurs_Gold).
 
-It is still in a bit of a "move fast, break things" phase, but we're trying to
-keep unstable features out of the main branch.
+Angelsea is still in a bit of a "move fast, break things" phase, but the `main`
+branch should generally be reasonably stable.
 
 ### Performance
 
 Compared to the [BlindMindStudios JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler),
-you should hopefully get similar or exceeding (+30%) performance in real world
-usecases.  
-However, we haven't looked at performance too closely yet; and since instruction
-support is not complete and there are differences in ABI support YMMV.
+we obtain +0~40% runtime performance in a real world application, but YMMV.  
+If you have results to share, we're interested!
 
 #### Compiler performance
 
-The compiler itself isn't very fast or memory efficient but we mitigate those
-concerns as well as we can:
+Compared to the BMS JIT, Angelsea may have higher JIT compile times and memory
+use, however:
 
-- Lazy compilation is used by default, so cold functions can be ignored.
-- Asynchronous compilation can be enabled using `Jit::SetCompileCallback`.
-Currently, this can bottleneck on a single thread, but it will not block the
-main thread.
-- Huge functions (typically thousands of lines) are ignored by default due to
-exploding compute and memory costs.
+- Lazy compilation is enabled by default.[^1]
+- Asynchronous compilation can be enabled using `Jit::SetCompileCallback`.[^2]
+- Huge functions (~thousands of LoC) are skipped by default.[^3]
+
+[^1]: This effectively means that cold functions can be entirely ignored. In real
+world applications, this can slash down the amount of compiled functions
+very significantly. This is especially true because the `#include` mechanism is
+prone to leaving a bunch of functions effectively unused.
+
+[^2]: This is not a fully multi-threaded process, as only one thread will run
+codegen at once. However, most of the process remains asynchronous, so it is
+largely suitable for real-time apps. It may also improve script loading times
+compared to the BMS JIT.
+
+[^3]: MIR isn't particularly designed for huge functions and as such, memory and
+compute costs can become ridiculous (gigabytes of RAM). We skip compilation past
+a certain bytecode size as a heuristic, which you can adjust.
 
 ## Supported platforms
 
