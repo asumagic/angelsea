@@ -17,6 +17,8 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug")
     endif()
 endif()
 
+option(ASEA_NO_DEBUG "Hardcodes JitConfig::debug and disables any related debug option. May reduce code size." OFF)
+
 #### DEPENDENCIES
 
 option(ASEA_FMT_SYSTEM "Disable building of vendored libfmt, and look it up via CMake instead" OFF)
@@ -124,6 +126,10 @@ add_library(angelsea STATIC
 target_link_libraries(angelsea PRIVATE ${ASEA_FMT_TARGET} asea_mir asea_angelscript_internal)
 target_include_directories(angelsea PUBLIC include/)
 target_compile_features(angelsea PUBLIC cxx_std_20)
+
+if(ASEA_NO_DEBUG)
+    target_compile_definitions(angelsea PUBLIC ASEA_NO_DEBUG=1)
+endif()
 
 if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(angelsea PRIVATE -Wall -Wextra)

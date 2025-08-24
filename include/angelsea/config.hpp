@@ -80,7 +80,21 @@ struct JitConfig {
 		/// Might not be valid for all handlers.
 		asEBCInstr fallback_after_instruction = asEBCInstr(-1);
 	};
+#ifndef ASEA_NO_DEBUG
 	Debug debug;
+#else
+	constexpr static const Debug debug
+	    = {.dump_c_code                = false,
+	       .dump_c_code_file           = nullptr,
+	       .dump_mir_code              = false,
+	       .dump_mir_code_file         = nullptr,
+	       .c2mir_diagnostic_file      = nullptr,
+	       .mir_debug_level            = -1,
+	       .mir_diagnostic_file        = nullptr,
+	       .blacklist_instructions     = {},
+	       .trace_functions            = false,
+	       .fallback_after_instruction = asEBCInstr(255)};
+#endif
 
 	struct CompileTriggers {
 		/// How many times should a function has any of its JIT entry points (usually many times per function,

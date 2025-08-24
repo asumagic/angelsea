@@ -66,10 +66,12 @@ angelsea::JitConfig get_test_jit_config() {
 			.verbose = is_env_set("ASEA_VERBOSE") ? asMSGTYPE_INFORMATION : (asEMsgType)-1,
 			.performance_hint = is_env_set("ASEA_VERBOSE") ? asMSGTYPE_INFORMATION : (asEMsgType)-1,
 		},
+#ifndef ASEA_NO_DEBUG
 	    .debug = {
 	        .dump_c_code   = is_env_set("ASEA_DUMP_C"),
 	        .dump_mir_code = is_env_set("ASEA_DUMP_MIR"),
 		},
+#endif
 		.triggers = {
 			// .hits_before_func_compile = 0,
 			.eager = true,
@@ -80,8 +82,10 @@ angelsea::JitConfig get_test_jit_config() {
 		},
 	};
 
+#ifndef ASEA_NO_DEBUG
 	set_env_int_variable("ASEA_MIR_DEBUG_LEVEL", config.debug.mir_debug_level);
 	set_env_int_variable("ASEA_MIR_OPT_LEVEL", config.mir_optimization_level);
+#endif
 
 	return config;
 }
