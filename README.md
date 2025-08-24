@@ -38,21 +38,18 @@ exploding compute and memory costs.
 
 ## Supported platforms
 
-MIR supports many other platforms and CPU architectures, and Angelsea should be
-generating fairly portable C code, but very little of it is tested (please don't
-bother trying big-endian).
-
-We would [like to support](https://github.com/asumagic/angelsea/issues?q=is%3Aissue%20state%3Aopen%20label%3Atargets):
-
-- ✅ **Linux x86-64** (CI pass, tested on real app)
-- ✅ **MinGW x86-64** (CI pass, tested on real app)
-- ✅ MSVC x86-64 (CI pass, not tested on real app)
-- ⚠️ Linux aarch64 (CI pass, not tested on real app)
-- ⚠️ macOS aarch64 (CI pass, but considered experimental. Please report feedback!)
-- ❌ macOS x86-64 (compiles, need ABI fixes, requires macOS 14 due to upstream AS issue with macOS 15)
-
-32-bit support is not planned because MIR supports no such platform.
-[BlindMindStudio's JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler) supports 32-bit and 64-bit x86.
+|    | OS       | Architecture | ABI   | Tested compilers | Notes |
+|----|----------|--------------|-------|------------------|-|
+| ✅ | Linux    | x86-64       | gcc   | gcc, clang       | Tested on real app |
+| ✅ | Windows  | x86-64       | MinGW | MinGW gcc        | Tested on real app |
+| ✅ | Windows  | x86-64       | MSVC  | cl               | Not tested on real app |
+| ⚠️ | Linux    | aarch64      | gcc   | clang            | Not tested on real app, considered experimental |
+| ⚠️ | macOS    | aarch64      | Apple | Apple clang      | Not tested on real app, considered experimental |
+| ❌ | macOS    | x86-64       | Apple | Apple clang      | Fails CI. Voice interest if you would like it fixed. See [#3](https://github.com/asumagic/angelsea/issues/3) |
+| ❌ | —        | 32-bit x86   | —     |                  | Not supported by MIR. Please use [BlindMindStudio's JIT](https://github.com/BlindMindStudios/AngelScript-JIT-Compiler) |
+| ❓ | Linux    | riscv64      | gcc   |                  | Supported by MIR, but not tested. |
+| ❓ | Linux    | ppc64le      | gcc   |                  | Supported by MIR, but not tested. |
+| ❌ | Linux    | s390x        | gcc   |                  | Supported by MIR, but big-endian is not supported by angelsea. |
 
 ## Clone & Build
 
