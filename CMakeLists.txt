@@ -50,11 +50,6 @@ endif()
 # Upstream CMakeLists doesn't allow us from excluding tests and such
 option(ASEA_MIR_SYSTEM "Disable building of vendored MIR. Make sure to provide -DASEA_MIR_ROOT" OFF)
 
-# Disable textual format scanning
-add_compile_definitions(MIR_NO_SCAN=1)
-add_compile_definitions(MIR_NO_BIN_COMPRESSION=1)
-add_compile_definitions(MIR_NO_IO=1)
-
 set(
     ASEA_MIR_ROOT
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/mir/"
@@ -78,6 +73,10 @@ else()
     if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(asea_mir PRIVATE -fsigned-char)
     endif()
+    if(ASEA_NO_DEBUG)
+        target_compile_definitions(asea_mir PUBLIC MIR_NO_GEN_DEBUG=1)
+    endif()
+    target_compile_definitions(asea_mir PUBLIC MIR_NO_SCAN=1 MIR_NO_BIN_COMPRESSION=1 MIR_NO_IO=1)
 endif()
 
 # Configure AngelScript build
