@@ -32,12 +32,13 @@ use, however:
 
 [^1]: This effectively means that cold functions can be entirely ignored. In real
 world applications, this can slash down the amount of compiled functions
-very significantly. This is especially true because 
+very significantly. This is especially true because the `#include` mechanism is
+prone to leaving a bunch of functions effectively unused.
 
 [^2]: This is not a fully multi-threaded process, as only one thread will run
 codegen at once. However, most of the process remains asynchronous, so it is
-suitable for real-world apps. It may also improve script loading times compared
-to the BMS JIT.
+largely suitable for real-time apps. It may also improve script loading times
+compared to the BMS JIT.
 
 [^3]: MIR isn't particularly designed for huge functions and as such, memory and
 compute costs can become ridiculous (gigabytes of RAM). We skip compilation past
