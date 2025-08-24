@@ -123,7 +123,12 @@ void MirJit::register_function(asIScriptFunction& script_function) {
 	}
 
 	LazyMirFunction* lazy_fn = &lazy_mir_it->second;
-	setup_jit_callback(script_function, jit_entry_function_counter, lazy_fn, false);
+
+	if (m_config.triggers.eager) {
+		translate_lazy_function(*lazy_fn);
+	} else {
+		setup_jit_callback(script_function, jit_entry_function_counter, lazy_fn, false);
+	}
 }
 
 void MirJit::unregister_function(asIScriptFunction& script_function) {
