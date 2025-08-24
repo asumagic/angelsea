@@ -71,7 +71,8 @@ angelsea::JitConfig get_test_jit_config() {
 	        .dump_mir_code = is_env_set("ASEA_DUMP_MIR"),
 		},
 		.triggers = {
-			.hits_before_func_compile = 0,
+			// .hits_before_func_compile = 0,
+			.eager = true,
 		},
 		.experimental_stack_elision = true,
 		.c = {

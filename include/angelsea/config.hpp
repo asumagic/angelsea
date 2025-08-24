@@ -88,6 +88,11 @@ struct JitConfig {
 		/// This avoids compiling cold functions unnecessarily, or even functions that are never called, which can be
 		/// surprisingly common for code that relies a lot on `#include`.
 		std::size_t hits_before_func_compile = 15000;
+
+		/// Enables eager compilation, i.e. always queue functions for compilation immediately. \ref
+		/// hits_before_func_compile will be ignored. The final JIT function will only be configured on first hit to
+		/// account for the possibility of async compilation (which this still supports), but that is a cheap operation.
+		bool eager = false;
 	};
 	CompileTriggers triggers;
 
