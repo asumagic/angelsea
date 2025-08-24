@@ -65,9 +65,11 @@ struct JitConfig {
 		/// What file to dump MIR debug logging into, if mir_debug_level >= 0.
 		FILE* mir_diagnostic_file = stderr;
 
+#ifndef ASEA_NO_DEBUG
 		/// Bytecode instructions that should emit a VM fallback; for debugging
 		/// miscompiles and such.
 		std::vector<asEBCInstr> blacklist_instructions;
+#endif
 
 		/// Emit a debug message via the engine on every function call.
 		bool trace_functions = false;
@@ -91,7 +93,6 @@ struct JitConfig {
 	       .c2mir_diagnostic_file      = nullptr,
 	       .mir_debug_level            = -1,
 	       .mir_diagnostic_file        = nullptr,
-	       .blacklist_instructions     = {},
 	       .trace_functions            = false,
 	       .fallback_after_instruction = asEBCInstr(255)};
 #endif

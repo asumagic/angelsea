@@ -443,8 +443,12 @@ void BytecodeToC::emit_error_handlers(FnState& state) {
 }
 
 bool BytecodeToC::is_instruction_blacklisted(asEBCInstr bc) const {
+#ifndef ASEA_NO_DEBUG
 	return std::find(m_config->debug.blacklist_instructions.begin(), m_config->debug.blacklist_instructions.end(), bc)
 	    != m_config->debug.blacklist_instructions.end();
+#else
+	return false;
+#endif
 }
 
 void BytecodeToC::translate_instruction(FnState& state) {
