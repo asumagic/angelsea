@@ -90,7 +90,7 @@ struct JitConfig {
 	Debug debug;
 #else
 	constexpr static const Debug debug
-	    = {.allow_function_metadata_debug = true,
+	    = {.allow_function_metadata_debug = false,
 	       .dump_c_code                   = false,
 	       .dump_c_code_file              = nullptr,
 	       .dump_mir_code                 = false,
