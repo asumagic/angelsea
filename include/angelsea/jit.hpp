@@ -4,6 +4,7 @@
 
 #include <angelscript.h>
 #include <angelsea/config.hpp>
+#include <angelsea/fnconfig.hpp>
 #include <functional>
 #include <memory>
 
@@ -42,6 +43,10 @@ class Jit final : public asIJITCompilerV2 {
 	/// For the time being, compile tasks can lock mutexes for heavy tasks, and thus block the thread for a fairly long
 	/// amount of time. Hence, it is discouraged to make compile jobs happen in the same background pool as other tasks.
 	void SetCompileCallback(std::function<void(CompileFunc*, void*)> callback);
+
+	/// Configure a function configuration callback. This allows you to adjust certain JIT tunables at a function level,
+	/// and optionally bind those to script metadata (see \ref parse_function_metadata).
+	void SetFnConfigRequestCallback(std::function<FnConfig(asIScriptFunction&)> callback);
 
 	private:
 	std::unique_ptr<detail::MirJit> m_compiler;

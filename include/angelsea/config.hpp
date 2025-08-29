@@ -40,6 +40,10 @@ struct JitConfig {
 	LogTargets log_targets = {};
 
 	struct Debug {
+		/// Whether scripts should be allowed to activate specific debug information for specific functions through
+		/// metadata. Will not break the sandbox but you may or may not want it activated.
+		bool allow_function_metadata_debug = false;
+
 		/// Whether to dump generated C code to stdout.
 		bool dump_c_code = false;
 

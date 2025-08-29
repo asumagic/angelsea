@@ -117,6 +117,7 @@ endif()
 
 add_library(angelsea STATIC
     src/angelsea/jit.cpp
+    src/angelsea/fnconfig.cpp
     src/angelsea/detail/mirjit.cpp
     src/angelsea/detail/runtime.cpp
     src/angelsea/detail/bytecode2c.cpp

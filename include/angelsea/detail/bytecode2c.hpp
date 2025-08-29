@@ -6,6 +6,7 @@
 #include <angelscript.h>
 #include <angelsea/config.hpp>
 #include <angelsea/detail/bytecodeinstruction.hpp>
+#include <angelsea/fnconfig.hpp>
 #include <as_property.h>
 #include <as_scriptengine.h>
 #include <as_scriptfunction.h>
@@ -78,7 +79,7 @@ class BytecodeToC {
 	void           prepare_new_context();
 	TranspiledCode finalize_context();
 
-	void translate_function(std::string_view internal_module_name, asIScriptFunction& fn);
+	void translate_function(std::string_view internal_module_name, asIScriptFunction& fn, FnConfig fn_config);
 
 	/// Configure the callback to be invoked when a function is mapped to a C
 	/// function name. This is useful to track the generated entry points in
@@ -378,6 +379,10 @@ class BytecodeToC {
 		std::size_t      fn_idx              = 0;
 		std::string      fn_name;
 		std::string      fn_bytecode_ptr;
+		FnConfig         fn_config;
+		// TODO: refactor some stuff between FnState and ModuleState, because it's not really clear where the line is
+		// drawn atm. FnState should probably be state that can evolve *within* the translation of a function, so things
+		// like the script function pointer should be in the module state instead.
 	};
 	ModuleState m_module_state;
 

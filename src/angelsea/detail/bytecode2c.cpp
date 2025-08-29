@@ -61,8 +61,9 @@ TranspiledCode BytecodeToC::finalize_context() {
 	return ret;
 }
 
-void BytecodeToC::translate_function(std::string_view internal_module_name, asIScriptFunction& fn) {
-	m_module_state.fn_name = create_new_entry_point_name(fn);
+void BytecodeToC::translate_function(std::string_view internal_module_name, asIScriptFunction& fn, FnConfig fn_config) {
+	m_module_state.fn_name   = create_new_entry_point_name(fn);
+	m_module_state.fn_config = fn_config;
 
 	if (m_on_map_function_callback) {
 		m_on_map_function_callback(fn, m_module_state.fn_name);

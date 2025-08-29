@@ -6,11 +6,11 @@
 #include <angelsea/config.hpp>
 #include <angelsea/detail/bytecode2c.hpp>
 #include <angelsea/detail/debug.hpp>
+#include <angelsea/fnconfig.hpp>
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
 extern "C" {
@@ -61,6 +61,7 @@ class MirJit;
 struct LazyMirFunction {
 	MirJit*            jit_engine;
 	asIScriptFunction* script_function;
+	FnConfig           fn_config;
 	std::size_t        hits_before_compile;
 };
 
@@ -109,6 +110,10 @@ class MirJit {
 		m_compile_callback = std::move(callback);
 	}
 
+	void set_fn_config_request_callback(std::function<FnConfig(asIScriptFunction&)> callback) {
+		m_request_fn_config_callback = std::move(callback);
+	}
+
 	private:
 	JitConfig        m_config;
 	asIScriptEngine* m_engine;
@@ -133,7 +138,8 @@ class MirJit {
 	std::condition_variable m_termination_cv;
 	std::atomic<int>        m_terminating_threads;
 
-	std::function<void(CompileFunc*, void*)> m_compile_callback;
+	std::function<void(CompileFunc*, void*)>    m_compile_callback;
+	std::function<FnConfig(asIScriptFunction&)> m_request_fn_config_callback;
 
 	/// slight hack: when we SetJITFunction, AS calls our CleanFunction; but we do *not* want this to happen, because we
 	/// use several temporary JIT functions, and we don't want to destroy any of our references to it during that time!
