@@ -207,7 +207,7 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 
 	if (fn_config.disable_jit) {
 		setup_jit_callback(*fn.script_function, nullptr, nullptr, true);
-		unregister_function(*fn.script_function);
+		m_lazy_functions.erase(fn.script_function);
 		return;
 	}
 
@@ -221,7 +221,8 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 			    LogSeverity::ASEA_WARNING,
 			    "Function not considered for JIT compilation because it is too complex");
 		}
-		unregister_function(*fn.script_function);
+		setup_jit_callback(*fn.script_function, nullptr, nullptr, true);
+		m_lazy_functions.erase(fn.script_function);
 		return;
 	}
 
