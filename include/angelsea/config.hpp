@@ -90,15 +90,16 @@ struct JitConfig {
 	Debug debug;
 #else
 	constexpr static const Debug debug
-	    = {.dump_c_code                = false,
-	       .dump_c_code_file           = nullptr,
-	       .dump_mir_code              = false,
-	       .dump_mir_code_file         = nullptr,
-	       .c2mir_diagnostic_file      = nullptr,
-	       .mir_debug_level            = -1,
-	       .mir_diagnostic_file        = nullptr,
-	       .trace_functions            = false,
-	       .fallback_after_instruction = asEBCInstr(255)};
+	    = {.allow_function_metadata_debug = true,
+	       .dump_c_code                   = false,
+	       .dump_c_code_file              = nullptr,
+	       .dump_mir_code                 = false,
+	       .dump_mir_code_file            = nullptr,
+	       .c2mir_diagnostic_file         = nullptr,
+	       .mir_debug_level               = -1,
+	       .mir_diagnostic_file           = nullptr,
+	       .trace_functions               = false,
+	       .fallback_after_instruction    = asEBCInstr(255)};
 #endif
 
 	struct CompileTriggers {
