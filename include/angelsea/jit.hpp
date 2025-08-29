@@ -46,6 +46,9 @@ class Jit final : public asIJITCompilerV2 {
 
 	/// Configure a function configuration callback. This allows you to adjust certain JIT tunables at a function level,
 	/// and optionally bind those to script metadata (see \ref parse_function_metadata).
+	///
+	/// Note that with the standard builder add-on, using `config.triggers.eager` may break your callback if it relies
+	/// on the metadata for function, because it is collected at the end of building the module.
 	void SetFnConfigRequestCallback(std::function<FnConfig(asIScriptFunction&)> callback);
 
 	private:

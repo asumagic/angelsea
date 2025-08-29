@@ -61,7 +61,6 @@ class MirJit;
 struct LazyMirFunction {
 	MirJit*            jit_engine;
 	asIScriptFunction* script_function;
-	FnConfig           fn_config;
 	std::size_t        hits_before_compile;
 };
 

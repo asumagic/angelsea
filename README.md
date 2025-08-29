@@ -242,6 +242,9 @@ angelsea::JitConfig config {
 };
 ```
 
+It is also possible to specify some per-function JIT tunables with a callback.
+For an example that leverages script builder metadata, see [`tests/configtest.cpp`](tests/configtest.cpp).
+
 > [!WARNING]
 > The JIT compiler itself is not currently thread-safe with regards to
 > multithreaded AngelScript contexts or engines.

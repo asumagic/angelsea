@@ -98,31 +98,11 @@ void MirJit::register_function(asIScriptFunction& script_function) {
 		m_registered_engine_globals = true;
 	}
 
-	FnConfig fn_config = m_request_fn_config_callback ? m_request_fn_config_callback(script_function) : FnConfig{};
-
-	if (fn_config.disable_jit) {
-		return;
-	}
-
-	asUINT bytecode_length;
-	script_function.GetByteCode(&bytecode_length);
-	if (bytecode_length * sizeof(asDWORD) > m_config.max_bytecode_bytes) {
-		if (!fn_config.ignore_perf_warnings) {
-			log(m_config,
-			    *m_engine,
-			    script_function,
-			    LogSeverity::ASEA_WARNING,
-			    "Function not considered for JIT compilation because it is too complex");
-		}
-		return;
-	}
-
 	auto [lazy_mir_it, not_already_registered] = m_lazy_functions.emplace(
 	    &script_function,
 	    LazyMirFunction{
 	        .jit_engine          = this,
 	        .script_function     = &script_function,
-	        .fn_config           = fn_config,
 	        .hits_before_compile = config().triggers.hits_before_func_compile
 	    }
 	);
@@ -219,12 +199,38 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 
 	std::vector<std::pair<std::string, void*>> deferred_bindings;
 
+	// it is *very* annoying that we query the function config this late, but there is not really a way around it using
+	// the standard script builder module, which only stores metadata after compiling the whole module.
+	// and it might still cause issues if initializing global variables by calling one of the script functions in the
+	// module...
+	FnConfig fn_config = m_request_fn_config_callback ? m_request_fn_config_callback(*fn.script_function) : FnConfig{};
+
+	if (fn_config.disable_jit) {
+		setup_jit_callback(*fn.script_function, nullptr, nullptr, true);
+		unregister_function(*fn.script_function);
+		return;
+	}
+
+	asUINT bytecode_length;
+	fn.script_function->GetByteCode(&bytecode_length);
+	if (bytecode_length * sizeof(asDWORD) > m_config.max_bytecode_bytes) {
+		if (!fn_config.ignore_perf_warnings) {
+			log(m_config,
+			    *m_engine,
+			    *fn.script_function,
+			    LogSeverity::ASEA_WARNING,
+			    "Function not considered for JIT compilation because it is too complex");
+		}
+		unregister_function(*fn.script_function);
+		return;
+	}
+
 	// TODO: b2c in thread as well
 	m_c_generator.prepare_new_context();
 	m_c_generator.set_map_extern_callback([&](const char*                                        c_name,
 	                                          [[maybe_unused]] const BytecodeToC::ExternMapping& mapping,
 	                                          void* raw_value) { deferred_bindings.emplace_back(c_name, raw_value); });
-	m_c_generator.translate_function(name, *fn.script_function, fn.fn_config);
+	m_c_generator.translate_function(name, *fn.script_function, fn_config);
 
 	if (m_c_generator.get_fallback_count() > 0) {
 		log(config(),
@@ -257,7 +263,7 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 	);
 	auto& async_fn = *async_fn_it->second;
 
-	if (config().debug.dump_c_code || (config().debug.allow_function_metadata_debug && fn.fn_config.dump_c)) {
+	if (config().debug.dump_c_code || (config().debug.allow_function_metadata_debug && fn_config.dump_c)) {
 		angelsea_assert(config().debug.dump_c_code_file != nullptr);
 		for (const char* block : async_fn.c_source.source_bits) {
 			std::ignore = fputs(block, config().debug.dump_c_code_file);

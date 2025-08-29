@@ -20,6 +20,7 @@ add_executable(angelsea-tests
 	branching.cpp
 	classmanip.cpp
 	common.cpp
+	configtest.cpp
 	enums.cpp
 	floatmath.cpp
 	funcdefs.cpp
