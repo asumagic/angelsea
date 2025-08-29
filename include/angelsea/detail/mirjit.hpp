@@ -59,9 +59,10 @@ class C2Mir {
 class MirJit;
 
 struct LazyMirFunction {
-	MirJit*            jit_engine;
-	asIScriptFunction* script_function;
-	std::size_t        hits_before_compile;
+	MirJit*                 jit_engine;
+	std::optional<FnConfig> fn_config;
+	asIScriptFunction*      script_function;
+	std::size_t             hits_before_compile;
 };
 
 struct AsyncMirFunction {
@@ -96,10 +97,13 @@ class MirJit {
 
 	void bind_engine_globals(asIScriptEngine& engine);
 
-	void translate_lazy_function(LazyMirFunction& fn);
-	void codegen_async_function(AsyncMirFunction& fn);
-	void link_ready_functions();
-	void link_function(AsyncMirFunction& fn);
+	/// Triggers C translation of a lazily-compiled function. Returns `true` if the translation was actually triggered
+	/// (as it can be skipped in certain circumstances), `false` if compilation was permanently cancelled or temporarily
+	/// postponed.
+	[[nodiscard]] bool translate_lazy_function(LazyMirFunction& fn);
+	void               codegen_async_function(AsyncMirFunction& fn);
+	void               link_ready_functions();
+	void               link_function(AsyncMirFunction& fn);
 
 	/// Configure a JIT entry callback to a function, where the asPWORD arg will be equal to `ud`
 	void setup_jit_callback(asIScriptFunction& function, asJITFunction callback, void* ud, bool ignore_unregister);
@@ -109,9 +113,12 @@ class MirJit {
 		m_compile_callback = std::move(callback);
 	}
 
-	void set_fn_config_request_callback(std::function<FnConfig(asIScriptFunction&)> callback) {
+	void set_fn_config_request_callback(std::function<FnConfig(asIScriptFunction&)> callback, bool manual_discovery) {
 		m_request_fn_config_callback = std::move(callback);
+		m_fn_config_manual_discovery = manual_discovery;
 	}
+
+	void discover_fn_config();
 
 	private:
 	JitConfig        m_config;
@@ -139,6 +146,7 @@ class MirJit {
 
 	std::function<void(CompileFunc*, void*)>    m_compile_callback;
 	std::function<FnConfig(asIScriptFunction&)> m_request_fn_config_callback;
+	bool                                        m_fn_config_manual_discovery = false;
 
 	/// slight hack: when we SetJITFunction, AS calls our CleanFunction; but we do *not* want this to happen, because we
 	/// use several temporary JIT functions, and we don't want to destroy any of our references to it during that time!

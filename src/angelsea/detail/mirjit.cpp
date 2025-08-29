@@ -54,10 +54,13 @@ void jit_entry_function_counter(asSVMRegisters* regs, asPWORD lazy_fn_raw) {
 		auto& lazy_fn = *std::bit_cast<LazyMirFunction*>(lazy_fn_raw);
 
 		if (lazy_fn.hits_before_compile == 0) {
-			lazy_fn.jit_engine->translate_lazy_function(lazy_fn);
-			return; // let jitentry rerun in case compilation updated the jit function
+			if (lazy_fn.jit_engine->translate_lazy_function(lazy_fn)) {
+				// let jitentry rerun in case compilation updated the jit function
+				return;
+			}
+		} else {
+			--lazy_fn.hits_before_compile;
 		}
-		--lazy_fn.hits_before_compile;
 	}
 
 	regs->programPointer += 1 + AS_PTR_SIZE; // skip the jitentry
@@ -102,6 +105,7 @@ void MirJit::register_function(asIScriptFunction& script_function) {
 	    &script_function,
 	    LazyMirFunction{
 	        .jit_engine          = this,
+	        .fn_config           = std::nullopt,
 	        .script_function     = &script_function,
 	        .hits_before_compile = config().triggers.hits_before_func_compile
 	    }
@@ -113,8 +117,13 @@ void MirJit::register_function(asIScriptFunction& script_function) {
 
 	LazyMirFunction* lazy_fn = &lazy_mir_it->second;
 
-	if (m_config.triggers.eager) {
-		translate_lazy_function(*lazy_fn);
+	if (!m_fn_config_manual_discovery && m_request_fn_config_callback) {
+		lazy_fn->fn_config = m_request_fn_config_callback(*lazy_fn->script_function);
+	}
+
+	if (!m_fn_config_manual_discovery && m_config.triggers.eager) {
+		// with manual discovery compilation will be triggered in discover_fn_config
+		std::ignore = translate_lazy_function(*lazy_fn);
 	} else {
 		setup_jit_callback(script_function, jit_entry_function_counter, lazy_fn, false);
 	}
@@ -185,7 +194,15 @@ static int c2mir_getc_callback(void* user_data) {
 	return c;
 }
 
-void MirJit::translate_lazy_function(LazyMirFunction& fn) {
+bool MirJit::translate_lazy_function(LazyMirFunction& fn) {
+	if (m_fn_config_manual_discovery && !fn.fn_config.has_value()) {
+		return false;
+	}
+
+	// TODO: maybe split the disable_jit and bytecode size checks to a different function as early as when FnConfig is
+	// known so that it can happen earlier than lazy function translation being triggered
+	FnConfig fn_config = fn.fn_config.has_value() ? *fn.fn_config : FnConfig{};
+
 	std::string c_name;
 	m_c_generator.set_map_function_callback([&]([[maybe_unused]] asIScriptFunction& received_fn,
 	                                            const std::string&                  name) {
@@ -199,16 +216,10 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 
 	std::vector<std::pair<std::string, void*>> deferred_bindings;
 
-	// it is *very* annoying that we query the function config this late, but there is not really a way around it using
-	// the standard script builder module, which only stores metadata after compiling the whole module.
-	// and it might still cause issues if initializing global variables by calling one of the script functions in the
-	// module...
-	FnConfig fn_config = m_request_fn_config_callback ? m_request_fn_config_callback(*fn.script_function) : FnConfig{};
-
 	if (fn_config.disable_jit) {
 		setup_jit_callback(*fn.script_function, nullptr, nullptr, true);
 		m_lazy_functions.erase(fn.script_function);
-		return;
+		return false;
 	}
 
 	asUINT bytecode_length;
@@ -223,7 +234,7 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 		}
 		setup_jit_callback(*fn.script_function, nullptr, nullptr, true);
 		m_lazy_functions.erase(fn.script_function);
-		return;
+		return false;
 	}
 
 	// TODO: b2c in thread as well
@@ -290,6 +301,8 @@ void MirJit::translate_lazy_function(LazyMirFunction& fn) {
 	} else {
 		codegen_async_function(async_fn);
 	}
+
+	return true;
 }
 
 void MirJit::codegen_async_function(AsyncMirFunction& fn) {
@@ -458,6 +471,27 @@ void MirJit::setup_jit_callback(asIScriptFunction& function, asJITFunction callb
 	function.SetJITFunction(callback);
 	if (ignore_unregister) {
 		m_ignore_unregister = nullptr;
+	}
+}
+
+void MirJit::discover_fn_config() {
+	if (!m_request_fn_config_callback) {
+		return;
+	}
+
+	for (auto& [script_fn, lazy_fn] : m_lazy_functions) {
+		if (lazy_fn.fn_config.has_value()) {
+			continue;
+		}
+
+		lazy_fn.fn_config = m_request_fn_config_callback(*script_fn);
+	}
+
+	if (m_config.triggers.eager) {
+		while (!m_lazy_functions.empty()) {
+			// this should always pop it from lazy_functions at this stage
+			std::ignore = translate_lazy_function(m_lazy_functions.begin()->second);
+		}
 	}
 }
 

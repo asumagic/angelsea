@@ -22,8 +22,10 @@ void Jit::SetCompileCallback(std::function<void(CompileFunc*, void*)> callback) 
 	m_compiler->set_compile_callback(std::move(callback));
 }
 
-void Jit::SetFnConfigRequestCallback(std::function<FnConfig(asIScriptFunction&)> callback) {
-	m_compiler->set_fn_config_request_callback(std::move(callback));
+void Jit::SetFnConfigRequestCallback(std::function<FnConfig(asIScriptFunction&)> callback, bool manual_discovery) {
+	m_compiler->set_fn_config_request_callback(std::move(callback), manual_discovery);
 }
+
+void Jit::DiscoverFnConfig() { m_compiler->discover_fn_config(); }
 
 } // namespace angelsea
