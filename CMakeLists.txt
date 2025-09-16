@@ -90,9 +90,11 @@ set(
     "Root directory of the AngelScript SDK in use"
 )
 
+set(ASEA_ANGELSCRIPT_BUILD_DIR "" CACHE STRING "Override for the build directory for the case where you want an Angelsea-built AngelScript, but with an out-of-tree ASEA_ANGELSCRIPT_ROOT")
+
 if (NOT ASEA_ANGELSCRIPT_SYSTEM)
     message("angelsea: Using vendored AngelScript at ${ASEA_ANGELSCRIPT_ROOT}")
-    add_subdirectory(${ASEA_ANGELSCRIPT_ROOT}/angelscript/projects/cmake)
+    add_subdirectory(${ASEA_ANGELSCRIPT_ROOT}/angelscript/projects/cmake ${ASEA_ANGELSCRIPT_BUILD_DIR})
     if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(angelscript PRIVATE -fno-strict-aliasing)
     endif()
